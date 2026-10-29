@@ -1,21 +1,30 @@
 <!-- pages/admin/admin.wxml -->
 <view class="container">
+  <!-- 非管理员态：展示当前 OpenID + 白名单引导 -->
   <view class="card lock-card" wx:if="{{!isAuthorized}}">
     <view class="lock-seal">囍</view>
     <text class="lock-title">新人专属管理后台</text>
-    <text class="lock-desc">婚礼新人专属管理后台，实时查看宾客回执与更新相册资料</text>
+    <text class="lock-desc">管理功能使用微信 OpenID 白名单鉴权：把当前账号的 OpenID 加入服务端白名单后即可进入。</text>
 
-    <input
-      type="password"
-      class="pin-input"
-      placeholder="请输入管理口令 (默认: 8888)"
-      value="{{inputPin}}"
-      bindinput="onPinInput"
-    />
+    <view class="diag-row" wx:if="{{currentOpenid}}">
+      <text class="diag-label">当前 OpenID:</text>
+      <text class="diag-val color-green" style="font-size: 22rpx; word-break: break-all;">{{currentOpenid}}</text>
+    </view>
+    <view class="diag-row" wx:else>
+      <text class="diag-label">登录状态:</text>
+      <text class="diag-val color-red">未获取到 OpenID（请检查后端地址与网络）</text>
+    </view>
 
-    <button class="btn-primary unlock-btn" bindtap="verifyPin">
-      验证并进入后台
+    <button class="btn-primary unlock-btn" bindtap="copyOpenid" wx:if="{{currentOpenid}}">
+      复制 OpenID
     </button>
+    <button class="btn-gold unlock-btn" bindtap="refreshAdminState" style="margin-top: 16rpx;">
+      重新检测权限
+    </button>
+
+    <text class="col-tip">本地开发：把上方 OpenID 填入根目录 .dev.vars 的 ADMIN_OPENIDS，重启 wrangler dev 即生效。</text>
+    <text class="col-tip">线上：把 OpenID 填入 wrangler.jsonc 的 ADMIN_OPENIDS（或用 wrangler secret put ADMIN_OPENIDS），重新 deploy 即生效。</text>
+    <text class="col-tip">当前后端: {{backend}}</text>
   </view>
 
   <block wx:else>
@@ -50,7 +59,7 @@
       </view>
     </view>
 
-    <!-- Tab 切换: 宾客名单 / 婚纱照管理 / 系统设置 -->
+    <!-- Tab 切换: 宾客名单 / 婚纱照管理 / 婚礼信息 -->
     <view class="tab-segment">
       <view
         class="tab-item {{curTab === 'guests' ? 'active' : ''}}"
@@ -71,7 +80,7 @@
         bindtap="switchTab"
         data-tab="settings"
       >
-        系统设置
+        婚礼信息
       </view>
     </view>
 
@@ -128,8 +137,8 @@
     <view class="tab-pane" wx:if="{{curTab === 'photos'}}">
       <view class="card upload-guide-card">
         <text class="ug-title">上传相片至婚纱相册</text>
-        <text class="ug-desc">选取手机相册中的婚纱大片上传，小程序相册与请柬将自动同步更新展示。</text>
-        
+        <text class="ug-desc">选取手机相册中的婚纱大片上传（自动转存图床并登记云端），小程序相册与请柬封面将自动同步更新。</text>
+
         <button class="btn-primary ug-btn" bindtap="chooseAndUploadPhoto" loading="{{uploading}}">
           选取并上传婚纱照
         </button>
@@ -137,70 +146,109 @@
 
       <view class="photos-manage-grid">
         <view wx:for="{{photosList}}" wx:key="url" class="pm-item">
-          <image class="pm-img" src="{{item.url}}" mode="aspectFill" bindtap="previewPhoto" data-url="{{item.url}}"></image>
+          <image class="pm-img" src="{{item.thumbUrl || item.url}}" mode="aspectFill" bindtap="previewPhoto" data-url="{{item.url}}"></image>
           <view class="pm-caption">
             <text class="pm-title">{{item.title || '婚纱照'}}</text>
+            <text bindtap="deletePhoto" data-id="{{item.id}}" style="color: #B23A3A; font-size: 24rpx; padding: 4rpx 12rpx;">删除</text>
           </view>
         </view>
       </view>
+
+      <view wx:if="{{photosList.length === 0}}" class="empty-tip">
+        <text>相册还是空的，点击上方按钮上传第一张婚纱照</text>
+      </view>
     </view>
 
-    <!-- 3. 数据库与列字段设置 -->
+    <!-- 3. 婚礼信息编辑 -->
     <view class="tab-pane" wx:if="{{curTab === 'settings'}}">
-      <!-- 微信登录配置与 jscode2session 调试 -->
-      <view class="card notion-status-card" style="margin-bottom: 24rpx;">
-        <text class="nsc-title">微信登录与用户解析 (jscode2session)</text>
+      <view class="card notion-status-card">
+        <text class="nsc-title">婚礼信息（保存后全局同步）</text>
+
         <view class="diag-row">
-          <text class="diag-label">AppID:</text>
-          <text class="diag-val">{{appId}}</text>
+          <text class="diag-label">新郎姓名:</text>
+          <input value="{{configForm.groomName}}" bindinput="onFormInput" data-field="groomName" placeholder="新郎姓名"
+                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
         </view>
-        <view class="diag-row" style="align-items: center;">
-          <text class="diag-label">AppSecret:</text>
-          <input
-            type="text"
-            password
-            placeholder="填入小程序 AppSecret"
-            value="{{appSecret}}"
-            bindinput="onAppSecretInput"
-            style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;"
-          />
+        <view class="diag-row">
+          <text class="diag-label">新郎电话:</text>
+          <input value="{{configForm.groomPhone}}" bindinput="onFormInput" data-field="groomPhone" placeholder="新郎电话"
+                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
         </view>
-        <view class="diag-row" wx:if="{{currentOpenid}}">
-          <text class="diag-label">已解析 OpenID:</text>
-          <text class="diag-val color-green" style="font-size: 22rpx; word-break: break-all;">{{currentOpenid}}</text>
+        <view class="diag-row">
+          <text class="diag-label">新娘姓名:</text>
+          <input value="{{configForm.brideName}}" bindinput="onFormInput" data-field="brideName" placeholder="新娘姓名"
+                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
         </view>
-        <view style="display: flex; gap: 16rpx; margin-top: 20rpx;">
-          <button class="btn-primary" style="flex: 1; font-size: 26rpx; padding: 16rpx 0;" bindtap="saveAppSecret">保存凭据</button>
-          <button class="btn-gold" style="flex: 1; font-size: 26rpx; padding: 16rpx 0;" bindtap="testJscode2Session">测试解析登录</button>
+        <view class="diag-row">
+          <text class="diag-label">新娘电话:</text>
+          <input value="{{configForm.bridePhone}}" bindinput="onFormInput" data-field="bridePhone" placeholder="新娘电话"
+                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
         </view>
-        <text class="col-tip">在微信开发者工具调试时请在「详情 - 本地设置」勾选「不校验合法域名」，即可直接通过 https://api.weixin.qq.com/sns/jscode2session 解析用户的 OpenID 与 SessionKey。</text>
+        <view class="diag-row">
+          <text class="diag-label">吉日良辰:</text>
+          <input value="{{configForm.date}}" bindinput="onFormInput" data-field="date" placeholder="如 2026年10月18日"
+                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
+        </view>
+        <view class="diag-row">
+          <text class="diag-label">典礼时间:</text>
+          <input value="{{configForm.time}}" bindinput="onFormInput" data-field="time" placeholder="如 11:58"
+                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
+        </view>
+        <view class="diag-row">
+          <text class="diag-label">酒店名称:</text>
+          <input value="{{configForm.venueName}}" bindinput="onFormInput" data-field="venueName" placeholder="酒店/会场名称"
+                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
+        </view>
+        <view class="diag-row">
+          <text class="diag-label">宴会厅号:</text>
+          <input value="{{configForm.venueHall}}" bindinput="onFormInput" data-field="venueHall" placeholder="宴会厅"
+                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
+        </view>
+        <view class="diag-row">
+          <text class="diag-label">详细地址:</text>
+          <input value="{{configForm.venueAddress}}" bindinput="onFormInput" data-field="venueAddress" placeholder="详细地址"
+                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
+        </view>
+        <view class="diag-row">
+          <text class="diag-label">纬度/经度:</text>
+          <input value="{{configForm.venueLat}}" bindinput="onFormInput" data-field="venueLat" placeholder="纬度 如 31.2304" style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
+          <input value="{{configForm.venueLng}}" bindinput="onFormInput" data-field="venueLng" placeholder="经度 如 121.4737" style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
+        </view>
+        <view class="diag-row">
+          <text class="diag-label">新郎联系电话:</text>
+          <input value="{{configForm.contactGroom}}" bindinput="onFormInput" data-field="contactGroom" placeholder="宾客拨打用"
+                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
+        </view>
+        <view class="diag-row">
+          <text class="diag-label">新娘联系电话:</text>
+          <input value="{{configForm.contactBride}}" bindinput="onFormInput" data-field="contactBride" placeholder="宾客拨打用"
+                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
+        </view>
+
+        <button class="btn-primary" style="margin-top: 24rpx;" bindtap="saveConfigForm" loading="{{savingConfig}}">
+          保存婚礼信息
+        </button>
+        <text class="col-tip">保存后请到各页面下拉刷新（首页/盛典/流程会自动读取最新配置）。</text>
       </view>
 
       <view class="card notion-status-card">
-        <text class="nsc-title">云端数据连接状态</text>
+        <text class="nsc-title">账号与后端</text>
         <view class="diag-row">
-          <text class="diag-label">Notion API Token:</text>
-          <text class="diag-val {{notionStatus.hasApiKey ? 'color-green' : 'color-red'}}">
-            {{notionStatus.hasApiKey ? '已配置有效' : '未绑定'}}
-          </text>
+          <text class="diag-label">当前 OpenID:</text>
+          <text class="diag-val color-green" style="font-size: 22rpx; word-break: break-all;">{{currentOpenid}}</text>
         </view>
         <view class="diag-row">
-          <text class="diag-label">RSVP 回执数据库:</text>
-          <text class="diag-val {{notionStatus.rsvpOk ? 'color-green' : 'color-red'}}">
-            {{notionStatus.rsvpOk ? '连接成功' : '未连接/需检查权限'}}
-          </text>
+          <text class="diag-label">后端地址:</text>
+          <text class="diag-val" style="font-size: 22rpx; word-break: break-all;">{{backend}}</text>
         </view>
         <view class="diag-row">
-          <text class="diag-label">祝福寄语数据库:</text>
-          <text class="diag-val {{notionStatus.blessingsOk ? 'color-green' : 'color-red'}}">
-            {{notionStatus.blessingsOk ? '连接成功' : '未连接'}}
-          </text>
+          <text class="diag-label">数据存储:</text>
+          <text class="diag-val color-green">Cloudflare D1（图片存 ImgBB）</text>
         </view>
 
-        <button class="btn-gold auto-col-btn" bindtap="autoInitColumns" loading="{{initializing}}">
-          初始化数据库表格列字段
+        <button class="btn-gold" style="margin-top: 24rpx;" bindtap="logoutAdmin">
+          退出管理账号
         </button>
-        <text class="col-tip">自动检查并补齐：宾客姓名、手机号、出席状态、同行人数、饮食习惯、接驳车与祝福</text>
       </view>
     </view>
   </block>

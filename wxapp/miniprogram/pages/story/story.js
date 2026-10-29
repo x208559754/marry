@@ -1,6 +1,6 @@
 // pages/story/story.js
 const app = getApp();
-const notion = require('../../utils/notion.js');
+const api = require('../../utils/api.js');
 
 Page({
   data: {
@@ -31,7 +31,7 @@ Page({
   },
 
   loadStory: function () {
-    notion.getWeddingConfig().then((cfg) => {
+    api.getWeddingConfig().then((cfg) => {
       if (cfg && cfg.story && cfg.story.length > 0) {
         this.setData({ storyList: cfg.story });
       }

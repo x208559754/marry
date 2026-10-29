@@ -1,6 +1,6 @@
 // pages/blessings/blessings.js
 const app = getApp();
-const notion = require('../../utils/notion.js');
+const api = require('../../utils/api.js');
 
 Page({
   data: {
@@ -58,7 +58,7 @@ Page({
   },
 
   loadBlessings: function (callback) {
-    notion.getBlessingsList().then((list) => {
+    api.getBlessingsList().then((list) => {
       const formatted = (list || []).map((item, idx) => ({
         id: item.id || `bless_${idx}`,
         author: item.author || item.name || '挚友',
@@ -119,7 +119,7 @@ Page({
       createdAt: '刚刚'
     };
 
-    notion.submitBlessing(newBlessing).then(() => {
+    api.submitBlessing(newBlessing).then(() => {
       this.setData({
         isSending: false,
         inputContent: '',
@@ -135,6 +135,8 @@ Page({
 
   likeBlessing: function (e) {
     const id = e.currentTarget.dataset.id;
+    // 同步到后台（失败静默；UI 走乐观 +1）
+    api.likeBlessing(id).catch(function () {});
     const list = this.data.blessingsList.map((item) => {
       if (item.id === id) {
         return Object.assign({}, item, { likes: (item.likes || 1) + 1 });

@@ -1,6 +1,6 @@
 // pages/schedule/schedule.js
 const app = getApp();
-const notion = require('../../utils/notion.js');
+const api = require('../../utils/api.js');
 const wechat = require('../../utils/wechat.js');
 
 Page({
@@ -46,7 +46,7 @@ Page({
   },
 
   loadData: function (callback) {
-    notion.getWeddingConfig().then((cfg) => {
+    api.getWeddingConfig().then((cfg) => {
       this.setData({ config: cfg });
       if (cfg && cfg.schedule && cfg.schedule.length > 0) {
         this.setData({ scheduleList: cfg.schedule });
@@ -54,7 +54,7 @@ Page({
       if (cfg && cfg.venue) {
         this.setData({
           venue: {
-            hotel: cfg.venue.hotel || this.data.venue.hotel,
+            hotel: cfg.venue.hotel || cfg.venue.name || this.data.venue.hotel,
             hall: cfg.venue.hall || this.data.venue.hall,
             address: cfg.venue.address || this.data.venue.address,
             latitude: parseFloat(cfg.venue.latitude) || this.data.venue.latitude,

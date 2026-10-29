@@ -1,16 +1,11 @@
-// app.js - 微信小程序全局入口逻辑
+// app.js - 微信小程序全局入口逻辑（后端已迁移到 Cloudflare Worker，见 utils/api.js）
+// 安全说明：AppSecret 已从客户端移除，jscode2session 由 Worker 服务端完成
 const wechat = require('./utils/wechat.js');
+const api = require('./utils/api.js');
 
 App({
   globalData: {
-    // 微信小程序配置凭据
-    appId: 'wx12a496fabe6eb244',
-    appSecret: 'REDACTED_OLD_APPSECRET', // 微信小程序 AppSecret
-
-    // 专属 Notion 交互后端服务地址 (若运行本地服务可设为 http://localhost:3000 或留空)
-    apiBase: '',
-    
-    // 当前登录用户信息
+    // 当前登录用户信息（登录结果由 utils/api.js 写入本地缓存与全局）
     userInfo: null,
     openid: '',
     sessionKey: '',
@@ -19,44 +14,52 @@ App({
     isLoggedIn: false,
     matchedGuest: null,
 
-    // 婚礼配置缓存（具备离线默认值）
+    // 婚礼配置内置默认值（云端 /api/config 会 merge 覆盖；字段结构与后端一致）
     weddingConfig: {
       groom: { name: '陈长生', pinyin: 'CHEN CHANGSHENG', phone: '13800000001' },
       bride: { name: '徐有容', pinyin: 'XU YOURONG', phone: '13800000002' },
       date: '2026年10月18日',
       time: '11:58',
-      location: {
+      venue: {
         name: '上海静安瑞吉酒店 · 阿斯特宴会厅',
+        hall: '阿斯特宴会厅',
         address: '上海市静安区北京西路1008号',
         latitude: 31.2304,
         longitude: 121.4737
       },
+      contacts: { groomPhone: '13800000001', bridePhone: '13800000002' },
       coverImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1000&q=80',
+      photos: [],
       music: {
         title: '婚礼浪漫进行曲',
         url: 'https://actions.google.com/sounds/v1/ambiences/warm_breeze.ogg'
-      }
+      },
+      letterParagraphs: [
+        '从相遇、相知到相守，漫漫岁月因为彼此而格外温暖。',
+        '谨定于 2026年10月18日 为 陈长生 与 徐有容 举行结婚典礼。',
+        '真诚期待您和家人的到来，与我们共同见证这份幸福！'
+      ]
     },
-    
+
     // 背景音频播放管理器
     bgmContext: null,
     isPlayingBgm: false,
-    
-    // 管理员权限
+
+    // 管理员权限（由 api 登录结果写入）
     isAdmin: false
   },
 
   onLaunch: function () {
     console.log('[小程序] 婚礼请柬启动');
-    
-    // 1. 读取本地持久化的用户与登录信息
+
+    // 1. 读取本地持久化的用户信息
     this.initUserStorage();
 
-    // 2. 静默微信登录并直接通过 jscode2session 解析用户信息
+    // 2. 静默微信登录（服务端 jscode2session；本地开发走 mock），换取 token 与 openid
     this.doWxLogin();
 
-    // 3. 从 Notion 同步婚礼配置与资源
-    this.syncWeddingConfigFromNotion();
+    // 3. 从云端同步婚礼配置与相册
+    this.syncWeddingConfig();
 
     // 4. 初始化背景音乐
     this.initBackgroundMusic();
@@ -68,180 +71,114 @@ App({
       const userInfo = wx.getStorageSync('wx_wedding_user');
       const phone = wx.getStorageSync('wx_wedding_phone');
       const openid = wx.getStorageSync('wx_wedding_openid');
-      const sessionKey = wx.getStorageSync('wx_wedding_session_key');
       const unionid = wx.getStorageSync('wx_wedding_unionid');
-      const isAdmin = wx.getStorageSync('wx_wedding_is_admin');
       const savedRsvp = wx.getStorageSync('wx_wedding_submitted_rsvp');
-      const customSecret = wx.getStorageSync('wx_wedding_app_secret');
+      const cachedConfig = wx.getStorageSync('cached_wedding_config');
 
-      if (customSecret) this.globalData.appSecret = customSecret;
       if (userInfo) this.globalData.userInfo = userInfo;
       if (phone) this.globalData.phoneNumber = phone;
       if (openid) this.globalData.openid = openid;
-      if (sessionKey) this.globalData.sessionKey = sessionKey;
       if (unionid) this.globalData.unionid = unionid;
       if (savedRsvp) this.globalData.matchedGuest = savedRsvp;
-      if (isAdmin) this.globalData.isAdmin = Boolean(isAdmin);
+      if (cachedConfig) {
+        this.globalData.weddingConfig = Object.assign({}, this.globalData.weddingConfig, cachedConfig);
+      }
+      this.globalData.isAdmin = api.isAdmin();
       if (userInfo || phone || openid) this.globalData.isLoggedIn = true;
     } catch (e) {
       console.warn('读取本地用户信息失败:', e);
     }
   },
 
-  // 执行微信登录，直接调用 https://api.weixin.qq.com/sns/jscode2session 解析 openid 与 session_key
+  // 微信登录：wx.login → Worker /api/login（服务端换 openid；客户端永不接触 AppSecret）
   doWxLogin: function (callback) {
     const that = this;
-    wx.login({
-      success: function (res) {
-        if (res.code) {
-          console.log('[微信登录] 获取 code 成功:', res.code);
-
-          // 动态读取小程序 AppID
-          const accountInfo = (wx.getAccountInfoSync && typeof wx.getAccountInfoSync === 'function')
-            ? wx.getAccountInfoSync()
-            : null;
-          const dynamicAppId = (accountInfo && accountInfo.miniProgram && accountInfo.miniProgram.appId && accountInfo.miniProgram.appId !== '__UNI__')
-            ? accountInfo.miniProgram.appId
-            : that.globalData.appId;
-
-          const currentSecret = that.globalData.appSecret || wx.getStorageSync('wx_wedding_app_secret') || '';
-
-          console.log('[微信登录] 直接请求微信官方 jscode2session 接口解析用户凭据, AppID:', dynamicAppId);
-
-          wechat.jscode2session(res.code, dynamicAppId, currentSecret)
-            .then(function (sessionData) {
-              console.log('[微信登录] jscode2session 解析成功:', sessionData);
-
-              const openid = sessionData.openid;
-              const sessionKey = sessionData.session_key || '';
-              const unionid = sessionData.unionid || '';
-
-              that.globalData.openid = openid;
-              that.globalData.sessionKey = sessionKey;
-              that.globalData.unionid = unionid;
-              that.globalData.isLoggedIn = true;
-
-              wx.setStorageSync('wx_wedding_openid', openid);
-              if (sessionKey) wx.setStorageSync('wx_wedding_session_key', sessionKey);
-              if (unionid) wx.setStorageSync('wx_wedding_unionid', unionid);
-
-              // 登录解析成功后，比对 Notion 宾客数据
-              that.syncGuestAfterLogin(openid);
-
-              if (typeof callback === 'function') callback(sessionData);
-            })
-            .catch(function (err) {
-              console.warn('[微信登录] 直接请求 jscode2session 异常:', err);
-              if (!currentSecret) {
-                console.warn('【配置提示】若需直接解析 jscode2session，请在 app.js 的 globalData.appSecret 中填入您的小程序 AppSecret。');
-              }
-              that.handleLoginFallback(callback);
-            });
-        }
-      },
-      fail: function (err) {
-        console.warn('wx.login 失败:', err);
-        that.handleLoginFallback(callback);
-      }
+    api.login().then(function (d) {
+      console.log('[微信登录] 成功:', d.openid, d.mock ? '(mock 本地开发模式)' : '');
+      that.globalData.openid = d.openid;
+      that.globalData.isAdmin = !!d.isAdmin;
+      that.globalData.isLoggedIn = true;
+      // 登录成功后恢复云端档案
+      that.syncGuestAfterLogin(d.openid);
+      if (typeof callback === 'function') callback(d);
+    }).catch(function (err) {
+      console.warn('[微信登录] 失败（网络或服务端配置问题），恢复网络后会自动重试:', err && err.message);
+      that.handleLoginFallback(callback);
     });
   },
 
-  // 登录解析成功后从 Notion 恢复用户上次填写的历史数据（姓名、电话、祝福语、回执）
+  // 登录异常/离线兜底：沿用本地缓存的 openid；不生成假身份，网络恢复后 api 层会自动重登
+  handleLoginFallback: function (callback) {
+    if (!this.globalData.openid) {
+      const cached = wx.getStorageSync('wx_wedding_openid');
+      if (cached) this.globalData.openid = cached;
+    }
+    if (typeof callback === 'function') callback({ openid: this.globalData.openid });
+  },
+
+  // 登录成功后恢复用户云端档案（姓名、电话、祝福语、回执）
   syncGuestAfterLogin: function (openid) {
     const that = this;
     if (!openid) return;
 
-    // 优先读取本地已提交记录
+    // 1. 先把本地已填写的资料同步到云端（静默、失败不打扰）
+    api.syncUserToNotion({
+      openid: openid,
+      name: wx.getStorageSync('wedding_guest_nickname') || '',
+      phone: wx.getStorageSync('wedding_guest_phone') || '',
+      blessing: wx.getStorageSync('wedding_guest_blessing') || ''
+    });
+
+    // 2. 优先应用本地已提交记录（首屏即时恢复）
     const savedRsvp = wx.getStorageSync('wx_wedding_submitted_rsvp');
     if (savedRsvp) {
       that.globalData.matchedGuest = savedRsvp;
       that.notifyGuestMatched(savedRsvp);
     }
 
-    try {
-      const notion = require('./utils/notion.js');
-      // 1. 同步记录到 Notion 微信小程序用户表 (活跃时间与次数)
-      if (notion && typeof notion.syncUserToNotion === 'function') {
-        notion.syncUserToNotion({
-          openid: openid,
-          name: wx.getStorageSync('wedding_guest_nickname') || '',
-          phone: wx.getStorageSync('wedding_guest_phone') || '',
-          blessing: wx.getStorageSync('wedding_guest_blessing') || ''
+    // 3. 拉取云端档案合并展示
+    api.getUserProfileByOpenid(openid).then(function (profile) {
+      if (profile && profile.matched) {
+        console.log('[档案同步] 已恢复云端用户资料:', profile.name || '(未填姓名)');
+        if (profile.name) {
+          wx.setStorageSync('wedding_guest_nickname', profile.name);
+          const curUser = that.globalData.userInfo || {};
+          curUser.nickName = curUser.nickName || profile.name;
+          that.globalData.userInfo = curUser;
+          wx.setStorageSync('wedding_app_opened', true);
+        }
+        if (profile.phone) {
+          that.globalData.phoneNumber = profile.phone;
+          wx.setStorageSync('wedding_guest_phone', profile.phone);
+          wx.setStorageSync('wx_wedding_phone', profile.phone);
+        }
+        if (profile.blessing) {
+          wx.setStorageSync('wedding_guest_blessing', profile.blessing);
+        }
+        const guestObj = Object.assign({}, profile.rsvp || {}, {
+          name: profile.name,
+          phone: profile.phone,
+          blessing: profile.blessing,
+          openid: openid
         });
+        that.globalData.matchedGuest = guestObj;
+        wx.setStorageSync('wx_wedding_submitted_rsvp', guestObj);
+        that.notifyGuestMatched(guestObj);
       }
-
-      // 2. 从 Notion 查询恢复该用户的历史填报档案（包含姓名、手机、祝福语、回执）
-      if (notion && typeof notion.getUserProfileByOpenid === 'function') {
-        notion.getUserProfileByOpenid(openid).then((profile) => {
-          if (profile && profile.matched) {
-            console.log('[Notion 档案同步] 成功恢复用户数据:', profile.name, profile.phone);
-            if (profile.name) {
-              wx.setStorageSync('wedding_guest_nickname', profile.name);
-              const curUser = that.globalData.userInfo || {};
-              curUser.nickName = curUser.nickName || profile.name;
-              that.globalData.userInfo = curUser;
-            }
-            if (profile.phone) {
-              that.globalData.phoneNumber = profile.phone;
-              wx.setStorageSync('wedding_guest_phone', profile.phone);
-              wx.setStorageSync('wx_wedding_phone', profile.phone);
-            }
-            if (profile.blessing) {
-              wx.setStorageSync('wedding_guest_blessing', profile.blessing);
-            }
-            if (profile.name) {
-              wx.setStorageSync('wedding_app_opened', true);
-            }
-
-            const guestObj = Object.assign({}, profile.rsvp || {}, {
-              name: profile.name,
-              phone: profile.phone,
-              blessing: profile.blessing,
-              openid: openid
-            });
-            that.globalData.matchedGuest = guestObj;
-            wx.setStorageSync('wx_wedding_submitted_rsvp', guestObj);
-            that.notifyGuestMatched(guestObj);
-          }
-        }).catch((e) => {
-          console.log('[Notion] 档案同步提示:', e);
-        });
-      }
-    } catch (e) {
-      console.warn('同步 Notion 档案发生错误:', e);
-    }
+    }).catch(function (e) {
+      console.log('[档案同步] 提示:', e && e.message);
+    });
   },
 
-  // 登录异常或无网络时的兜底降级处理
-  handleLoginFallback: function (callback) {
-    if (!this.globalData.openid) {
-      const cached = wx.getStorageSync('wx_wedding_openid');
-      if (cached) {
-        this.globalData.openid = cached;
-      } else {
-        const mockOpenId = 'wx_guest_' + Date.now().toString(36);
-        this.globalData.openid = mockOpenId;
-        wx.setStorageSync('wx_wedding_openid', mockOpenId);
-      }
-    }
-    if (typeof callback === 'function') callback({ openid: this.globalData.openid });
-  },
-
-  // 统一解密/换取手机号 (同时兼容 Promise 与 callback 两种调用风格，兼容传事件对象或传 code 字符串)
+  // 微信手机号授权换取（服务端换号；本地未配置时返回演示号，可手动输入兜底）
   resolvePhoneNumber: function (eOrCode, callback) {
     const that = this;
-    return new Promise((resolve) => {
+    return new Promise(function (resolve) {
       let phoneCode = '';
-      let encryptedData = '';
-      let iv = '';
-
       if (typeof eOrCode === 'string') {
         phoneCode = eOrCode;
       } else if (eOrCode && eOrCode.detail) {
         phoneCode = eOrCode.detail.code || '';
-        encryptedData = eOrCode.detail.encryptedData || '';
-        iv = eOrCode.detail.iv || '';
-
         // 用户主动取消授权
         if (eOrCode.detail.errMsg && eOrCode.detail.errMsg.indexOf('deny') !== -1) {
           wx.showToast({ title: '已取消授权，可直接输入', icon: 'none' });
@@ -250,81 +187,47 @@ App({
         }
       }
 
-      if (!phoneCode && !encryptedData) {
+      if (!phoneCode) {
         wx.showToast({ title: '可直接输入手机号', icon: 'none' });
         if (typeof callback === 'function') callback('');
         return resolve('');
       }
 
-      const apiBase = (that.globalData && that.globalData.apiBase) || '';
-
-      // 未配置专属后端服务时的降级提示
-      if (!apiBase) {
-        wx.showToast({ title: '请直接输入联系电话', icon: 'none' });
-        if (typeof callback === 'function') callback('');
-        return resolve('');
-      }
-
       wx.showLoading({ title: '正在获取手机号...' });
-
-      wx.request({
-        url: `${apiBase}/api/wechat/phone`,
-        method: 'POST',
-        data: {
-          code: phoneCode,
-          encryptedData: encryptedData,
-          iv: iv,
-          openid: that.globalData.openid
-        },
-        header: { 'content-type': 'application/json' },
-        success: function (res) {
-          wx.hideLoading();
-          if (res.data && res.data.phoneNumber) {
-            const phone = res.data.phoneNumber;
-            that.globalData.phoneNumber = phone;
-            wx.setStorageSync('wx_wedding_phone', phone);
-            wx.setStorageSync('wedding_guest_phone', phone);
-            wx.showToast({ title: '已填入手机号', icon: 'success' });
-            if (typeof callback === 'function') callback(phone);
-            resolve(phone);
-          } else {
-            wx.showToast({ title: '可直接输入手机号', icon: 'none' });
-            if (typeof callback === 'function') callback('');
-            resolve('');
-          }
-        },
-        fail: function () {
-          wx.hideLoading();
-          wx.showToast({ title: '请直接输入联系电话', icon: 'none' });
+      api.getPhoneNumber(phoneCode).then(function (phone) {
+        wx.hideLoading();
+        if (phone) {
+          that.globalData.phoneNumber = phone;
+          wx.setStorageSync('wx_wedding_phone', phone);
+          wx.setStorageSync('wedding_guest_phone', phone);
+          wx.showToast({ title: '已填入手机号', icon: 'success' });
+          if (typeof callback === 'function') callback(phone);
+          resolve(phone);
+        } else {
+          wx.showToast({ title: '可直接输入手机号', icon: 'none' });
           if (typeof callback === 'function') callback('');
           resolve('');
         }
+      }).catch(function (err) {
+        wx.hideLoading();
+        console.warn('[手机号] 获取失败:', err && err.message);
+        wx.showToast({ title: '请直接输入联系电话', icon: 'none' });
+        if (typeof callback === 'function') callback('');
+        resolve('');
       });
     });
   },
 
-  // 从 Notion 同步配置数据与图片
-  syncWeddingConfigFromNotion: function (callback) {
+  // 从云端同步婚礼配置与相册资源（失败时静默沿用本地/默认配置）
+  syncWeddingConfig: function (callback) {
     const that = this;
-    if (!that.globalData.apiBase) return;
-    wx.request({
-      url: `${that.globalData.apiBase}/api/notion/config`,
-      method: 'GET',
-      success: function (res) {
-        if (res.statusCode === 200 && res.data && res.data.config) {
-          that.globalData.weddingConfig = res.data.config;
-          wx.setStorageSync('wx_wedding_config', res.data.config);
-          console.log('[Notion] 已同步婚礼配置与相册资源');
-          if (typeof callback === 'function') callback(res.data.config);
-        } else {
-          console.log('[配置] 使用预设婚礼数据展示');
-          if (typeof callback === 'function') callback(that.globalData.weddingConfig);
-        }
-      },
-      fail: function (err) {
-        console.log('[配置] 离线/默认婚礼配置已就绪');
-        if (typeof callback === 'function') callback(that.globalData.weddingConfig);
-      }
+    api.getWeddingConfig().then(function (cfg) {
+      that.globalData.weddingConfig = cfg;
+      console.log('[配置] 已同步云端婚礼配置');
+      if (typeof callback === 'function') callback(cfg);
+    }).catch(function () {
+      console.log('[配置] 使用本地/默认婚礼配置');
+      if (typeof callback === 'function') callback(that.globalData.weddingConfig);
     });
   },
 
@@ -394,7 +297,7 @@ App({
     });
   },
 
-  // 宾客与 Notion 匹配状态监听
+  // 宾客档案匹配状态监听
   guestMatchedListeners: [],
   addGuestMatchedListener: function (fn) {
     this.guestMatchedListeners.push(fn);
@@ -411,32 +314,24 @@ App({
     });
   },
 
-  // 将当前微信 OpenID 与 Notion 宾客名单比对并绑定
+  // 将当前微信身份绑定到新人预填的宾客名单（按姓名/手机号匹配）
   bindGuestOpenid: function (guestInfo, callback) {
     const that = this;
     const openid = this.globalData.openid || wx.getStorageSync('wx_wedding_openid');
     if (!openid) {
-      if (typeof callback === 'function') callback({ success: false, message: '未获取到微信 OpenID' });
+      if (typeof callback === 'function') callback({ success: false, message: '尚未完成微信登录' });
       return;
     }
 
-    try {
-      const notion = require('./utils/notion.js');
-      notion.bindGuestOpenid({
-        name: guestInfo.name,
-        phone: guestInfo.phone,
-        openid: openid
-      }).then((res) => {
-        if (res && res.updated && guestInfo) {
-          that.globalData.matchedGuest = Object.assign({}, that.globalData.matchedGuest || {}, guestInfo, { openid: openid });
-          that.notifyGuestMatched(that.globalData.matchedGuest);
-        }
-        if (typeof callback === 'function') callback(res);
-      }).catch((err) => {
-        if (typeof callback === 'function') callback({ success: false, error: err });
-      });
-    } catch (e) {
-      if (typeof callback === 'function') callback({ success: false, error: e });
-    }
+    api.bindGuestOpenid({
+      name: (guestInfo && guestInfo.name) || '',
+      phone: (guestInfo && guestInfo.phone) || ''
+    }).then(function (res) {
+      if (res && res.updated && guestInfo) {
+        that.globalData.matchedGuest = Object.assign({}, that.globalData.matchedGuest || {}, guestInfo, { openid: openid });
+        that.notifyGuestMatched(that.globalData.matchedGuest);
+      }
+      if (typeof callback === 'function') callback(res);
+    });
   }
 });

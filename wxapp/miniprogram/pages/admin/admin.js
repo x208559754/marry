@@ -1,95 +1,87 @@
-// pages/admin/admin.js
+// pages/admin/admin.js — 婚礼管理后台（微信 openid 白名单鉴权；数据来自 Cloudflare Worker + D1）
 const app = getApp();
-const notion = require('../../utils/notion.js');
+const api = require('../../utils/api.js');
 const wechat = require('../../utils/wechat.js');
 
 Page({
   data: {
     isAuthorized: false,
-    inputPin: '',
+    currentOpenid: '',
+    backend: '',
     curTab: 'guests',
     rsvpList: [],
     loadingRsvps: false,
     photosList: [],
     uploading: false,
-    initializing: false,
+    savingConfig: false,
     stats: {
       totalAttendees: 0,
       yesCount: 0,
       noCount: 0,
       shuttleCount: 0
     },
-    notionStatus: {
-      hasApiKey: true,
-      rsvpOk: true,
-      blessingsOk: true
-    },
-    appId: '',
-    appSecret: '',
-    currentOpenid: ''
+    // 婚礼信息编辑表单
+    configForm: {
+      groomName: '', groomPhone: '',
+      brideName: '', bridePhone: '',
+      date: '', time: '',
+      venueName: '', venueHall: '', venueAddress: '', venueLat: '', venueLng: '',
+      contactGroom: '', contactBride: ''
+    }
   },
 
   onLoad: function () {
-    const isSavedAuth = wx.getStorageSync('wx_wedding_admin_auth');
-    this.initWechatConfig();
-    if (isSavedAuth) {
-      this.setData({ isAuthorized: true });
-      this.refreshAll();
-    }
+    this.refreshAdminState();
   },
 
-  initWechatConfig: function () {
-    const accountInfo = (wx.getAccountInfoSync && typeof wx.getAccountInfoSync === 'function')
-      ? wx.getAccountInfoSync()
-      : null;
-    const dynamicAppId = (accountInfo && accountInfo.miniProgram && accountInfo.miniProgram.appId && accountInfo.miniProgram.appId !== '__UNI__')
-      ? accountInfo.miniProgram.appId
-      : (app.globalData.appId || 'wx12a496fabe6eb244');
-
-    this.setData({
-      appId: dynamicAppId,
-      appSecret: app.globalData.appSecret || wx.getStorageSync('wx_wedding_app_secret') || '',
-      currentOpenid: app.globalData.openid || wx.getStorageSync('wx_wedding_openid') || ''
-    });
+  onShow: function () {
+    // 每次进入复查一次权限：ADMIN_OPENIDS 变更（重新部署）后无需清缓存即生效
+    this.refreshAdminState();
   },
 
   onPullDownRefresh: function () {
-    if (this.data.isAuthorized) {
-      this.refreshAll(() => {
-        wx.stopPullDownRefresh();
-      });
-    } else {
+    this.refreshAdminState(function () {
       wx.stopPullDownRefresh();
-    }
-  },
-
-  onPinInput: function (e) {
-    this.setData({ inputPin: e.detail.value });
-  },
-
-  verifyPin: function () {
-    const pin = this.data.inputPin.trim();
-    if (pin === '8888' || pin === '6666' || pin === '520') {
-      wx.setStorageSync('wx_wedding_admin_auth', true);
-      this.setData({ isAuthorized: true });
-      wx.showToast({ title: '欢迎进入管理后台', icon: 'success' });
-      this.refreshAll();
-    } else {
-      wx.showToast({ title: '口令错误，请重试', icon: 'none' });
-    }
-  },
-
-  logoutAdmin: function () {
-    wx.removeStorageSync('wx_wedding_admin_auth');
-    this.setData({
-      isAuthorized: false,
-      inputPin: ''
     });
   },
 
+  // 复查登录态与管理员权限
+  refreshAdminState: function (cb) {
+    const that = this;
+    this.setData({ backend: api.BASE_URL });
+    api.getMe().then(function (me) {
+      that.setData({
+        currentOpenid: api.getOpenid() || '',
+        isAuthorized: !!(me && me.isAdmin)
+      });
+      if (me && me.isAdmin) {
+        that.refreshAll();
+        that.loadConfigForm();
+      }
+      if (typeof cb === 'function') cb();
+    }).catch(function (err) {
+      that.setData({ currentOpenid: api.getOpenid() || '' });
+      console.warn('[admin] 获取登录态失败:', err && err.message);
+      if (typeof cb === 'function') cb();
+    });
+  },
+
+  copyOpenid: function () {
+    if (!this.data.currentOpenid) return;
+    wx.setClipboardData({
+      data: this.data.currentOpenid,
+      success: function () { wx.showToast({ title: '已复制 OpenID', icon: 'success' }); }
+    });
+  },
+
+  logoutAdmin: function () {
+    api.logout();
+    this.setData({ isAuthorized: false, rsvpList: [], photosList: [] });
+    wx.showToast({ title: '已退出管理', icon: 'none' });
+  },
+
   switchTab: function (e) {
-    const tab = e.currentTarget.dataset.tab;
-    this.setData({ curTab: tab });
+    this.setData({ curTab: e.currentTarget.dataset.tab });
   },
 
   refreshAll: function (callback) {
@@ -98,15 +90,18 @@ Page({
     if (typeof callback === 'function') callback();
   },
 
+  // ---- 宾客回执 ----
+
   loadRsvps: function () {
+    const that = this;
     this.setData({ loadingRsvps: true });
-    notion.getRsvpList().then((list) => {
+    api.getRsvpList().then(function (list) {
       let attendees = 0;
       let yes = 0;
       let no = 0;
       let shuttle = 0;
 
-      (list || []).forEach(item => {
+      (list || []).forEach(function (item) {
         if (item.attending === 'yes') {
           yes += 1;
           attendees += (parseInt(item.guestCount, 10) || 1);
@@ -116,7 +111,7 @@ Page({
         }
       });
 
-      this.setData({
+      that.setData({
         rsvpList: list || [],
         loadingRsvps: false,
         stats: {
@@ -126,23 +121,22 @@ Page({
           shuttleCount: shuttle
         }
       });
-    }).catch(() => {
-      this.setData({ loadingRsvps: false });
+    }).catch(function () {
+      that.setData({ loadingRsvps: false });
     });
   },
 
+  callGuest: function (e) {
+    wechat.makePhoneCall(e.currentTarget.dataset.phone);
+  },
+
+  // ---- 相册管理 ----
+
   loadPhotos: function () {
-    notion.getNotionImages().then((imgs) => {
-      if (imgs && imgs.length > 0) {
-        this.setData({ photosList: imgs });
-      } else {
-        return notion.getWeddingConfig();
-      }
-    }).then((cfg) => {
-      if (cfg && cfg.photos) {
-        this.setData({ photosList: cfg.photos });
-      }
-    }).catch(() => {});
+    const that = this;
+    api.getPhotosList().then(function (list) {
+      that.setData({ photosList: list || [] });
+    }).catch(function () {});
   },
 
   chooseAndUploadPhoto: function () {
@@ -151,21 +145,38 @@ Page({
       count: 1,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
-      success: (res) => {
+      success: function (res) {
         const tempPath = res.tempFiles[0].tempFilePath;
         that.setData({ uploading: true });
-
-        notion.uploadImageToNotion(tempPath).then((res) => {
+        api.uploadPhoto(tempPath, '婚纱照').then(function () {
           that.setData({ uploading: false });
-          wx.showToast({ title: '图片已上传至Notion', icon: 'success' });
+          wx.showToast({ title: '上传成功', icon: 'success' });
           that.loadPhotos();
-        }).catch((err) => {
+        }).catch(function (err) {
           that.setData({ uploading: false });
           wx.showModal({
-            title: '上传提示',
-            content: err.message || '上传失败，请检查网络或配置',
+            title: '上传失败',
+            content: (err && err.message) || '请检查网络或服务端 IMGBB_API_KEY',
             showCancel: false
           });
+        });
+      }
+    });
+  },
+
+  deletePhoto: function (e) {
+    const that = this;
+    const id = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '删除照片',
+      content: '确定删除这张照片吗？',
+      success: function (res) {
+        if (!res.confirm) return;
+        api.deletePhoto(id).then(function () {
+          wx.showToast({ title: '已删除', icon: 'success' });
+          that.loadPhotos();
+        }).catch(function (err) {
+          wx.showToast({ title: (err && err.message) || '删除失败', icon: 'none' });
         });
       }
     });
@@ -175,71 +186,89 @@ Page({
     const url = e.currentTarget.dataset.url;
     wx.previewImage({
       current: url,
-      urls: this.data.photosList.map(p => p.url)
+      urls: this.data.photosList.map(function (p) { return p.url; })
     });
   },
 
-  callGuest: function (e) {
-    const phone = e.currentTarget.dataset.phone;
-    wechat.makePhoneCall(phone);
-  },
+  // ---- 婚礼信息设置 ----
 
-  autoInitColumns: function () {
-    this.setData({ initializing: true });
-    wx.request({
-      url: `${app.globalData.apiBase}/api/notion/init-database-schema`,
-      method: 'POST',
-      data: { target: 'all' },
-      success: (res) => {
-        this.setData({ initializing: false });
-        if (res.data && res.data.success) {
-          wx.showModal({
-            title: '补齐字段成功',
-            content: '已成功在 Notion RSVP 数据库中补齐 6 大属性列（姓名、出席、人数、手机号、饮食、班车、祝福）！',
-            showCancel: false
-          });
-          this.loadRsvps();
-        } else {
-          wx.showToast({ title: res.data.message || '操作失败', icon: 'none' });
-        }
-      },
-      fail: () => {
-        this.setData({ initializing: false });
-        wx.showToast({ title: '网络请求超时', icon: 'none' });
-      }
-    });
-  },
-
-  onAppSecretInput: function (e) {
-    this.setData({ appSecret: e.detail.value });
-  },
-
-  saveAppSecret: function () {
-    const secret = (this.data.appSecret || '').trim();
-    app.globalData.appSecret = secret;
-    wx.setStorageSync('wx_wedding_app_secret', secret);
-    wx.showToast({ title: 'AppSecret 已保存', icon: 'success' });
-  },
-
-  testJscode2Session: function () {
+  loadConfigForm: function () {
     const that = this;
-    wx.showLoading({ title: '正在测试登录...' });
-    app.doWxLogin((res) => {
-      wx.hideLoading();
-      if (res && res.openid) {
-        that.setData({ currentOpenid: res.openid });
-        wx.showModal({
-          title: '解析成功',
-          content: `OpenID:\n${res.openid}\n\nSessionKey:\n${res.session_key ? (res.session_key.slice(0, 10) + '...') : '已解析'}`,
-          showCancel: false
-        });
-      } else {
-        wx.showModal({
-          title: '解析未成功',
-          content: `errcode: ${res ? res.errcode : '无'}\nerrmsg: ${res ? res.errmsg : '请确认AppSecret是否正确并在开发者工具中勾选不校验合法域名'}`,
-          showCancel: false
-        });
-      }
+    api.getConfig().then(function (cfg) {
+      cfg = cfg || {};
+      const groom = cfg.groom || {};
+      const bride = cfg.bride || {};
+      const venue = cfg.venue || {};
+      const contacts = cfg.contacts || {};
+      that.setData({
+        configForm: {
+          groomName: groom.name || '',
+          groomPhone: groom.phone || '',
+          brideName: bride.name || '',
+          bridePhone: bride.phone || '',
+          date: cfg.date || '',
+          time: cfg.time || '',
+          venueName: venue.name || '',
+          venueHall: venue.hall || '',
+          venueAddress: venue.address || '',
+          venueLat: venue.latitude != null ? String(venue.latitude) : '',
+          venueLng: venue.longitude != null ? String(venue.longitude) : '',
+          contactGroom: contacts.groomPhone || '',
+          contactBride: contacts.bridePhone || ''
+        }
+      });
+    }).catch(function () {});
+  },
+
+  onFormInput: function (e) {
+    const field = e.currentTarget.dataset.field;
+    const update = {};
+    update['configForm.' + field] = e.detail.value;
+    this.setData(update);
+  },
+
+  saveConfigForm: function () {
+    const that = this;
+    const f = this.data.configForm;
+    this.setData({ savingConfig: true });
+    api.getConfig().then(function (cfg) {
+      cfg = cfg || {};
+      const merged = Object.assign({}, cfg, {
+        groom: Object.assign({}, cfg.groom || {}, {
+          name: f.groomName.trim(),
+          phone: f.groomPhone.trim()
+        }),
+        bride: Object.assign({}, cfg.bride || {}, {
+          name: f.brideName.trim(),
+          phone: f.bridePhone.trim()
+        }),
+        date: f.date.trim(),
+        time: f.time.trim(),
+        venue: Object.assign({}, cfg.venue || {}, {
+          name: f.venueName.trim(),
+          hall: f.venueHall.trim(),
+          address: f.venueAddress.trim(),
+          latitude: f.venueLat.trim() ? (parseFloat(f.venueLat) || 0) : ((cfg.venue && cfg.venue.latitude) || 0),
+          longitude: f.venueLng.trim() ? (parseFloat(f.venueLng) || 0) : ((cfg.venue && cfg.venue.longitude) || 0)
+        }),
+        contacts: {
+          groomPhone: f.contactGroom.trim(),
+          bridePhone: f.contactBride.trim()
+        }
+      });
+      return api.saveConfig(merged);
+    }).then(function () {
+      that.setData({ savingConfig: false });
+      wx.showToast({ title: '婚礼信息已保存', icon: 'success' });
+      // 拉取一次合并后的配置刷新本地缓存，其他页面下拉即可看到新内容
+      return api.getWeddingConfig();
+    }).catch(function (err) {
+      that.setData({ savingConfig: false });
+      wx.showModal({
+        title: '保存失败',
+        content: (err && err.message) || '请确认当前账号在管理员白名单（ADMIN_OPENIDS）中',
+        showCancel: false
+      });
     });
   }
 });

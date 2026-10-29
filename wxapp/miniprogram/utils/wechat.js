@@ -1,4 +1,6 @@
-// utils/wechat.js - 微信专属能力封装（登录、手机号、头像选择、地图导航、电话拨打）
+// utils/wechat.js - 微信专属能力封装（拨号、地图导航、保存相册）
+// 注意：登录/换 openid 已全部移到服务端（utils/api.js → Worker /api/login），
+// 客户端不再接触 AppSecret，也不存在 jscode2session 直连。
 
 /**
  * 微信一键拨打电话
@@ -69,35 +71,8 @@ function saveImageToPhotosAlbum(url) {
   });
 }
 
-/**
- * 微信官方 jscode2session 接口直接解析用户凭据 (openid, session_key, unionid)
- */
-function jscode2session(code, appId, appSecret) {
-  return new Promise((resolve, reject) => {
-    if (!code) {
-      return reject(new Error('缺少 code 参数'));
-    }
-    const finalAppId = appId || 'wx12a496fabe6eb244';
-    const finalSecret = appSecret || 'REDACTED_OLD_APPSECRET';
-    const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${encodeURIComponent(finalAppId)}&secret=${encodeURIComponent(finalSecret)}&js_code=${encodeURIComponent(code)}&grant_type=authorization_code`;
-    wx.request({
-      url: url,
-      method: 'GET',
-      success: (res) => {
-        if (res.data && res.data.openid) {
-          resolve(res.data);
-        } else {
-          reject(res.data || new Error('微信登录凭证解析失败'));
-        }
-      },
-      fail: reject
-    });
-  });
-}
-
 module.exports = {
   makePhoneCall,
   openMapLocation,
-  saveImageToPhotosAlbum,
-  jscode2session
+  saveImageToPhotosAlbum
 };

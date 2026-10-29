@@ -1,6 +1,6 @@
 // pages/gallery/gallery.js
 const app = getApp();
-const notion = require('../../utils/notion.js');
+const api = require('../../utils/api.js');
 
 Page({
   data: {
@@ -50,7 +50,7 @@ Page({
   },
 
   loadGallery: function (callback) {
-    notion.getPhotosList().then((list) => {
+    api.getPhotosList().then((list) => {
       if (list && list.length > 0) {
         this.setData({ photosList: list });
       } else {

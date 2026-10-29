@@ -1,6 +1,6 @@
 // pages/index/index.js
 const app = getApp();
-const notion = require('../../utils/notion.js');
+const api = require('../../utils/api.js');
 
 Page({
   data: {
@@ -155,7 +155,7 @@ Page({
   },
 
   loadWeddingData: function (callback) {
-    notion.getWeddingConfig().then((cfg) => {
+    api.getWeddingConfig().then((cfg) => {
       let cover = 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1000&q=80';
       if (cfg && cfg.photos && cfg.photos.length > 0) {
         cover = cfg.photos[0].url;
@@ -178,7 +178,7 @@ Page({
   restoreGuestFromNotion: function () {
     const openid = app.globalData.openid || wx.getStorageSync('wx_wedding_openid');
     if (!openid) return;
-    notion.getUserProfileByOpenid(openid).then((profile) => {
+    api.getUserProfileByOpenid(openid).then((profile) => {
       if (profile && profile.matched) {
         this.applyGuestProfile(profile);
       }
@@ -340,7 +340,7 @@ Page({
     wx.setStorageSync('wedding_app_opened', true);
 
     // 持久化保存到 Notion 云端数据库（用户表、回执表、祝福语表）
-    notion.syncUserToNotion({
+    api.syncUserToNotion({
       name: name,
       phone: phone,
       blessing: blessing
@@ -428,7 +428,7 @@ Page({
     wx.setStorageSync('wedding_guest_nickname', name);
 
     // 同步到 Notion 用户表及回执
-    notion.syncUserToNotion({
+    api.syncUserToNotion({
       name: name,
       phone: this.data.guestPhone,
       blessing: this.data.guestBlessing
@@ -448,7 +448,7 @@ Page({
     wx.setStorageSync('wedding_app_opened', true);
 
     // 记录访问用户至 Notion 用户表
-    notion.syncUserToNotion({ name: defaultName, phone: defaultPhone });
+    api.syncUserToNotion({ name: defaultName, phone: defaultPhone });
 
     if (!this.data.isPlayingBgm) {
       app.toggleBackgroundMusic();
@@ -512,10 +512,7 @@ Page({
 
   startCountdown: function () {
     const update = () => {
-      const targetDateStr = (this.data.config && this.data.config.weddingDate)
-        ? this.data.config.weddingDate.replace(/年|月/g, '-').replace(/日/g, '')
-        : '2026-10-18';
-      const targetTime = new Date(targetDateStr).getTime() || new Date('2026-10-18 11:58:00').getTime();
+      const cfg = this.data.config || {}; const rawDate = String(cfg.date || '2026-10-18').replace(/年|月/g, '-').replace(/日/g, '').trim(); const rawTime = String(cfg.time || '11:58').trim(); const targetTime = new Date((rawDate + ' ' + rawTime).replace(/-/g, '/')).getTime() || new Date('2026/10/18 11:58').getTime();
       const now = Date.now();
       const diff = Math.max(0, targetTime - now);
 

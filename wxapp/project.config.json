@@ -1,7 +1,7 @@
 {
   "miniprogramRoot": "miniprogram/",
   "projectname": "wedding-invitation-miniprogram",
-  "description": "浪漫满溢·原生微信小程序婚礼请柬与Notion管理后台",
+  "description": "浪漫满溢·原生微信小程序婚礼请柬与云端管理后台",
   "appid": "touristappid",
   "setting": {
     "urlCheck": false,

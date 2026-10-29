@@ -269,7 +269,7 @@
     <view class="card wedding-hero-card">
       <view class="hero-en-tag">WEDDING INVITATION</view>
 
-      <view class="hero-couple-names">
+      <view class="hero-couple-names" bindlongpress="onSecretAdminTrigger">
         <text class="name-text">{{config.groom.name || '陈长生'}}</text>
         <text class="amp-text">&</text>
         <text class="name-text">{{config.bride.name || '徐有容'}}</text>

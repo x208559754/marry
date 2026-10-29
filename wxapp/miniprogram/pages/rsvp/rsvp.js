@@ -1,6 +1,6 @@
 // pages/rsvp/rsvp.js
 const app = getApp();
-const notion = require('../../utils/notion.js');
+const api = require('../../utils/api.js');
 
 Page({
   data: {
@@ -50,7 +50,7 @@ Page({
 
     // 尝试向 Notion 实时核验当前的 OpenID
     if (openid) {
-      notion.checkGuestByOpenid(openid).then((res) => {
+      api.checkGuestByOpenid(openid).then((res) => {
         if (res && res.matched && res.guest) {
           this.applyMatchedGuest(res.guest);
         }
@@ -284,7 +284,7 @@ Page({
       submittedAt: new Date().toISOString()
     };
 
-    notion.submitRsvp(payload).then((res) => {
+    api.submitRsvp(payload).then((res) => {
       this.setData({
         submitting: false,
         isSubmitted: true,
