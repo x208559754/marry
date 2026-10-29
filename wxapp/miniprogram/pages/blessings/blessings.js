@@ -4,6 +4,7 @@ const api = require('../../utils/api.js');
 
 Page({
   data: {
+    danmakuList: [],
     defaultAvatar: '',
     guestName: '',
     guestAvatar: '',
@@ -72,10 +73,33 @@ Page({
         blessingsList: formatted,
         heartsCount: 1314 + formatted.length
       });
+      this.buildDanmaku(formatted);
       if (typeof callback === 'function') callback();
     }).catch(() => {
       if (typeof callback === 'function') callback();
     });
+  },
+
+  // 组装弹幕（有真实祝福滚真实的；没有则用预设祝词兜底，保证弹幕区不空场）
+  buildDanmaku: function (list) {
+    var source = (list && list.length)
+      ? list.map(function (it) {
+          var text = (it.author ? it.author + '：' : '') + (it.content || '');
+          return text.length > 16 ? text.slice(0, 16) + '…' : text;
+        })
+      : this.data.presetBlessings;
+    var items = [];
+    var max = Math.min(source.length, 9);
+    for (var i = 0; i < max; i++) {
+      items.push({
+        key: 'dm_' + i,
+        text: source[i],
+        lane: i % 3,
+        duration: 12 + (i % 4) * 2,
+        delay: -(i * 2.4)
+      });
+    }
+    this.setData({ danmakuList: items });
   },
 
   sendHeart: function () {

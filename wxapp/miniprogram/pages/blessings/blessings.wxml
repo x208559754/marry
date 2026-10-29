@@ -7,6 +7,16 @@
     <view class="section-divider"></view>
   </view>
 
+  <!-- 祝福弹幕（实时滚动） -->
+  <view class="danmaku-stage">
+    <view
+      wx:for="{{danmakuList}}"
+      wx:key="key"
+      class="danmaku-item danmaku-lane-{{item.lane}}"
+      style="animation-duration: {{item.duration}}s; animation-delay: {{item.delay}}s;"
+    >{{item.text}}</view>
+  </view>
+
   <!-- 祝福互动区 -->
   <view class="card heart-energy-card">
     <view class="he-title">已收到亲友真挚祝福</view>

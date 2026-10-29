@@ -250,3 +250,36 @@
 .like-heart {
   font-size: 22rpx;
 }
+
+
+/* ================= 祝福弹幕 ================= */
+.danmaku-stage {
+  position: relative;
+  height: 200rpx;
+  margin: 0 24rpx 24rpx;
+  border-radius: 20rpx;
+  overflow: hidden;
+  background: linear-gradient(150deg, #8B1E1E 0%, #A93226 60%, #C05B49 100%);
+}
+.danmaku-item {
+  position: absolute;
+  left: 0;
+  white-space: nowrap;
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 252, 246, 0.95);
+  color: #8B1E1E;
+  font-size: 24rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.20);
+  animation-name: danmaku-move;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+.danmaku-lane-0 { top: 22rpx; }
+.danmaku-lane-1 { top: 76rpx; }
+.danmaku-lane-2 { top: 130rpx; }
+@keyframes danmaku-move {
+  from { transform: translateX(760rpx); }
+  to { transform: translateX(-100%); }
+}
