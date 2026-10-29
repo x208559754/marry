@@ -222,8 +222,6 @@ const lines = [];
 lines.push('-- scripts/seed.sql — 由 scripts/export-notion.mjs 生成（' + new Date().toISOString() + '）');
 lines.push('-- 旧 Notion 数据一次性迁移；含个人隐私数据，已 gitignore，请勿提交');
 lines.push('');
-lines.push('BEGIN TRANSACTION;');
-lines.push('');
 
 if (weddingConfig && Object.keys(weddingConfig).length) {
   lines.push("-- 婚礼配置");
@@ -274,8 +272,6 @@ if (blessingRows.length) {
   lines.push('');
 }
 
-lines.push('COMMIT;');
-lines.push('');
 
 fs.mkdirSync('scripts', { recursive: true });
 fs.writeFileSync(path.resolve('scripts/seed.sql'), lines.join('\n'), 'utf8');
