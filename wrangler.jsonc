@@ -4,13 +4,12 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-09-01",
 
-  // 非敏感环境变量；敏感信息（WX_APPSECRET / SESSION_SECRET / IMGBB_API_KEY）用
-  // `npx wrangler secret put <名称>` 配置。
+  // 非敏感环境变量；敏感信息（WX_APPSECRET / SESSION_SECRET / IMGBB_API_KEY / ADMIN_OPENIDS）用
+  // `npx wrangler secret put <名称>` 配置（本仓库是公开的，个人 openid 等都不进仓库）。
   // ADMIN_OPENIDS：平台超级管理员 openid 白名单（逗号分隔，可管理所有婚礼）；
   // 单场婚礼的管理员在数据库 users.is_admin 中配置，不写在这里。
   "vars": {
-    "WX_APPID": "wx12a496fabe6eb244",
-    "ADMIN_OPENIDS": ""
+    "WX_APPID": "wx12a496fabe6eb244"
   },
 
   // D1 数据库绑定（database_id 来自 `npm run db:create` 的输出）
