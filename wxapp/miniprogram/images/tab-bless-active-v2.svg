@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="blessBubble" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A52A2A"/>
+      <stop offset="100%" stop-color="#7B1414"/>
+    </linearGradient>
+    <linearGradient id="heartGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEBB3"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+  </defs>
+  <!-- Active Blessings Speech Bubble -->
+  <path d="M12 10 C7 10 5 14 5 19 C5 26 12 32 18 32 L18 38 L25 32 C37 32 43 28 43 19 C43 14 39 10 32 10 Z" fill="url(#blessBubble)" stroke="#D4AF37" stroke-width="1.8" stroke-linejoin="round"/>
+  <!-- Glowing Heart -->
+  <path d="M24 24.5 C21 21.5 19.5 19.5 19.5 17.5 C19.5 15.5 21 14.2 22.8 14.2 C23.8 14.2 24 14.8 24 14.8 C24 14.8 24.2 14.2 25.2 14.2 C27 14.2 28.5 15.5 28.5 17.5 C28.5 19.5 27 21.5 24 24.5 Z" fill="url(#heartGold)"/>
+  <!-- Sparkles -->
+  <circle cx="13" cy="16" r="1.2" fill="#FFEBB3"/>
+  <circle cx="35" cy="15" r="1.2" fill="#FFEBB3"/>
+</svg>

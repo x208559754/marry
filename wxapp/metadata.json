@@ -1,0 +1,8 @@
+{
+  "name": "浪漫满溢·电子结婚请柬与小程序",
+  "description": "高颜值跨端电子结婚请柬，支持新中式/法式/森系/极简多套主题切换、背景音乐与花瓣飘落动效、婚纱大片展卷、婚礼日程与一键地图导航、实时弹幕祝福板与宾客RSVP出席回执统计。",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

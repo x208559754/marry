@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- Inactive Invitation Envelope -->
+  <rect x="6" y="11" width="36" height="26" rx="5" fill="none" stroke="#9A8982" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M7 13 L24 26 L41 13" fill="none" stroke="#9A8982" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="24" cy="26" r="3.5" fill="#BFA78F"/>
+</svg>

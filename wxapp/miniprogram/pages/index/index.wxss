@@ -1,0 +1,1505 @@
+/* pages/index/index.wxss - 高定唯美喜帖样式 (开屏火漆信封 + 纸质信笺展出 + 首页主视口) */
+.container {
+  padding-top: 220rpx;
+  padding-top: calc(env(safe-area-inset-top) + 160rpx);
+  padding-bottom: 80rpx;
+  min-height: 100vh;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* =========================================================================
+   0. 古典梅花枝头艺术装饰 (Plum Blossom Branch Header Decoration)
+   寓意：喜上眉梢 · 暗香疏影 · 良缘天成
+   ========================================================================= */
+.header-plum-branch-wrap,
+.splash-plum-branch-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  overflow: visible;
+  line-height: 0;
+}
+
+.header-plum-branch-wrap {
+  z-index: 20;
+  opacity: 0.92;
+  transform-origin: 0 0;
+  animation: plumBranchBreeze 10s ease-in-out infinite alternate;
+}
+
+.splash-plum-branch-wrap {
+  z-index: 101;
+  opacity: 0.96;
+  transform-origin: 0 0;
+  animation: plumBranchBreeze 10s ease-in-out infinite alternate;
+}
+
+.header-plum-branch-img,
+.splash-plum-branch-img {
+  width: 100%;
+  max-width: 820rpx;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 6rpx 14rpx rgba(110, 36, 40, 0.1));
+}
+
+@keyframes plumBranchBreeze {
+  0% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: rotate(0.6deg) translate3d(4rpx, -2rpx, 0);
+  }
+  100% {
+    transform: rotate(-0.5deg) translate3d(-3rpx, 2rpx, 0);
+  }
+}
+
+/* =========================================================================
+   1. 全屏开屏火漆信封覆盖层 (Full-Screen Splash Cover)
+   ========================================================================= */
+.splash-cover-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  z-index: 100;
+  background: radial-gradient(ellipse at 50% 25%, #FDF7F2 0%, #F5E3D8 35%, #E9D0C5 70%, #D8B7AC 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 190rpx 32rpx 48rpx;
+  padding-top: calc(env(safe-area-inset-top) + 140rpx);
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.splash-cover-overlay.fade-out {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+
+/* 顶部跳过 (安全置于左上角，与微信右上角官方胶囊按钮形成完美视效呼应) */
+.splash-skip-wrap {
+  position: absolute;
+  top: 80rpx;
+  top: calc(env(safe-area-inset-top) + 20rpx);
+  left: 36rpx;
+  z-index: 105;
+}
+
+.splash-skip-btn {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1rpx solid rgba(225, 215, 205, 0.95);
+  padding: 10rpx 26rpx;
+  border-radius: 30rpx;
+  font-size: 22rpx;
+  color: #5C4F4A;
+  backdrop-filter: blur(10rpx);
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.05);
+}
+
+/* 顶部抬头 */
+.splash-top-header {
+  text-align: center;
+  margin-top: 10rpx;
+  margin-bottom: 36rpx;
+  z-index: 102;
+}
+
+.splash-en-title {
+  font-size: 22rpx;
+  letter-spacing: 6rpx;
+  color: #8D5E53;
+  text-transform: uppercase;
+  font-family: serif;
+}
+
+.splash-couple-title {
+  font-size: 46rpx;
+  font-weight: 700;
+  color: #3E221E;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  margin: 12rpx 0 6rpx;
+  letter-spacing: 2rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+}
+
+.splash-amp {
+  font-size: 38rpx;
+  color: #C58B79;
+  font-weight: 300;
+  font-family: serif;
+}
+
+.splash-sub-desc {
+  font-size: 24rpx;
+  color: #8D645B;
+  letter-spacing: 3rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+/* 信封本体卡片 */
+.splash-envelope-box {
+  width: 100%;
+  max-width: 660rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 102;
+}
+
+.envelope-card-body {
+  width: 100%;
+  height: 480rpx;
+  border-radius: 36rpx;
+  background: linear-gradient(145deg, #DEABA4 0%, #D49990 40%, #BF7E75 100%);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 25rpx 60rpx rgba(130, 75, 68, 0.35), 0 10rpx 25rpx rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.envelope-gold-frame {
+  position: absolute;
+  top: 14rpx;
+  left: 14rpx;
+  right: 14rpx;
+  bottom: 14rpx;
+  border-radius: 28rpx;
+  border: 2rpx solid rgba(248, 215, 152, 0.75);
+  pointer-events: none;
+}
+
+.envelope-gold-inner {
+  position: absolute;
+  top: 22rpx;
+  left: 22rpx;
+  right: 22rpx;
+  bottom: 22rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid rgba(255, 240, 200, 0.45);
+  pointer-events: none;
+}
+
+.envelope-flap-triangle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 220rpx;
+  background: linear-gradient(180deg, rgba(201, 133, 125, 0.95) 0%, rgba(191, 126, 117, 0.95) 100%);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  border-bottom: 2rpx solid rgba(248, 215, 152, 0.7);
+}
+
+.envelope-seal-center {
+  position: absolute;
+  top: 150rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+/* 真实熔蜡非正圆天然流淌质感 3D 浮雕扫金火漆印章 */
+.organic-wax-seal-img {
+  width: 176rpx;
+  height: 176rpx;
+  display: block;
+  filter: drop-shadow(0 14rpx 28rpx rgba(100, 16, 16, 0.45)) drop-shadow(0 4rpx 10rpx rgba(0, 0, 0, 0.2));
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.organic-wax-seal-img:active {
+  transform: scale(0.93) rotate(-2deg);
+}
+
+.seal-break-anim {
+  animation: waxBreak 0.6s forwards;
+}
+
+@keyframes waxBreak {
+  0% { transform: scale(1) rotate(0deg); }
+  35% { transform: scale(1.18) rotate(-10deg); }
+  100% { transform: scale(0) rotate(25deg); opacity: 0; }
+}
+
+.envelope-bottom-date {
+  position: absolute;
+  bottom: 24rpx;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 20rpx;
+  color: #FFF2D4;
+  letter-spacing: 4rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.seal-tap-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  font-size: 26rpx;
+  color: #8D5E53;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  margin-top: 36rpx;
+}
+
+.seal-hint-dot {
+  color: #D4AF37;
+  font-size: 18rpx;
+}
+
+/* 展出的纸质信笺 */
+.splash-letter-scroll {
+  width: 100%;
+  max-width: 680rpx;
+  margin: 0 auto;
+  box-sizing: border-box;
+  z-index: 102;
+  padding-bottom: 80rpx;
+  animation: slideUpLetter 0.6s ease-out;
+}
+
+@keyframes slideUpLetter {
+  from { opacity: 0; transform: translateY(40rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.letter-paper-card {
+  width: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FCF9F5 50%, #F8F2E8 100%);
+  border-radius: 36rpx;
+  padding: 44rpx 30rpx;
+  box-shadow: 0 25rpx 60rpx rgba(120, 70, 65, 0.25);
+  border: 1rpx solid rgba(225, 215, 205, 0.9);
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.letter-paper-stamped {
+  animation: paperPress 0.65s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@keyframes paperPress {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.982); }
+  70% { transform: scale(1.008); }
+  100% { transform: scale(1); }
+}
+
+.letter-gold-border {
+  position: absolute;
+  top: 14rpx;
+  left: 14rpx;
+  right: 14rpx;
+  bottom: 14rpx;
+  border-radius: 28rpx;
+  border: 1rpx solid rgba(212, 175, 55, 0.35);
+  pointer-events: none;
+}
+
+.letter-head {
+  text-align: center;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid rgba(212, 175, 55, 0.3);
+}
+
+.letter-mini-seal {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  background: #8B1E1E;
+  color: #F8E2A6;
+  font-size: 26rpx;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10rpx;
+  box-shadow: 0 4rpx 10rpx rgba(139, 30, 30, 0.3);
+}
+
+.letter-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1A1311;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  letter-spacing: 3rpx;
+}
+
+.letter-en {
+  font-size: 18rpx;
+  color: #A8958E;
+  letter-spacing: 4rpx;
+  font-family: serif;
+  text-transform: uppercase;
+}
+
+/* 专属迎宾抬头（实时展示输入名字，提交时伴随落印动效） */
+.letter-guest-salute {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  margin: 24rpx 0 12rpx;
+  padding: 10rpx 16rpx;
+  border-radius: 16rpx;
+  transition: all 0.4s ease;
+}
+
+.salute-stamping-glow {
+  background: radial-gradient(ellipse at center, rgba(212, 175, 55, 0.22) 0%, rgba(184, 40, 40, 0.1) 60%, transparent 100%);
+  box-shadow: 0 0 24rpx rgba(212, 175, 55, 0.35);
+}
+
+.salute-badge {
+  background: #8B1E1E;
+  color: #F8E2A6;
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-weight: 600;
+}
+
+.salute-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #3E221E;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  letter-spacing: 1rpx;
+  transition: color 0.3s ease;
+}
+
+.salute-empty-hint {
+  color: #A88F85;
+  font-size: 25rpx;
+  font-weight: 500;
+  letter-spacing: 1rpx;
+}
+
+/* 题名落印章徽标 (盖在信纸上) */
+.salute-stamp-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid #B82828;
+  background: rgba(184, 40, 40, 0.08);
+  border-radius: 6rpx;
+  padding: 2rpx 8rpx;
+  transform: rotate(-6deg);
+  margin-left: 8rpx;
+  box-shadow: inset 0 0 4rpx rgba(184, 40, 40, 0.2);
+}
+
+.salute-stamp-badge.stamp-show {
+  animation: stampDropAnim 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes stampDropAnim {
+  0% { opacity: 0; transform: scale(2.2) rotate(-28deg); }
+  60% { opacity: 1; transform: scale(0.92) rotate(-6deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-6deg); }
+}
+
+.ssb-text {
+  font-size: 18rpx;
+  font-weight: 700;
+  color: #B82828;
+  font-family: "STKaiti", "KaiTi", serif;
+  letter-spacing: 2rpx;
+  line-height: 1;
+}
+
+.letter-prose {
+  margin: 20rpx 0 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.letter-p {
+  font-size: 24rpx;
+  line-height: 1.8;
+  color: #5C4F4A;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  text-align: justify;
+  text-indent: 48rpx;
+}
+
+.highlight-text {
+  font-weight: bold;
+  color: #8B1E1E;
+}
+
+.letter-info-card {
+  background: #FAF7F2;
+  border-radius: 20rpx;
+  padding: 20rpx 24rpx;
+  border: 1rpx solid rgba(225, 215, 205, 0.8);
+  margin-bottom: 26rpx;
+}
+
+.lic-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  font-size: 22rpx;
+  color: #5C4F4A;
+  margin-bottom: 10rpx;
+}
+
+.lic-row:last-child {
+  margin-bottom: 0;
+}
+
+.lic-tag {
+  background: rgba(139, 30, 30, 0.08);
+  color: #8B1E1E;
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.lic-text {
+  font-weight: 600;
+  color: #2D2522;
+}
+
+/* 宾客名帖题名区 */
+.letter-guest-form {
+  border-top: 2rpx dashed rgba(212, 175, 55, 0.45);
+  padding-top: 32rpx;
+  margin-top: 8rpx;
+}
+
+.form-title-row {
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+
+.ft-left {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+}
+
+.ft-diamond {
+  color: #D4AF37;
+  font-size: 18rpx;
+}
+
+.ft-text {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #3E221E;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  letter-spacing: 2rpx;
+}
+
+.ft-sub {
+  font-size: 20rpx;
+  color: #8C6D62;
+  margin-top: 6rpx;
+  display: block;
+}
+
+/* 金笺式条目卡片 */
+.lform-slip-card {
+  display: flex;
+  align-items: center;
+  background: #FFFFFF;
+  border: 1.5rpx solid #E5D7CA;
+  border-radius: 18rpx;
+  height: 88rpx;
+  padding: 0 16rpx 0 20rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(139, 30, 30, 0.03);
+  box-sizing: border-box;
+  width: 100%;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.shake-error {
+  animation: shakeErrorAnim 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  border-color: #C23838 !important;
+  background: #FFF8F8 !important;
+  box-shadow: 0 0 16rpx rgba(194, 56, 56, 0.28) !important;
+}
+
+@keyframes shakeErrorAnim {
+  10%, 90% { transform: translate3d(-3rpx, 0, 0); }
+  20%, 80% { transform: translate3d(5rpx, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-6rpx, 0, 0); }
+  40%, 60% { transform: translate3d(6rpx, 0, 0); }
+}
+
+.lform-slip-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  width: 136rpx;
+  flex-shrink: 0;
+}
+
+.lform-slip-label {
+  font-size: 24rpx;
+  color: #7D5A4F;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+  white-space: nowrap;
+}
+
+.lform-slip-req {
+  font-size: 17rpx;
+  color: #C23838;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lform-slip-opt {
+  font-size: 17rpx;
+  color: #A08C82;
+  white-space: nowrap;
+}
+
+.lform-slip-divider {
+  width: 2rpx;
+  height: 28rpx;
+  background: #E8DDD2;
+  margin: 0 14rpx;
+  flex-shrink: 0;
+}
+
+.lform-slip-input {
+  flex: 1;
+  min-width: 0;
+  height: 88rpx;
+  font-size: 24rpx;
+  color: #2D2522;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.phone-input-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+}
+
+.phone-flex {
+  flex: 1;
+  min-width: 0;
+  padding-right: 10rpx;
+  height: 88rpx;
+  font-size: 24rpx;
+  color: #2D2522;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.slip-placeholder {
+  color: #B5A499;
+  font-size: 22rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.btn-wx-auth-phone-elegant {
+  background: linear-gradient(135deg, #FAF4E8 0%, #F5E8D2 100%);
+  color: #8B1E1E;
+  border: 1.5rpx solid #D6B265;
+  font-size: 20rpx;
+  height: 52rpx;
+  line-height: 50rpx;
+  border-radius: 26rpx;
+  padding: 0 16rpx !important;
+  margin: 0 !important;
+  width: auto !important;
+  min-height: 0 !important;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2rpx 6rpx rgba(214, 178, 101, 0.2);
+  box-sizing: border-box;
+}
+
+.btn-wx-auth-phone-elegant::after {
+  border: none;
+}
+
+.btn-wx-auth-phone-elegant:active {
+  opacity: 0.85;
+}
+
+/* 贺词祈愿卡片 */
+.lform-blessing-box {
+  background: #FFFFFF;
+  border: 1.5rpx solid #E5D7CA;
+  border-radius: 20rpx;
+  padding: 24rpx 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(139, 30, 30, 0.03);
+  box-sizing: border-box;
+  margin-bottom: 28rpx;
+}
+
+.lbless-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.lbless-title {
+  font-size: 24rpx;
+  color: #7D5A4F;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-weight: 600;
+}
+
+.lbless-sub {
+  font-size: 20rpx;
+  color: #A8958E;
+}
+
+.lform-couplets-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14rpx;
+  margin-top: 10rpx;
+  margin-bottom: 18rpx;
+}
+
+.lcouplet-item {
+  background: #FAF7F2;
+  border: 1rpx solid #EAE0D5;
+  border-radius: 12rpx;
+  height: 60rpx;
+  padding: 0 14rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 20rpx;
+  color: #5C4F4A;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.lcouplet-item.active {
+  background: #FFF5E0;
+  border-color: #D4AF37;
+  color: #6E4000;
+  font-weight: 600;
+}
+
+.couplet-bullet {
+  color: #C5A059;
+  font-size: 16rpx;
+  flex-shrink: 0;
+}
+
+.couplet-txt {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lform-textarea {
+  width: 100%;
+  height: 104rpx;
+  background: #FAF7F2;
+  border: 1rpx solid #EFE6DD;
+  border-radius: 14rpx;
+  padding: 14rpx 16rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+  color: #2D2522;
+  box-sizing: border-box;
+  margin-top: 4rpx;
+}
+
+/* 恭启良辰喜帖盛典大按钮 (置于信笺底部自然承接) */
+.btn-enter-app-ceremony {
+  background: linear-gradient(135deg, #A82828 0%, #8B1E1E 50%, #6E1111 100%);
+  color: #FFF4DE;
+  font-size: 28rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-weight: 600;
+  letter-spacing: 4rpx;
+  height: 92rpx;
+  line-height: 92rpx;
+  border-radius: 46rpx;
+  border: 1.5rpx solid rgba(247, 219, 140, 0.7);
+  box-shadow: 0 12rpx 32rpx rgba(139, 30, 30, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  margin-top: 36rpx !important;
+  margin-bottom: 8rpx !important;
+  width: 100% !important;
+  padding: 0 24rpx !important;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.btn-enter-txt {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #FFF4DE;
+  letter-spacing: 4rpx;
+  white-space: nowrap;
+}
+
+.btn-bullet {
+  color: #F8E2A6;
+  font-size: 20rpx;
+  flex-shrink: 0;
+}
+
+.btn-enter-app-ceremony:active {
+  transform: scale(0.98);
+  opacity: 0.95;
+}
+
+.btn-enter-app-ceremony.stamping-active {
+  background: linear-gradient(135deg, #7A1616 0%, #540D0D 100%);
+  box-shadow: 0 6rpx 20rpx rgba(84, 13, 13, 0.45);
+  transform: scale(0.97);
+  opacity: 0.92;
+}
+
+/* =========================================================================
+   2. 首页顶部专属迎宾名牌
+   ========================================================================= */
+.guest-welcome-banner {
+  background: linear-gradient(135deg, #FFFDF8 0%, #FFFFFF 60%, #FAF4EC 100%);
+  border: 1rpx solid rgba(212, 175, 55, 0.45);
+  padding: 34rpx 30rpx;
+}
+
+.gwb-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.gwb-honorific {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.gwb-red-tag {
+  background: #8B1E1E;
+  color: #F8E2A6;
+  font-size: 18rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  font-weight: 600;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.gwb-to {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1A1311;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  letter-spacing: 2rpx;
+}
+
+.gwb-edit-badge {
+  font-size: 20rpx;
+  color: #8B1E1E;
+  background: rgba(139, 30, 30, 0.08);
+  border: 1rpx solid rgba(139, 30, 30, 0.25);
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  margin-left: 8rpx;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.gwb-reseal-btn {
+  font-size: 20rpx;
+  color: #8C7B75;
+  padding: 4rpx 10rpx;
+}
+
+.gwb-invitation-words {
+  font-size: 24rpx;
+  color: #5C4F4A;
+  line-height: 1.6;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.couple-highlight {
+  font-weight: bold;
+  color: #8B1E1E;
+}
+
+.gwb-blessing-quote {
+  margin-top: 16rpx;
+  background: rgba(250, 247, 242, 0.9);
+  border-radius: 14rpx;
+  padding: 12rpx 18rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.quote-tag {
+  background: rgba(139, 30, 30, 0.1);
+  color: #8B1E1E;
+  font-size: 18rpx;
+  padding: 2rpx 8rpx;
+  border-radius: 4rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.quote-text {
+  font-size: 22rpx;
+  color: #5C4F4A;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+/* =========================================================================
+   3. 迎宾封面大卡片与其余首页组件
+   ========================================================================= */
+.wedding-hero-card {
+  text-align: center;
+  padding: 44rpx 32rpx;
+}
+
+.hero-en-tag {
+  font-size: 20rpx;
+  letter-spacing: 6rpx;
+  color: #A8958E;
+  text-transform: uppercase;
+  font-family: serif;
+}
+
+.hero-couple-names {
+  margin: 16rpx 0 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+}
+
+.hero-couple-names .name-text {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #1A1311;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  letter-spacing: 2rpx;
+}
+
+.hero-couple-names .amp-text {
+  font-size: 38rpx;
+  color: #C5A059;
+  font-family: serif;
+  font-weight: 300;
+}
+
+.hero-pinyin {
+  font-size: 20rpx;
+  color: #A8958E;
+  letter-spacing: 4rpx;
+  font-family: serif;
+  margin-bottom: 24rpx;
+}
+
+/* 3:4 婚纱照 */
+.hero-photo-box {
+  position: relative;
+  width: 100%;
+  height: 600rpx;
+  border-radius: 32rpx;
+  overflow: hidden;
+  box-shadow: 0 12rpx 30rpx rgba(0, 0, 0, 0.08);
+  border: 1rpx solid rgba(225, 215, 205, 0.7);
+}
+
+.hero-img {
+  width: 100%;
+  height: 100%;
+}
+
+.hero-photo-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 40rpx 24rpx 20rpx;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+}
+
+.hero-photo-title {
+  color: #ffffff;
+  font-size: 24rpx;
+  font-weight: 500;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+/* 倒计时 */
+.countdown-wrap {
+  margin-top: 36rpx;
+  padding: 24rpx 16rpx;
+  background: #FAF7F2;
+  border-radius: 28rpx;
+  border: 1rpx solid rgba(225, 215, 205, 0.6);
+}
+
+.cd-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  margin-bottom: 18rpx;
+}
+
+.cd-diamond {
+  color: #C5A059;
+  font-size: 16rpx;
+}
+
+.cd-title-text {
+  font-size: 22rpx;
+  color: #8D645B;
+  letter-spacing: 4rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-weight: 600;
+}
+
+.cd-grid {
+  display: flex;
+  justify-content: center;
+  gap: 16rpx;
+}
+
+.cd-box {
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 16rpx 20rpx;
+  min-width: 100rpx;
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.04);
+  border: 1rpx solid rgba(197, 160, 89, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cd-num {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #8B1E1E;
+  font-family: -apple-system, BlinkMacSystemFont, monospace;
+}
+
+.cd-lbl {
+  font-size: 18rpx;
+  color: #8C7B75;
+  margin-top: 2rpx;
+}
+
+.hero-date-block {
+  margin-top: 30rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx dashed rgba(225, 215, 205, 0.9);
+}
+
+.date-main {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #2D2522;
+}
+
+.date-lunar {
+  font-size: 22rpx;
+  color: #C5A059;
+  margin-top: 6rpx;
+}
+
+/* 诚邀致辞誓言卡片 */
+.prose-card {
+  text-align: center;
+  padding: 40rpx 32rpx;
+}
+
+.prose-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1A1311;
+  letter-spacing: 2rpx;
+  margin-top: 6rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.prose-divider {
+  width: 60rpx;
+  height: 4rpx;
+  background: #8B1E1E;
+  margin: 16rpx auto 24rpx;
+  border-radius: 4rpx;
+}
+
+.prose-body {
+  font-size: 24rpx;
+  line-height: 1.8;
+  color: #5C4F4A;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  text-align: justify;
+  text-indent: 48rpx;
+  display: block;
+  white-space: pre-line;
+}
+
+/* 新郎新娘双名片 */
+.couple-cards-row {
+  display: flex;
+  gap: 20rpx;
+  margin: 0 28rpx 24rpx;
+}
+
+.couple-card {
+  flex: 1;
+  background: #ffffff;
+  border-radius: 36rpx;
+  padding: 32rpx 20rpx;
+  text-align: center;
+  box-shadow: 0 6rpx 24rpx rgba(45, 37, 34, 0.05);
+  border: 1rpx solid rgba(225, 215, 205, 0.8);
+}
+
+.couple-avatar-tag {
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 26rpx;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12rpx;
+  box-shadow: 0 4rpx 14rpx rgba(139, 30, 30, 0.25);
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.couple-avatar-tag.groom {
+  background: #8B1E1E;
+}
+
+.couple-avatar-tag.bride {
+  background: #8B1E1E;
+}
+
+.couple-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #2D2522;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.couple-role {
+  font-size: 18rpx;
+  color: #A8958E;
+  letter-spacing: 2rpx;
+  margin: 4rpx 0 16rpx;
+}
+
+.btn-call {
+  background: #FAF7F2;
+  border-radius: 30rpx;
+  padding: 14rpx 0;
+  border: 1rpx solid rgba(225, 215, 205, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.call-text {
+  font-size: 22rpx;
+  color: #3E221E;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-weight: 600;
+}
+
+.btn-call:active {
+  background: #F2ECE1;
+}
+
+/* 席设快捷卡片 */
+.venue-quick-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx;
+}
+
+.venue-info {
+  flex: 1;
+}
+
+.venue-texts {
+  flex: 1;
+}
+
+.venue-tag {
+  display: inline-block;
+  background: rgba(139, 30, 30, 0.08);
+  color: #8B1E1E;
+  font-size: 18rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.venue-name {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #2D2522;
+}
+
+.venue-addr {
+  font-size: 20rpx;
+  color: #8C7B75;
+  margin-top: 6rpx;
+}
+
+.venue-arrow {
+  font-size: 22rpx;
+  font-weight: bold;
+  color: #8B1E1E;
+  flex-shrink: 0;
+  padding-left: 16rpx;
+}
+
+/* 快捷操作大卡片 */
+.quick-nav-grid {
+  display: flex;
+  gap: 20rpx;
+  margin: 0 28rpx;
+}
+
+.quick-btn {
+  flex: 1;
+  border-radius: 32rpx;
+  padding: 28rpx 20rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.05);
+}
+
+.quick-btn.rsvp-btn {
+  background: linear-gradient(135deg, #9C2424 0%, #8B1E1E 100%);
+  color: #ffffff;
+}
+
+.quick-btn.bless-btn {
+  background: linear-gradient(135deg, #FFFDF8 0%, #FBF6EC 100%);
+  border: 1rpx solid rgba(212, 175, 55, 0.5);
+  color: #5C4F4A;
+}
+
+.qb-title {
+  font-size: 26rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.quick-btn.rsvp-btn .qb-sub {
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 6rpx;
+}
+
+.quick-btn.bless-btn .qb-sub {
+  font-size: 20rpx;
+  color: #8C7B75;
+  margin-top: 6rpx;
+}
+
+/* =========================================================================
+   高定中式雅致弹窗：修改尊名称谓 (替代原生丑陋的 wx.showModal)
+   ========================================================================= */
+.custom-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(18, 12, 12, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 44rpx;
+  box-sizing: border-box;
+  animation: modalFadeIn 0.28s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.custom-modal-card {
+  width: 100%;
+  max-width: 630rpx;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FCF9F5 45%, #F8F2E8 100%);
+  border-radius: 36rpx;
+  padding: 46rpx 36rpx 40rpx;
+  box-shadow: 0 30rpx 70rpx rgba(70, 18, 18, 0.35);
+  border: 1.5rpx solid rgba(225, 215, 205, 0.9);
+  position: relative;
+  box-sizing: border-box;
+  animation: modalScaleUp 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalScaleUp {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 烫金边框与典雅四角 */
+.cmodal-gold-border {
+  position: absolute;
+  top: 14rpx;
+  left: 14rpx;
+  right: 14rpx;
+  bottom: 14rpx;
+  border-radius: 28rpx;
+  border: 1rpx solid rgba(212, 175, 55, 0.35);
+  pointer-events: none;
+}
+
+.cmodal-corner {
+  position: absolute;
+  width: 16rpx;
+  height: 16rpx;
+  border-color: #D4AF37;
+  border-style: solid;
+  pointer-events: none;
+}
+
+.cmodal-corner.tl { top: 22rpx; left: 22rpx; border-width: 2rpx 0 0 2rpx; }
+.cmodal-corner.tr { top: 22rpx; right: 22rpx; border-width: 2rpx 2rpx 0 0; }
+.cmodal-corner.bl { bottom: 22rpx; left: 22rpx; border-width: 0 0 2rpx 2rpx; }
+.cmodal-corner.br { bottom: 22rpx; right: 22rpx; border-width: 0 2rpx 2rpx 0; }
+
+/* 头部 */
+.cmodal-head {
+  text-align: center;
+  margin-bottom: 28rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.cmodal-mini-seal {
+  width: 58rpx;
+  height: 58rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #C23838 0%, #8B1E1E 70%, #590F0F 100%);
+  color: #F8E2A6;
+  font-size: 30rpx;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12rpx;
+  box-shadow: 0 6rpx 16rpx rgba(139, 30, 30, 0.35);
+  font-family: "STKaiti", "KaiTi", serif;
+  border: 1rpx solid rgba(247, 219, 140, 0.6);
+}
+
+.cmodal-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #2D1E1B;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  letter-spacing: 2rpx;
+}
+
+.cmodal-sub {
+  font-size: 21rpx;
+  color: #8C6D62;
+  margin-top: 6rpx;
+  letter-spacing: 1rpx;
+}
+
+/* 快捷推荐称谓 */
+.cmodal-presets-wrap {
+  margin-bottom: 24rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.cmodal-presets-label {
+  font-size: 20rpx;
+  color: #9C7D73;
+  margin-bottom: 12rpx;
+  font-weight: 500;
+}
+
+.cmodal-presets-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.cpreset-tag {
+  background: #FAF5EE;
+  border: 1.5rpx solid #E4D5C7;
+  color: #5C433C;
+  font-size: 22rpx;
+  padding: 8rpx 20rpx;
+  border-radius: 20rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  transition: all 0.2s ease;
+}
+
+.cpreset-tag:active {
+  transform: scale(0.96);
+}
+
+.cpreset-tag.active {
+  background: #FFF5E3;
+  border-color: #D4AF37;
+  color: #8B1E1E;
+  font-weight: 700;
+  box-shadow: 0 2rpx 8rpx rgba(212, 175, 55, 0.25);
+}
+
+/* 输入框 */
+.cmodal-input-wrap {
+  display: flex;
+  align-items: center;
+  background: #FFFFFF;
+  border: 1.5rpx solid #D8C6B6;
+  border-radius: 20rpx;
+  height: 92rpx;
+  padding: 0 24rpx;
+  box-shadow: inset 0 2rpx 6rpx rgba(0, 0, 0, 0.03);
+  margin-bottom: 34rpx;
+  position: relative;
+  z-index: 2;
+  transition: border-color 0.2s ease;
+}
+
+.cmodal-input-wrap:focus-within {
+  border-color: #8B1E1E;
+  box-shadow: 0 0 12rpx rgba(139, 30, 30, 0.15);
+}
+
+.cmodal-input {
+  flex: 1;
+  font-size: 28rpx;
+  color: #2D2522;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  height: 100%;
+}
+
+.cmodal-placeholder {
+  color: #B8A699;
+  font-size: 25rpx;
+}
+
+.cmodal-clear-btn {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: #ECE3D9;
+  color: #7D6B62;
+  font-size: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 12rpx;
+  flex-shrink: 0;
+}
+
+/* 操作按钮 */
+.cmodal-actions {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.cmodal-btn {
+  flex: 1;
+  height: 84rpx;
+  line-height: 84rpx;
+  border-radius: 42rpx;
+  font-size: 27rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  text-align: center;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.cmodal-btn.btn-cancel {
+  background: #F4ECE1;
+  color: #6E5349;
+  border: 1.5rpx solid #D9C8B7;
+}
+
+.cmodal-btn.btn-cancel:active {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+.cmodal-btn.btn-confirm {
+  background: linear-gradient(135deg, #A82828 0%, #8B1E1E 50%, #6E1111 100%);
+  color: #FFF4DE;
+  border: 1.5rpx solid rgba(247, 219, 140, 0.7);
+  box-shadow: 0 10rpx 24rpx rgba(139, 30, 30, 0.35);
+}
+
+.cmodal-btn.btn-confirm:active {
+  opacity: 0.9;
+  transform: scale(0.98);
+}

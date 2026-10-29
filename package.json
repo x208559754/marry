@@ -1,0 +1,24 @@
+{
+  "name": "marry",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create marry-images",
+    "db:local": "wrangler d1 execute marry-images --local --file=./schema.sql",
+    "db:remote": "wrangler d1 execute marry-images --remote --file=./schema.sql",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.13.13"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261023.0",
+    "typescript": "^5.5.0",
+    "wrangler": "^4.152.0"
+  }
+}

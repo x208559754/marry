@@ -1,0 +1,444 @@
+<!-- pages/index/index.wxml - 原生微信小程序高定婚礼请柬 (开屏火漆印开帖 + 典雅信笺) -->
+<view class="container" style="padding-top: {{topSafeHeight}}px;">
+  <!-- 飘落花瓣粒子层 -->
+  <view class="petals-layer">
+    <view class="petal"></view>
+    <view class="petal"></view>
+    <view class="petal"></view>
+    <view class="petal"></view>
+  </view>
+
+  <!-- 头部古典唯美梅花枝头艺术装饰 (喜上枝头 · 枝头暗香) -->
+  <view class="header-plum-branch-wrap">
+    <image class="header-plum-branch-img" src="/images/plum-branch.svg" mode="widthFix"></image>
+  </view>
+
+  <!-- 悬浮背景音乐按钮 -->
+  <view class="floating-music-btn {{isPlayingBgm ? 'rotating' : ''}}" style="top: {{topSafeHeight + 8}}px;" bindtap="toggleBgm">
+    <view class="music-disc-inner">
+      <text class="music-symbol">♫</text>
+    </view>
+  </view>
+
+  <!-- =========================================================================
+       【核心阶段 1】：全屏开屏火漆信封封面 (未正式开启喜帖前展示)
+       用户点击火漆印开启信封，信笺展出婚礼盛邀，可直接恭启喜帖或自愿题名留念
+       ========================================================================= -->
+  <view class="splash-cover-overlay {{isEnteringApp ? 'fade-out' : ''}}" style="padding-top: {{topSafeHeight}}px;" wx:if="{{!isAppOpened}}">
+    <!-- 开屏信封顶部的梅花枝头 -->
+    <view class="splash-plum-branch-wrap">
+      <image class="splash-plum-branch-img" src="/images/plum-branch.svg" mode="widthFix"></image>
+    </view>
+
+    <!-- 顶部快速进入 (置于安全区左上方，与微信右上角胶囊自然平衡) -->
+    <view class="splash-skip-wrap" style="top: {{statusBarHeight + 8}}px;">
+      <view class="splash-skip-btn" bindtap="handleQuickSkip">直接翻阅 ›</view>
+    </view>
+
+    <!-- 顶部新人抬头 -->
+    <view class="splash-top-header">
+      <view class="splash-en-title">WEDDING INVITATION</view>
+      <view class="splash-couple-title">
+        <text>{{config.groom.name || '陈长生'}}</text>
+        <text class="splash-amp">&</text>
+        <text>{{config.bride.name || '徐有容'}}</text>
+      </view>
+      <view class="splash-sub-desc">诚挚邀请您见证我们的婚礼</view>
+    </view>
+
+    <!-- 1.1 信封封口阶段 (Sealed / Opening) -->
+    <view class="splash-envelope-box" wx:if="{{envelopeStage === 'sealed' || envelopeStage === 'opening'}}">
+      <view class="envelope-card-body" bindtap="handleUnsealEnvelope">
+        <!-- 烫金边框装饰 -->
+        <view class="envelope-gold-frame"></view>
+        <view class="envelope-gold-inner"></view>
+
+        <!-- 上方三角形折盖纹理 -->
+        <view class="envelope-flap-triangle"></view>
+
+        <!-- 3D 浮雕扫金有机火漆印章 (处于折盖正中心，真实熔蜡非正圆) -->
+        <view class="envelope-seal-center">
+          <image
+            class="organic-wax-seal-img {{envelopeStage === 'opening' ? 'seal-break-anim' : ''}}"
+            src="/images/wax-seal-organic.svg"
+            mode="aspectFit"
+          ></image>
+        </view>
+
+        <!-- 底部落款日期 -->
+        <view class="envelope-bottom-date">
+          <text>{{config.date || '2026年10月18日'}} · 良缘永结</text>
+        </view>
+      </view>
+
+      <!-- 启封提示 -->
+      <view class="seal-tap-hint">
+        <text class="seal-hint-dot">✦</text>
+        <text>轻触火漆印 · 启封喜帖</text>
+        <text class="seal-hint-dot">✦</text>
+      </view>
+    </view>
+
+    <!-- 1.2 点击火漆印后展出的纸质信笺 (Unfolded Stationery) -->
+    <view class="splash-letter-scroll" wx:if="{{envelopeStage === 'unfolded'}}">
+      <view class="letter-paper-card {{isStamping ? 'letter-paper-stamped' : ''}}">
+        <!-- 烫金细边装饰 -->
+        <view class="letter-gold-border"></view>
+        <view class="letter-corner-decor tl"></view>
+        <view class="letter-corner-decor tr"></view>
+        <view class="letter-corner-decor bl"></view>
+        <view class="letter-corner-decor br"></view>
+
+        <!-- 信笺头部 -->
+        <view class="letter-head">
+          <view class="letter-mini-seal">囍</view>
+          <view class="letter-title">婚礼邀请函</view>
+          <view class="letter-en">WEDDING INVITATION</view>
+        </view>
+
+        <!-- 专属迎宾抬头（实时展示输入名字，提交时伴随落印动效） -->
+        <view class="letter-guest-salute {{isStamping ? 'salute-stamping-glow' : ''}}">
+          <text class="salute-badge">谨呈</text>
+          <block wx:if="{{guestInputName || (guestName && guestName !== '特邀宾客' && guestName !== '亲朋好友')}}">
+            <text class="salute-name">{{guestInputName || guestName}} 亲启</text>
+          </block>
+          <block wx:else>
+            <text class="salute-name salute-empty-hint">（请于下方题写您的称谓） 亲启</text>
+          </block>
+          <!-- 动效落款章 (点击提交时盖印到信上) -->
+          <view class="salute-stamp-badge {{isStamping ? 'stamp-show' : ''}}" wx:if="{{isStamping || (guestName && guestName !== '特邀宾客' && guestName !== '亲朋好友')}}">
+            <text class="ssb-text">芳名已录</text>
+          </view>
+        </view>
+
+        <!-- 诚挚邀请正文 (支持在 Notion「喜帖信笺与婚礼配置表」自主配置) -->
+        <view class="letter-prose">
+          <block wx:if="{{config.letterParagraphs && config.letterParagraphs.length > 0}}">
+            <text class="letter-p" wx:for="{{config.letterParagraphs}}" wx:key="index">{{item}}</text>
+          </block>
+          <block wx:else>
+            <text class="letter-p">从相遇、相知到相守，漫漫岁月因为彼此而格外温暖。</text>
+            <text class="letter-p">谨定于 <text class="highlight-text">{{config.date || '2026年10月18日'}}</text> 为 <text class="highlight-text">{{config.groom.name || '陈长生'}}</text> 与 <text class="highlight-text">{{config.bride.name || '徐有容'}}</text> 举行结婚典礼。</text>
+            <text class="letter-p">真诚期待您和家人的到来，与我们共同见证这份幸福！</text>
+          </block>
+        </view>
+
+        <!-- 盛典时间与宴席地点 -->
+        <view class="letter-info-card">
+          <view class="lic-row">
+            <text class="lic-tag">吉日良辰</text>
+            <text class="lic-text">{{config.date || '2026年10月18日 11:58'}}</text>
+          </view>
+          <view class="lic-row">
+            <text class="lic-tag">席设华堂</text>
+            <text class="lic-text">{{config.venue.name || '半岛国际大酒店'}} · {{config.venue.hall || '三层金玉满堂厅'}}</text>
+          </view>
+        </view>
+
+        <!-- 嘉宾题名表单 (打开信封后填写称谓与信息) -->
+        <form class="letter-guest-form" bindsubmit="handleConfirmAndEnter">
+          <view class="form-title-row">
+            <view class="ft-left">
+              <text class="ft-diamond">✦</text>
+              <text class="ft-text">宾客题名 · 谨录雅座</text>
+              <text class="ft-diamond">✦</text>
+            </view>
+            <text class="ft-sub">留下您的称呼，名帖将印入请柬呈送新人</text>
+          </view>
+
+          <!-- 字段 1：称谓 / 姓名 (必填校验！) -->
+          <view class="lform-slip-card {{isNameMissing ? 'shake-error' : ''}}">
+            <view class="lform-slip-label-row">
+              <text class="lform-slip-label">尊名称谓</text>
+              <text class="lform-slip-req">* 必填</text>
+            </view>
+            <view class="lform-slip-divider"></view>
+            <input
+              name="guestName"
+              type="text"
+              class="lform-slip-input"
+              placeholder="请输入您的称谓 (例如：大伯一家 / 表姐)"
+              placeholder-class="slip-placeholder"
+              value="{{guestInputName}}"
+              bindchange="onNicknameChange"
+              bindinput="onNameInput"
+              bindblur="onNameBlur"
+            />
+          </view>
+
+          <!-- 字段 2：联系电话 (选填) -->
+          <view class="lform-slip-card" style="margin-top: 20rpx;">
+            <view class="lform-slip-label-row">
+              <text class="lform-slip-label">联络电话</text>
+              <text class="lform-slip-opt">选填</text>
+            </view>
+            <view class="lform-slip-divider"></view>
+            <view class="phone-input-row">
+              <input
+                name="guestPhone"
+                type="number"
+                maxlength="11"
+                class="lform-slip-input phone-flex"
+                placeholder="便于安排席位 (选填)"
+                placeholder-class="slip-placeholder"
+                value="{{guestInputPhone}}"
+                bindinput="onPhoneInput"
+                bindblur="onPhoneBlur"
+              />
+              <button
+                class="btn-wx-auth-phone-elegant"
+                open-type="getPhoneNumber"
+                bindgetphonenumber="onGetPhoneNumber"
+              >
+                一键填入
+              </button>
+            </view>
+          </view>
+
+          <!-- 字段 3：新婚祝福心声 (选填) -->
+          <view class="lform-blessing-box" style="margin-top: 20rpx;">
+            <view class="lbless-header">
+              <text class="lbless-title">新婚祝福</text>
+              <text class="lbless-sub">轻点吉言或写下心愿 (选填)</text>
+            </view>
+            <!-- 经典古风贺语快选 -->
+            <view class="lform-couplets-grid">
+              <view
+                wx:for="{{quickBlessings}}"
+                wx:key="*this"
+                class="lcouplet-item {{guestInputBlessing === item ? 'active' : ''}}"
+                bindtap="selectQuickBlessing"
+                data-text="{{item}}"
+              >
+                <text class="couplet-bullet">✦</text>
+                <text class="couplet-txt">{{item}}</text>
+              </view>
+            </view>
+            <textarea
+              name="guestBlessing"
+              class="lform-textarea"
+              placeholder="写下一句对新人的美好祝愿 (选填)..."
+              placeholder-class="slip-placeholder"
+              value="{{guestInputBlessing}}"
+              bindinput="onBlessingInput"
+              maxlength="100"
+            />
+          </view>
+
+          <!-- 主操作：题名并开启喜帖（提交时触发盖印到信纸上的动效） -->
+          <button class="btn-enter-app-ceremony {{isStamping ? 'stamping-active' : ''}}" form-type="submit">
+            <text class="btn-bullet">✦</text>
+            <text class="btn-enter-txt">{{isStamping ? '名帖落印中…' : '题名落印 · 步入盛典'}}</text>
+            <text class="btn-bullet">✦</text>
+          </button>
+        </form>
+      </view>
+    </view>
+  </view>
+
+  <!-- =========================================================================
+       【核心阶段 2】：已开屏解封进入的喜帖主页内容 (App Opened)
+       顶部第一屏呈现「致亲朋好友 亲启」温情雅致卡片与重温信封功能
+       ========================================================================= -->
+  <block wx:if="{{isAppOpened}}">
+    <!-- 2.1 专属宾客迎宾卡片 -->
+    <view class="card guest-welcome-banner">
+      <view class="gwb-top">
+        <view class="gwb-honorific" bindtap="openEditNameModal">
+          <text class="gwb-red-tag">喜帖敬呈</text>
+          <text class="gwb-to">致：{{guestName || '亲爱的亲朋好友'}} 亲启</text>
+          <view class="gwb-edit-badge">✎ 修改</view>
+        </view>
+        <!-- 合上信封重温按钮 -->
+        <view class="gwb-reseal-btn" bindtap="handleResealEnvelope">
+          <text>重温信笺 ›</text>
+        </view>
+      </view>
+
+      <view class="gwb-invitation-words">
+        新郎 <text class="couple-highlight">{{config.groom.name || '陈长生'}}</text> 与新娘 <text class="couple-highlight">{{config.bride.name || '徐有容'}}</text> 诚挚邀请您的光临与见证！
+      </view>
+
+      <view class="gwb-blessing-quote" wx:if="{{guestBlessing}}">
+        <text class="quote-tag">贺词</text>
+        <text class="quote-text">“{{guestBlessing}}”</text>
+      </view>
+    </view>
+
+    <!-- 2.2 迎宾封面大卡片 (Wedding Invitation 经典高定构图) -->
+    <view class="card wedding-hero-card">
+      <view class="hero-en-tag">WEDDING INVITATION</view>
+
+      <view class="hero-couple-names">
+        <text class="name-text">{{config.groom.name || '陈长生'}}</text>
+        <text class="amp-text">&</text>
+        <text class="name-text">{{config.bride.name || '徐有容'}}</text>
+      </view>
+
+      <view class="hero-pinyin">
+        {{config.groom.pinyin || 'CHEN CHANGSHENG'}} & {{config.bride.pinyin || 'XU YOURONG'}}
+      </view>
+
+      <!-- 3:4 婚纱大片 (来自相册资源) -->
+      <view class="hero-photo-box" bindtap="previewCover">
+        <image
+          class="hero-img"
+          src="{{coverImage}}"
+          mode="aspectFill"
+          lazy-load="{{true}}"
+        ></image>
+        <view class="hero-photo-overlay">
+          <text class="hero-photo-title">{{config.invitationTitle || '良缘永结 · 匹配同称'}}</text>
+        </view>
+      </view>
+
+      <!-- 优雅倒计时四宫格 -->
+      <view class="countdown-wrap">
+        <view class="cd-title">
+          <text class="cd-diamond">✦</text>
+          <text class="cd-title-text">良 辰 吉 日 · 倒 计 时</text>
+          <text class="cd-diamond">✦</text>
+        </view>
+        <view class="cd-grid">
+          <view class="cd-box">
+            <text class="cd-num">{{countdown.days}}</text>
+            <text class="cd-lbl">天</text>
+          </view>
+          <view class="cd-box">
+            <text class="cd-num">{{countdown.hours}}</text>
+            <text class="cd-lbl">时</text>
+          </view>
+          <view class="cd-box">
+            <text class="cd-num">{{countdown.minutes}}</text>
+            <text class="cd-lbl">分</text>
+          </view>
+          <view class="cd-box">
+            <text class="cd-num">{{countdown.seconds}}</text>
+            <text class="cd-lbl">秒</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 日期与农历吉时 -->
+      <view class="hero-date-block">
+        <view class="date-main">{{config.date || '2026年10月18日'}}</view>
+        <view class="date-lunar">{{config.lunarDate || '农历九月初九 · 宜嫁娶'}}</view>
+      </view>
+    </view>
+
+    <!-- 2.3 诚邀致辞誓言卡片 -->
+    <view class="card prose-card">
+      <view class="prose-title">谨定吉日 · 诚挚邀请</view>
+      <view class="prose-divider"></view>
+      <text class="prose-body">
+        {{config.invitationProse || '从相遇、相知到相守，漫漫岁月因为彼此而格外温暖。\n真诚期待您和家人的到来，与我们共同见证这份幸福！'}}
+      </text>
+    </view>
+
+    <!-- 2.4 新郎新娘双名片与一键呼叫 -->
+    <view class="couple-cards-row">
+      <view class="couple-card">
+        <view class="couple-avatar-tag groom">新郎</view>
+        <view class="couple-name">{{config.groom.name || '陈长生'}}</view>
+        <view class="couple-role">GROOM</view>
+        <view class="btn-call" bindtap="callGroom">
+          <text class="call-text">致电新郎</text>
+        </view>
+      </view>
+
+      <view class="couple-card">
+        <view class="couple-avatar-tag bride">新娘</view>
+        <view class="couple-name">{{config.bride.name || '徐有容'}}</view>
+        <view class="couple-role">BRIDE</view>
+        <view class="btn-call" bindtap="callBride">
+          <text class="call-text">致电新娘</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 2.5 盛典宴席快捷导航卡片 -->
+    <view class="card venue-quick-card" bindtap="navigateToSchedule">
+      <view class="venue-info">
+        <view class="venue-texts">
+          <view class="venue-tag">席设华堂</view>
+          <view class="venue-name">{{config.venue.name || '半岛国际大酒店'}} · {{config.venue.hall || '三层金玉满堂厅'}}</view>
+          <view class="venue-addr">{{config.venue.address || '上海市黄浦区中山东一路128号'}}</view>
+        </view>
+      </view>
+      <view class="venue-arrow">盛典安排 ›</view>
+    </view>
+
+    <!-- 2.6 快捷通道：回执与祝福 -->
+    <view class="quick-nav-grid">
+      <view class="quick-btn rsvp-btn" bindtap="navigateToRsvp">
+        <text class="qb-title">出席回执</text>
+        <text class="qb-sub">敬备喜筵 · 恭候光临</text>
+      </view>
+      <view class="quick-btn bless-btn" bindtap="navigateToBlessings">
+        <text class="qb-title">祝福留言</text>
+        <text class="qb-sub">字句真情 · 共贺良缘</text>
+      </view>
+    </view>
+
+    <!-- 底部留白 -->
+    <view style="height: 60rpx;"></view>
+  </block>
+
+  <!-- =========================================================================
+       高定中式雅致弹窗：修改尊名称谓 (替代原生丑陋的 wx.showModal)
+       ========================================================================= -->
+  <view class="custom-modal-mask {{showNameModal ? 'modal-show' : ''}}" wx:if="{{showNameModal}}" bindtap="closeEditNameModal">
+    <view class="custom-modal-card" catchtap="preventProp">
+      <!-- 烫金边框与典雅四角花纹 -->
+      <view class="cmodal-gold-border"></view>
+      <view class="cmodal-corner tl"></view>
+      <view class="cmodal-corner tr"></view>
+      <view class="cmodal-corner bl"></view>
+      <view class="cmodal-corner br"></view>
+
+      <!-- 弹窗头部 -->
+      <view class="cmodal-head">
+        <view class="cmodal-mini-seal">囍</view>
+        <view class="cmodal-title">设置您的尊名称谓</view>
+        <view class="cmodal-sub">专属称谓将印入请柬，迎候您的莅临</view>
+      </view>
+
+      <!-- 快捷常用称谓选择 -->
+      <view class="cmodal-presets-wrap">
+        <view class="cmodal-presets-label">快捷推荐：</view>
+        <view class="cmodal-presets-list">
+          <view
+            class="cpreset-tag {{tempEditName === item ? 'active' : ''}}"
+            wx:for="{{presetHonorifics}}"
+            wx:key="*this"
+            bindtap="selectPresetHonorific"
+            data-name="{{item}}"
+          >
+            {{item}}
+          </view>
+        </view>
+      </view>
+
+      <!-- 输入框 -->
+      <view class="cmodal-input-wrap">
+        <input
+          class="cmodal-input"
+          type="text"
+          value="{{tempEditName}}"
+          placeholder="例如：表姐 / 张伟 / 大伯一家"
+          placeholder-class="cmodal-placeholder"
+          bindinput="onTempNameInput"
+          focus="{{showNameModal}}"
+          maxlength="20"
+        />
+        <view class="cmodal-clear-btn" wx:if="{{tempEditName}}" bindtap="clearTempName">✕</view>
+      </view>
+
+      <!-- 弹窗操作按钮 -->
+      <view class="cmodal-actions">
+        <button class="cmodal-btn btn-cancel" bindtap="closeEditNameModal">取消</button>
+        <button class="cmodal-btn btn-confirm" bindtap="confirmEditName">保存称谓</button>
+      </view>
+    </view>
+  </view>
+</view>

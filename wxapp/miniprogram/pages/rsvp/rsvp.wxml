@@ -1,0 +1,309 @@
+<!-- pages/rsvp/rsvp.wxml - 高定唯美结婚席位回函 (良缘天成 · 敬候台光) -->
+<view class="container">
+  <!-- 头部艺术标题 -->
+  <view class="section-title">
+    <text class="title-cn">出席回执</text>
+    <text class="title-en">WEDDING R.S.V.P.</text>
+    <view class="divider"></view>
+  </view>
+
+  <!-- =========================================================================
+       1. 席位确认证书卡片 (已送达新人时置顶展示，尊贵典雅)
+       ========================================================================= -->
+  <view class="card confirmed-certificate-card" wx:if="{{isSubmitted}}">
+    <!-- 证书烫金边角装饰 -->
+    <view class="cert-gold-border"></view>
+    <view class="cert-corner tl"></view>
+    <view class="cert-corner tr"></view>
+    <view class="cert-corner bl"></view>
+    <view class="cert-corner br"></view>
+
+    <!-- 顶部红底金字印章与抬头 -->
+    <view class="cert-header">
+      <view class="cert-seal-badge {{formData.status === 'yes' ? '' : 'absent-seal'}}">
+        <text class="cert-seal-text">{{formData.status === 'yes' ? '囍' : '福'}}</text>
+      </view>
+      <view class="cert-header-content">
+        <text class="cert-title">{{formData.status === 'yes' ? '席位已列册 · 敬候莅临' : '心意已送达 · 遥祝良缘'}}</text>
+        <text class="cert-sub">{{formData.status === 'yes' ? '新人已收到您的出席回执，感谢您的真挚心意' : '新人已收到您的真挚祝福，同沐嘉喜，感念于心'}}</text>
+      </view>
+    </view>
+
+    <!-- 宾客信息概览 (仅当有头像时才展示头像，绝无默认陌生人头像) -->
+    <view class="cert-guest-row">
+      <image class="cert-avatar-img" wx:if="{{formData.avatarUrl}}" src="{{formData.avatarUrl}}" mode="aspectFill"></image>
+      <view class="cert-name-box">
+        <view class="cert-name-line">
+          <text class="cert-guest-name">{{formData.name || '贵客'}}</text>
+          <view class="cert-status-badge {{formData.status === 'yes' ? 'attending' : 'absent'}}">
+            <text class="csb-icon">{{formData.status === 'yes' ? '囍' : '💌'}}</text>
+            <text>{{formData.status === 'yes' ? '准时赴宴' : '遥祝大喜 · 缺席'}}</text>
+          </view>
+        </view>
+        <text class="cert-phone-val">联络手机：{{formData.phone || '未填写'}}</text>
+      </view>
+    </view>
+
+    <!-- 详细参数席签 (赴宴时展示) -->
+    <view class="cert-specs-grid" wx:if="{{formData.status === 'yes'}}">
+      <view class="cert-spec-item">
+        <text class="spec-label">出席人数</text>
+        <text class="spec-val">{{formData.guestsCount}} 位</text>
+      </view>
+      <view class="cert-spec-item">
+        <text class="spec-label">宴席偏好</text>
+        <text class="spec-val">{{formData.dietary || '正常荤素'}}</text>
+      </view>
+      <view class="cert-spec-item">
+        <text class="spec-label">大巴接驳</text>
+        <text class="spec-val">{{formData.needShuttle ? '需要接送' : '自行前往'}}</text>
+      </view>
+    </view>
+
+    <!-- 祝福语展示 -->
+    <view class="cert-blessing-box" wx:if="{{formData.blessing}}">
+      <text class="cert-blessing-quote">“</text>
+      <text class="cert-blessing-content">{{formData.blessing}}</text>
+      <text class="cert-blessing-quote">”</text>
+    </view>
+
+    <!-- 底部操作按钮：点击后才展开底下的编辑表单 -->
+    <view class="cert-edit-action">
+      <button class="btn-cert-edit" bindtap="toggleEditForm">
+        <text class="bce-icon">{{isEditing ? '▲' : '✎'}}</text>
+        <text class="bce-text">{{isEditing ? '收起修改表单' : '修改回执信息'}}</text>
+      </button>
+    </view>
+  </view>
+
+  <!-- =========================================================================
+       2. 高定席位表单卡片 (未提交时直接展示；已提交时仅在点击“修改”后才展示)
+       ========================================================================= -->
+  <view class="card rsvp-ceremony-card" wx:if="{{!isSubmitted || isEditing}}">
+    <!-- 烫金双边框 -->
+    <view class="rsvp-gold-inner-border"></view>
+
+    <!-- 顶端仪式引言 -->
+    <view class="rsvp-card-top">
+      <view class="rsvp-top-en">SEAT RESERVATION</view>
+      <view class="rsvp-top-title">谨订雅席 · 宴迎佳宾</view>
+      <view class="rsvp-top-quote">良辰已定，吉日待访；敬备薄酌，恭候台光。</view>
+      <view class="rsvp-top-line"></view>
+    </view>
+
+    <!-- 第 1 部分：宾客题名与联络 -->
+    <view class="form-section-title">
+      <text class="fst-diamond">◆</text>
+      <text class="fst-text">宾客题名 · 联络信息</text>
+      <text class="fst-diamond">◆</text>
+    </view>
+
+    <!-- 称谓输入行 -->
+    <view class="field-item">
+      <view class="field-label-row">
+        <text class="field-label">尊名称谓 <text class="req">*</text></text>
+        <!-- 头像动作区：有人提交/选择就展示头像气泡与更换/移除；没有就不显示任何头像，仅提供选填按钮 -->
+        <view class="avatar-action-wrap">
+          <block wx:if="{{formData.avatarUrl}}">
+            <button class="avatar-bubble-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+              <image class="avatar-bubble-img" src="{{formData.avatarUrl}}" mode="aspectFill"></image>
+              <text class="avatar-bubble-tag">更换</text>
+            </button>
+            <view class="avatar-del-btn" bindtap="removeAvatar" title="移除头像">✕</view>
+          </block>
+          <block wx:else>
+            <button class="btn-avatar-pick-plain" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+              <text class="bap-icon">👤</text>
+              <text>选填微信头像</text>
+            </button>
+          </block>
+        </view>
+      </view>
+
+      <view class="input-shell">
+        <input
+          type="text"
+          class="luxury-input"
+          placeholder="请输入您的姓名或称谓 (例如：表姐 / 张伟 / 大伯一家)"
+          placeholder-class="input-placeholder"
+          value="{{formData.name}}"
+          bindchange="onNicknameChange"
+          bindinput="onNameInput"
+          bindblur="onNicknameBlur"
+        />
+      </view>
+    </view>
+
+    <!-- 手机号输入行 -->
+    <view class="field-item" style="margin-top: 28rpx;">
+      <view class="field-label-row">
+        <text class="field-label">联系电话 <text class="req">*</text></text>
+        <text class="field-sub-tip">用于现场席位核对</text>
+      </view>
+      <view class="phone-composite-wrap">
+        <input
+          type="number"
+          maxlength="11"
+          class="luxury-input phone-luxury-input"
+          placeholder="请输入11位手机号码"
+          placeholder-class="input-placeholder"
+          value="{{formData.phone}}"
+          bindinput="onPhoneInput"
+        />
+        <button
+          class="btn-wx-quick-phone"
+          open-type="getPhoneNumber"
+          bindgetphonenumber="onGetPhoneNumber"
+        >
+          <text class="wx-icon-sym">☎</text>
+          <text>微信一键填入</text>
+        </button>
+      </view>
+    </view>
+
+    <!-- 第 2 部分：出席意向决策 (出席 / 缺席) -->
+    <view class="form-section-title" style="margin-top: 42rpx;">
+      <text class="fst-diamond">◆</text>
+      <text class="fst-text">出席意向 · 盛典相邀</text>
+      <text class="fst-diamond">◆</text>
+    </view>
+
+    <view class="decision-cards-row">
+      <view
+        class="decision-card {{formData.status === 'yes' ? 'active-yes' : ''}}"
+        bindtap="selectStatus"
+        data-value="yes"
+      >
+        <view class="dec-badge">囍</view>
+        <text class="dec-title">准时赴宴</text>
+        <text class="dec-sub">共赴良辰 · 举杯相庆</text>
+        <view class="dec-check-mark" wx:if="{{formData.status === 'yes'}}">✓</view>
+      </view>
+
+      <view
+        class="decision-card {{formData.status === 'no' ? 'active-no' : ''}}"
+        bindtap="selectStatus"
+        data-value="no"
+      >
+        <view class="dec-badge absent-badge">☕</view>
+        <text class="dec-title">遗憾缺席</text>
+        <text class="dec-sub">遥祝良缘 · 喜乐常伴</text>
+        <view class="dec-check-mark" wx:if="{{formData.status === 'no'}}">✓</view>
+      </view>
+    </view>
+
+    <!-- 第 3 部分：准时出席专属细节设置 (人数、饮食、班车) -->
+    <block wx:if="{{formData.status === 'yes'}}">
+      <!-- 同行人数 -->
+      <view class="field-item" style="margin-top: 36rpx;">
+        <view class="field-label-row">
+          <text class="field-label">同行出席人数</text>
+          <text class="field-sub-tip">含本人在内</text>
+        </view>
+        <view class="guests-count-bar">
+          <view
+            wx:for="{{guestCountOptions}}"
+            wx:key="*this"
+            class="count-segment {{formData.guestsCount == item ? 'active' : ''}}"
+            bindtap="selectGuestCount"
+            data-value="{{item}}"
+          >
+            <text class="cs-num">{{item}}</text>
+            <text class="cs-unit">位</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 饮食偏好 -->
+      <view class="field-item" style="margin-top: 36rpx;">
+        <view class="field-label-row">
+          <text class="field-label">宴席饮食偏好 / 忌口</text>
+          <text class="field-sub-tip">主家为您贴心备膳</text>
+        </view>
+        <view class="diet-tags-wrap">
+          <view
+            wx:for="{{dietOptions}}"
+            wx:key="*this"
+            class="diet-tag-btn {{formData.dietary === item ? 'active' : ''}}"
+            bindtap="selectDietary"
+            data-value="{{item}}"
+          >
+            {{item}}
+          </view>
+        </view>
+      </view>
+
+      <!-- 大巴接驳需求 -->
+      <view class="field-item" style="margin-top: 36rpx;">
+        <view class="field-label-row">
+          <text class="field-label">婚礼当天大巴接驳</text>
+          <text class="field-sub-tip">定点班车往返宴会大厅</text>
+        </view>
+        <view class="shuttle-toggle-row">
+          <view
+            class="shuttle-choice-btn {{formData.needShuttle ? 'active' : ''}}"
+            bindtap="toggleShuttle"
+            data-value="{{true}}"
+          >
+            <text class="sc-icon">🚌</text>
+            <text class="sc-text">需要接驳大巴</text>
+          </view>
+          <view
+            class="shuttle-choice-btn {{!formData.needShuttle ? 'active' : ''}}"
+            bindtap="toggleShuttle"
+            data-value="{{false}}"
+          >
+            <text class="sc-icon">🚗</text>
+            <text class="sc-text">自行前往宴会厅</text>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 第 4 部分：真挚祝福寄语 -->
+    <view class="field-item" style="margin-top: 36rpx;">
+      <view class="field-label-row">
+        <text class="field-label">对新人的真挚寄语</text>
+        <text class="field-sub-tip">字字温情 · 永结同心</text>
+      </view>
+
+      <!-- 快捷祝词快选 -->
+      <view class="quick-blessings-chips">
+        <view
+          wx:for="{{quickBlessings}}"
+          wx:key="*this"
+          class="qb-chip"
+          bindtap="selectQuickBlessing"
+          data-text="{{item}}"
+        >
+          {{item}}
+        </view>
+      </view>
+
+      <view class="textarea-shell">
+        <textarea
+          class="luxury-textarea"
+          placeholder="在此题写您对二位新人的真挚祝福与美好祈愿..."
+          placeholder-class="input-placeholder"
+          value="{{formData.blessing}}"
+          bindinput="onBlessingInput"
+          maxlength="200"
+        ></textarea>
+        <text class="textarea-counter">{{formData.blessing.length || 0}} / 200</text>
+      </view>
+    </view>
+
+    <!-- 底部提交大按钮 -->
+    <view class="submit-action-box">
+      <button
+        class="luxury-submit-btn"
+        bindtap="onSubmitRsvp"
+        loading="{{submitting}}"
+      >
+        <text class="sub-btn-seal">囍</text>
+        <text class="sub-btn-text">{{isSubmitted ? '更新已送达回执' : '确认送达出席回执'}}</text>
+        <text class="sub-btn-arrow">›</text>
+      </button>
+    </view>
+  </view>
+</view>

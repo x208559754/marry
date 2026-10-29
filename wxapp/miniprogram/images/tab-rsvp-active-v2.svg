@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="rsvpCard" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A52A2A"/>
+      <stop offset="100%" stop-color="#7B1414"/>
+    </linearGradient>
+    <linearGradient id="quillGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEBB3"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+  </defs>
+  <!-- Active RSVP Card -->
+  <rect x="8" y="9" width="25" height="30" rx="4" fill="url(#rsvpCard)" stroke="#D4AF37" stroke-width="1.8"/>
+  <line x1="13" y1="16" x2="24" y2="16" stroke="#FFEBB3" stroke-width="2" stroke-linecap="round"/>
+  <line x1="13" y1="22" x2="22" y2="22" stroke="#FFEBB3" stroke-width="2" stroke-linecap="round"/>
+  <!-- Gold Checkmark on card -->
+  <path d="M13 29 L16 32 L22 26" fill="none" stroke="#FFEBB3" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Golden Quill -->
+  <path d="M27 35 C29 30 33 24 39 10 C36 15 31 16 29 19 L27 35 Z" fill="url(#quillGold)" stroke="#A52A2A" stroke-width="1"/>
+  <circle cx="27" cy="35" r="1.5" fill="#5A0D0D"/>
+</svg>

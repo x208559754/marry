@@ -1,0 +1,28 @@
+<!-- pages/story/story.wxml -->
+<view class="container">
+  <view class="section-title">
+    <text class="title-cn">我们相遇的故事</text>
+    <text class="title-en">OUR LOVE STORY & TIMELINE</text>
+    <view class="divider"></view>
+  </view>
+
+  <view class="story-list">
+    <view wx:for="{{storyList}}" wx:key="title" class="card story-card">
+      <view class="story-tag">
+        <text class="tag-year">{{item.year || item.date || '2022'}}</text>
+      </view>
+      <view class="story-head">
+        <text class="sh-icon">✦</text>
+        <text class="sh-title">{{item.title}}</text>
+      </view>
+      <image
+        wx:if="{{item.image}}"
+        class="story-img"
+        src="{{item.image}}"
+        mode="aspectFill"
+        lazy-load="{{true}}"
+      ></image>
+      <text class="story-desc">{{item.desc || item.content}}</text>
+    </view>
+  </view>
+</view>

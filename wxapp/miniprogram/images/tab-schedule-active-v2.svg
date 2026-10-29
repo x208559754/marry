@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="ringGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEBB3"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#AA7F1A"/>
+    </linearGradient>
+  </defs>
+  <!-- Active Interlocking Gold Rings -->
+  <circle cx="18.5" cy="27" r="9.5" fill="none" stroke="url(#ringGold)" stroke-width="3"/>
+  <circle cx="29.5" cy="27" r="9.5" fill="none" stroke="#A52A2A" stroke-width="3"/>
+  <circle cx="29.5" cy="27" r="9.5" fill="none" stroke="url(#ringGold)" stroke-width="1.2" stroke-dasharray="14 14"/>
+  <!-- Ruby Diamond on Left Ring -->
+  <polygon points="18.5,10 23,15 18.5,18 14,15" fill="#C52A2A" stroke="url(#ringGold)" stroke-width="1.2"/>
+  <polygon points="18.5,10 20.5,15 18.5,18 16.5,15" fill="#FFEBB3" opacity="0.6"/>
+  <!-- Sparkles -->
+  <path d="M18.5 7 L18.5 4 M13 10 L10 8 M24 10 L27 8" stroke="#D4AF37" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

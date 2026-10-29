@@ -1,0 +1,74 @@
+<!-- pages/gallery/gallery.wxml - 高定婚纱大片与恋爱纪事 -->
+<view class="container">
+  <!-- 标题 -->
+  <view class="section-header">
+    <text class="section-en">WEDDING MEMORIES</text>
+    <text class="section-cn">婚纱大片 · 定格幸福</text>
+    <view class="section-divider"></view>
+  </view>
+
+  <!-- 照片瀑布流 / 栅格展卷 (100% 还原原版高定构图) -->
+  <view class="photo-grid">
+    <view
+      wx:for="{{photosList}}"
+      wx:key="url"
+      class="photo-card {{index % 3 === 0 ? 'span-full' : ''}}"
+      bindtap="previewImage"
+      data-current="{{item.url}}"
+    >
+      <image
+        class="grid-img"
+        src="{{item.url}}"
+        mode="aspectFill"
+        lazy-load="{{true}}"
+      ></image>
+      <view class="photo-overlay">
+        <text class="p-title">{{item.title || '幸福剪影'}}</text>
+        <text class="p-sub">良缘留影</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ==============================================
+       恋爱历程时间轴 (Our Love Story)
+       ============================================== -->
+  <view class="story-section">
+    <view class="section-header" style="margin-top: 48rpx;">
+      <text class="section-en">OUR LOVE STORY</text>
+      <text class="section-cn">浪漫纪事 · 岁月相伴</text>
+      <view class="section-divider"></view>
+    </view>
+
+    <view class="timeline-wrap">
+      <view class="timeline-line"></view>
+
+      <view class="story-item" wx:for="{{storiesList}}" wx:key="id">
+        <!-- 节点 -->
+        <view class="story-node">
+          <text class="node-heart">✦</text>
+        </view>
+
+        <!-- 故事卡片 -->
+        <view class="story-card">
+          <view class="story-head">
+            <text class="story-date">{{item.date}}</text>
+            <text class="story-tag">岁月印记</text>
+          </view>
+          <view class="story-title">{{item.title}}</view>
+          <image
+            wx:if="{{item.image}}"
+            class="story-img"
+            src="{{item.image}}"
+            mode="aspectFill"
+            lazy-load="{{true}}"
+          ></image>
+          <text class="story-content">{{item.content}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="save-tip">
+    <text>点击照片可全屏阅览欣赏</text>
+  </view>
+</view>

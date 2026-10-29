@@ -1,0 +1,251 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 320" width="100%" height="100%">
+  <defs>
+    <!-- 枝干渐变 -->
+    <linearGradient id="branchGrad" x1="0%" y1="0%" x2="100%" y2="80%">
+      <stop offset="0%" stop-color="#3D2016"/>
+      <stop offset="40%" stop-color="#542E1F"/>
+      <stop offset="80%" stop-color="#412418"/>
+      <stop offset="100%" stop-color="#2C160E"/>
+    </linearGradient>
+
+    <!-- 梅花主瓣渐变 1：深红雅致 -->
+    <radialGradient id="petalRed" cx="50%" cy="50%" r="55%" fx="35%" fy="35%">
+      <stop offset="0%" stop-color="#FF9B9B"/>
+      <stop offset="35%" stop-color="#E2484D"/>
+      <stop offset="75%" stop-color="#B82228"/>
+      <stop offset="100%" stop-color="#801015"/>
+    </radialGradient>
+
+    <!-- 梅花粉润花瓣渐变 2 -->
+    <radialGradient id="petalSoft" cx="45%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#FFF0F2"/>
+      <stop offset="40%" stop-color="#F7A1A7"/>
+      <stop offset="80%" stop-color="#DC4954"/>
+      <stop offset="100%" stop-color="#9C1C22"/>
+    </radialGradient>
+
+    <!-- 花蕊金芯渐变 -->
+    <radialGradient id="goldCenter" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFF8D6"/>
+      <stop offset="60%" stop-color="#F3C644"/>
+      <stop offset="100%" stop-color="#C2871A"/>
+    </radialGradient>
+
+    <!-- 花蕾渐变 -->
+    <linearGradient id="budGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF757A"/>
+      <stop offset="60%" stop-color="#BD222A"/>
+      <stop offset="100%" stop-color="#5E1114"/>
+    </linearGradient>
+
+    <!-- 花萼渐变 -->
+    <linearGradient id="calyxGrad" x1="0%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#5A1E1E"/>
+      <stop offset="100%" stop-color="#2D0A0A"/>
+    </linearGradient>
+
+    <!-- 单朵梅花定义 (5瓣) -->
+    <g id="blossomFull">
+      <!-- 花萼投影/背瓣阴影 -->
+      <path d="M-6,-2 C-14,-14 14,-14 6,-2 C14,14 -14,14 -6,-2 Z" fill="rgba(60,15,15,0.18)"/>
+      <!-- 五瓣 -->
+      <!-- 上瓣 -->
+      <path d="M0,0 C-14,-18 -18,-38 0,-44 C18,-38 14,-18 0,0 Z" fill="url(#petalRed)"/>
+      <!-- 右上瓣 -->
+      <path d="M0,0 C12,-16 34,-24 42,-8 C40,12 20,16 0,0 Z" fill="url(#petalSoft)"/>
+      <!-- 右下瓣 -->
+      <path d="M0,0 C18,8 32,28 18,40 C6,42 -6,24 0,0 Z" fill="url(#petalRed)"/>
+      <!-- 左下瓣 -->
+      <path d="M0,0 C-6,24 -18,42 -30,36 C-38,20 -18,8 0,0 Z" fill="url(#petalSoft)"/>
+      <!-- 左上瓣 -->
+      <path d="M0,0 C-20,6 -40,-8 -38,-24 C-26,-34 -10,-14 0,0 Z" fill="url(#petalRed)"/>
+      
+      <!-- 花心浅红底晕 -->
+      <circle cx="0" cy="0" r="10" fill="#6A0C11"/>
+
+      <!-- 金色花丝与花药 -->
+      <g stroke="#F8DE7E" stroke-width="1.2" stroke-linecap="round">
+        <line x1="0" y1="0" x2="-6" y2="-12"/><circle cx="-6" cy="-12" r="1.6" fill="#F3C644" stroke="none"/>
+        <line x1="0" y1="0" x2="6" y2="-13"/><circle cx="6" cy="-13" r="1.6" fill="#F3C644" stroke="none"/>
+        <line x1="0" y1="0" x2="13" y2="-5"/><circle cx="13" cy="-5" r="1.6" fill="#F3C644" stroke="none"/>
+        <line x1="0" y1="0" x2="12" y2="7"/><circle cx="12" cy="7" r="1.6" fill="#F3C644" stroke="none"/>
+        <line x1="0" y1="0" x2="3" y2="13"/><circle cx="3" cy="13" r="1.6" fill="#F3C644" stroke="none"/>
+        <line x1="0" y1="0" x2="-8" y2="11"/><circle cx="-8" cy="11" r="1.6" fill="#F3C644" stroke="none"/>
+        <line x1="0" y1="0" x2="-13" y2="2"/><circle cx="-13" cy="2" r="1.6" fill="#F3C644" stroke="none"/>
+        <line x1="0" y1="0" x2="-11" y2="-8"/><circle cx="-11" cy="-8" r="1.6" fill="#F3C644" stroke="none"/>
+      </g>
+      <!-- 金粉花蕊中心 -->
+      <circle cx="0" cy="0" r="4.5" fill="url(#goldCenter)"/>
+    </g>
+
+    <!-- 半开梅花定义 -->
+    <g id="blossomSide">
+      <path d="M0,0 C-14,-10 -18,-24 -6,-30 C6,-32 14,-18 0,0 Z" fill="url(#petalRed)"/>
+      <path d="M0,0 C10,-12 28,-14 26,2 C18,12 8,8 0,0 Z" fill="url(#petalSoft)"/>
+      <path d="M0,0 C6,10 16,18 4,24 C-8,22 -6,10 0,0 Z" fill="url(#petalRed)"/>
+      <!-- 花萼 -->
+      <path d="M-10,-2 C-16,4 -10,12 0,10 C-4,4 -2,0 -10,-2 Z" fill="url(#calyxGrad)"/>
+      <!-- 花丝若干 -->
+      <g stroke="#F8DE7E" stroke-width="1.2">
+        <line x1="2" y1="-2" x2="10" y2="-12"/><circle cx="10" cy="-12" r="1.5" fill="#F3C644" stroke="none"/>
+        <line x1="2" y1="0" x2="16" y2="-4"/><circle cx="16" cy="-4" r="1.5" fill="#F3C644" stroke="none"/>
+        <line x1="0" y1="2" x2="12" y2="6"/><circle cx="12" cy="6" r="1.5" fill="#F3C644" stroke="none"/>
+      </g>
+    </g>
+
+    <!-- 梅花花苞定义 -->
+    <g id="blossomBud">
+      <path d="M-4,10 C-10,2 -6,-8 0,-14 C6,-8 10,2 4,10 Z" fill="url(#budGrad)"/>
+      <!-- 绿褐花萼托底 -->
+      <path d="M-6,8 C-10,14 0,18 6,8 C4,14 -4,14 -6,8 Z" fill="url(#calyxGrad)"/>
+      <path d="M-8,4 C-8,12 -2,10 -4,4 Z" fill="url(#calyxGrad)"/>
+      <path d="M8,4 C8,12 2,10 4,4 Z" fill="url(#calyxGrad)"/>
+    </g>
+
+    <!-- 飘落单瓣 -->
+    <g id="singlePetal">
+      <path d="M0,0 C-8,-12 8,-16 12,-6 C14,4 4,10 0,0 Z" fill="url(#petalSoft)" opacity="0.92"/>
+    </g>
+  </defs>
+
+  <!-- ==========================================
+       【主枝干群】：从左上方苍劲入画，向右下婉转垂落
+       ========================================== -->
+  <g class="plum-main-branches" filter="drop-shadow(0 4px 10px rgba(60,25,18,0.12))">
+    <!-- 主老干（粗实苍劲） -->
+    <path d="M-20,-10 
+             C40,15 110,35 180,45 
+             C240,53 290,30 350,52 
+             C400,70 440,110 500,125 
+             C560,140 640,130 710,160 
+             C715,162 705,170 690,168 
+             C625,142 550,150 490,135 
+             C435,120 395,82 345,66 
+             C285,46 235,68 175,58 
+             C105,48 35,26 -20,2 Z" 
+          fill="url(#branchGrad)"/>
+
+    <!-- 分支 1：左上向下小垂枝 -->
+    <path d="M120,40 
+             C135,75 125,115 140,150 
+             C143,158 138,158 135,152 
+             C120,118 130,80 115,44 Z" 
+          fill="url(#branchGrad)"/>
+
+    <!-- 分支 2：中段向上伸展小枝 -->
+    <path d="M260,45 
+             C285,25 315,15 340,6 
+             C344,4 344,8 340,10 
+             C315,19 288,29 265,51 Z" 
+          fill="url(#branchGrad)"/>
+
+    <!-- 分支 3：中段向下主侧枝 -->
+    <path d="M330,55 
+             C345,95 320,140 335,185 
+             C345,215 375,245 400,265 
+             C404,268 400,270 396,267 
+             C370,245 338,212 328,182 
+             C312,138 338,96 324,56 Z" 
+          fill="url(#branchGrad)"/>
+
+    <!-- 分支 4：向下侧枝之小细枝 -->
+    <path d="M332,135 
+             C305,150 280,180 265,210 
+             C262,216 259,214 261,208 
+             C275,178 300,150 328,133 Z" 
+          fill="url(#branchGrad)"/>
+
+    <!-- 分支 5：右侧梢头细枝 -->
+    <path d="M470,118 
+             C505,85 540,65 580,50 
+             C584,48 584,52 580,54 
+             C542,68 508,88 474,121 Z" 
+          fill="url(#branchGrad)"/>
+
+    <!-- 分支 6：右下方点缀细梢 -->
+    <path d="M570,138 
+             C600,175 620,215 650,240 
+             C653,243 650,245 647,242 
+             C618,217 598,177 568,140 Z" 
+          fill="url(#branchGrad)"/>
+  </g>
+
+  <!-- ==========================================
+       【点苔与枝结小节】
+       ========================================== -->
+  <g fill="#2A140B" opacity="0.8">
+    <ellipse cx="60" cy="22" rx="4" ry="2"/>
+    <ellipse cx="145" cy="46" rx="5" ry="2.5" transform="rotate(-10 145 46)"/>
+    <ellipse cx="225" cy="52" rx="6" ry="3" transform="rotate(5 225 52)"/>
+    <ellipse cx="340" cy="60" rx="5" ry="2.5"/>
+    <ellipse cx="440" cy="98" rx="4" ry="2" transform="rotate(20 440 98)"/>
+    <ellipse cx="530" cy="132" rx="4.5" ry="2"/>
+    <ellipse cx="330" cy="115" rx="3.5" ry="2"/>
+    <ellipse cx="350" cy="195" rx="4" ry="2" transform="rotate(30 350 195)"/>
+  </g>
+
+  <!-- ==========================================
+       【繁花与含苞待放】按枝头层次错落排布
+       ========================================== -->
+  <!-- 1. 左侧起点花蕾与早发梅花 -->
+  <use href="#blossomBud" x="45" y="16" transform="rotate(-35 45 16) scale(0.85)"/>
+  <use href="#blossomSide" x="90" y="30" transform="rotate(-15 90 30) scale(0.9)"/>
+  <use href="#blossomBud" x="110" y="15" transform="rotate(25 110 15) scale(0.75)"/>
+
+  <!-- 2. 下垂小枝上的花 -->
+  <use href="#blossomFull" x="135" y="90" transform="scale(0.82) rotate(15 135 90)"/>
+  <use href="#blossomSide" x="142" y="152" transform="scale(0.8) rotate(45 142 152)"/>
+  <use href="#blossomBud" x="132" y="168" transform="scale(0.7) rotate(120 132 168)"/>
+
+  <!-- 3. 主干黄金点：华丽盛放主花 (大朵，吸睛) -->
+  <use href="#blossomFull" x="195" y="52" transform="scale(1.22) rotate(-5 195 52)"/>
+  <use href="#blossomSide" x="245" y="38" transform="scale(0.95) rotate(-30 245 38)"/>
+  
+  <!-- 4. 向上小枝上的花与花苞 -->
+  <use href="#blossomBud" x="305" y="18" transform="rotate(-40 305 18) scale(0.8)"/>
+  <use href="#blossomFull" x="345" y="6" transform="scale(0.85) rotate(20 345 6)"/>
+
+  <!-- 5. 中间主花丛 (层叠有致) -->
+  <use href="#blossomFull" x="310" y="62" transform="scale(1.05) rotate(25 310 62)"/>
+  <use href="#blossomSide" x="350" y="50" transform="scale(1.15) rotate(10 350 50)"/>
+  <use href="#blossomBud" x="375" y="38" transform="rotate(35 375 38) scale(0.85)"/>
+
+  <!-- 6. 中间垂枝花串 -->
+  <use href="#blossomFull" x="340" y="112" transform="scale(0.95) rotate(-15 340 112)"/>
+  <use href="#blossomSide" x="328" y="158" transform="scale(0.88) rotate(-45 328 158)"/>
+  <use href="#blossomFull" x="368" y="215" transform="scale(1.0) rotate(35 368 215)"/>
+  <use href="#blossomSide" x="398" y="265" transform="scale(0.85) rotate(60 398 265)"/>
+  <use href="#blossomBud" x="412" y="282" transform="rotate(85 412 282) scale(0.75)"/>
+
+  <!-- 7. 中间小侧枝上的点缀花 -->
+  <use href="#blossomSide" x="295" y="162" transform="scale(0.82) rotate(-65 295 162)"/>
+  <use href="#blossomBud" x="262" y="215" transform="rotate(-80 262 215) scale(0.75)"/>
+
+  <!-- 8. 右侧主干与盛放花朵 -->
+  <use href="#blossomFull" x="430" y="85" transform="scale(1.18) rotate(-20 430 85)"/>
+  <use href="#blossomBud" x="465" y="68" transform="rotate(-15 465 68) scale(0.8)"/>
+  
+  <!-- 9. 向上伸展右细枝 -->
+  <use href="#blossomSide" x="525" y="70" transform="scale(0.88) rotate(-35 525 70)"/>
+  <use href="#blossomFull" x="578" y="48" transform="scale(0.85) rotate(10 578 48)"/>
+
+  <!-- 10. 右下方梢头花与花蕾 -->
+  <use href="#blossomFull" x="508" y="132" transform="scale(1.08) rotate(15 508 132)"/>
+  <use href="#blossomSide" x="575" y="142" transform="scale(0.92) rotate(40 575 142)"/>
+  <use href="#blossomFull" x="625" y="195" transform="scale(0.88) rotate(50 625 195)"/>
+  <use href="#blossomBud" x="652" y="244" transform="rotate(70 652 244) scale(0.75)"/>
+
+  <!-- 11. 最右梢头收笔花苞 -->
+  <use href="#blossomSide" x="670" y="152" transform="scale(0.8) rotate(20 670 152)"/>
+  <use href="#blossomBud" x="712" y="162" transform="rotate(45 712 162) scale(0.72)"/>
+
+  <!-- ==========================================
+       【漫天落瓣】：枝头飘落微风中的轻盈花瓣
+       ========================================== -->
+  <use href="#singlePetal" x="180" y="130" transform="rotate(25 180 130) scale(0.85)"/>
+  <use href="#singlePetal" x="260" y="110" transform="rotate(-40 260 110) scale(0.7)"/>
+  <use href="#singlePetal" x="385" y="165" transform="rotate(55 385 165) scale(0.9)"/>
+  <use href="#singlePetal" x="460" y="175" transform="rotate(-15 460 175) scale(0.75)"/>
+  <use href="#singlePetal" x="530" y="210" transform="rotate(35 530 210) scale(0.8)"/>
+  <use href="#singlePetal" x="320" y="245" transform="rotate(-60 320 245) scale(0.65)"/>
+</svg>

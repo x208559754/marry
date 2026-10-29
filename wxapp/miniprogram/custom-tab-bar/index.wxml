@@ -1,0 +1,32 @@
+<!-- custom-tab-bar/index.wxml - 高定唯美悬浮毛玻璃底栏 (香槟微金 · 喜结良缘) -->
+<view class="custom-tab-bar-wrap {{visible ? 'visible' : 'hidden'}}">
+  <view class="custom-tab-bar-dock">
+    <!-- 顶部微光金线 -->
+    <view class="dock-gold-line"></view>
+
+    <!-- 5大核心导航 Tab -->
+    <view
+      wx:for="{{list}}"
+      wx:key="pagePath"
+      class="tab-item {{selected === index ? 'active' : ''}}"
+      data-index="{{index}}"
+      bindtap="switchTab"
+    >
+      <!-- 激活选中项的香槟柔光胶囊背景 -->
+      <view class="tab-item-pill" wx:if="{{selected === index}}"></view>
+
+      <!-- 图标与光晕点 -->
+      <view class="tab-icon-box">
+        <image
+          class="tab-icon-img"
+          src="{{selected === index ? item.selectedIconPath : item.iconPath}}"
+          mode="aspectFit"
+        ></image>
+        <view class="tab-active-dot" wx:if="{{selected === index}}"></view>
+      </view>
+
+      <!-- 标签文字 -->
+      <text class="tab-label">{{item.text}}</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,151 @@
+/* custom-tab-bar/index.wxss - 高定唯美悬浮毛玻璃底栏 */
+.custom-tab-bar-wrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 990;
+  pointer-events: none;
+  box-sizing: border-box;
+  padding-bottom: 0;
+}
+
+.custom-tab-bar-wrap.visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.custom-tab-bar-wrap.hidden {
+  opacity: 0;
+  transform: translateY(60rpx);
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+/* 悬浮毛玻璃胶囊 Dock 栏 */
+.custom-tab-bar-dock {
+  margin: 0 24rpx calc(env(safe-area-inset-bottom) + 12rpx);
+  height: 114rpx;
+  background: rgba(255, 252, 248, 0.94);
+  backdrop-filter: blur(28rpx);
+  -webkit-backdrop-filter: blur(28rpx);
+  border-radius: 57rpx;
+  border: 1.5rpx solid rgba(212, 175, 55, 0.42);
+  box-shadow: 
+    0 16rpx 42rpx rgba(110, 32, 28, 0.09),
+    0 4rpx 14rpx rgba(0, 0, 0, 0.04),
+    inset 0 1rpx 2rpx rgba(255, 255, 255, 0.95);
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* 顶部流金微光 */
+.dock-gold-line {
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 2rpx;
+  background: linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.65) 50%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Tab 项 */
+.tab-item {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.15s ease;
+}
+
+.tab-item:active {
+  transform: scale(0.95);
+}
+
+/* 激活时的香槟金柔光药丸胶囊 */
+.tab-item-pill {
+  position: absolute;
+  top: 8rpx;
+  bottom: 8rpx;
+  left: 8rpx;
+  right: 8rpx;
+  border-radius: 46rpx;
+  background: linear-gradient(145deg, rgba(139, 30, 30, 0.07) 0%, rgba(212, 175, 55, 0.15) 100%);
+  border: 1rpx solid rgba(212, 175, 55, 0.25);
+  z-index: 1;
+  animation: pillPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes pillPop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 图标容器 */
+.tab-icon-box {
+  position: relative;
+  width: 44rpx;
+  height: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.tab-icon-img {
+  width: 44rpx;
+  height: 44rpx;
+  display: block;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tab-item.active .tab-icon-img {
+  transform: scale(1.12) translateY(-2rpx);
+}
+
+/* 激活时右上角闪耀金星点 */
+.tab-active-dot {
+  position: absolute;
+  top: -4rpx;
+  right: -6rpx;
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: #D4AF37;
+  box-shadow: 0 0 8rpx rgba(212, 175, 55, 0.95);
+}
+
+/* 标签文字 */
+.tab-label {
+  font-size: 20rpx;
+  color: #9A8982;
+  margin-top: 4rpx;
+  letter-spacing: 1rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  z-index: 2;
+  transition: all 0.2s ease;
+}
+
+.tab-item.active .tab-label {
+  color: #8B1E1E;
+  font-weight: 700;
+  font-size: 21rpx;
+  text-shadow: 0 1rpx 2rpx rgba(139, 30, 30, 0.12);
+}

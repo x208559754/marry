@@ -1,0 +1,887 @@
+/* pages/rsvp/rsvp.wxss - 高定唯美结婚席位回函样式 (金玉良缘 · 礼聘吉席) */
+.container {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 160rpx);
+  box-sizing: border-box;
+}
+
+/* =========================================================================
+   1. 席位确认证书卡片 (Confirmed Certificate Card)
+   ========================================================================= */
+.confirmed-certificate-card {
+  background: radial-gradient(ellipse at 50% 0%, #FFFFFF 0%, #FDFBF7 60%, #F8F3EA 100%);
+  border: 1.5rpx solid rgba(212, 175, 55, 0.55);
+  border-radius: 36rpx;
+  padding: 44rpx 36rpx 36rpx;
+  margin: 20rpx 28rpx 36rpx;
+  box-shadow: 0 16rpx 44rpx rgba(139, 30, 30, 0.08), 0 4rpx 14rpx rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 证书内圈烫金边框 */
+.cert-gold-border {
+  position: absolute;
+  top: 14rpx;
+  left: 14rpx;
+  right: 14rpx;
+  bottom: 14rpx;
+  border: 1rpx dashed rgba(212, 175, 55, 0.35);
+  border-radius: 26rpx;
+  pointer-events: none;
+}
+
+/* 四角祥云/金饰花角 */
+.cert-corner {
+  position: absolute;
+  width: 16rpx;
+  height: 16rpx;
+  border-color: #D4AF37;
+  pointer-events: none;
+}
+
+.cert-corner.tl { top: 22rpx; left: 22rpx; border-top: 2rpx solid; border-left: 2rpx solid; }
+.cert-corner.tr { top: 22rpx; right: 22rpx; border-top: 2rpx solid; border-right: 2rpx solid; }
+.cert-corner.bl { bottom: 22rpx; left: 22rpx; border-bottom: 2rpx solid; border-left: 2rpx solid; }
+.cert-corner.br { bottom: 22rpx; right: 22rpx; border-bottom: 2rpx solid; border-right: 2rpx solid; }
+
+.cert-header {
+  display: flex;
+  align-items: center;
+  gap: 22rpx;
+  padding-bottom: 26rpx;
+  border-bottom: 1rpx solid rgba(212, 175, 55, 0.22);
+  margin-bottom: 28rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.cert-seal-badge {
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #A82424 0%, #8B1E1E 70%, #5E1010 100%);
+  border: 2rpx solid #F3DA98;
+  box-shadow: 0 4rpx 16rpx rgba(139, 30, 30, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cert-seal-text {
+  color: #FFF2CE;
+  font-size: 32rpx;
+  font-weight: 700;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.cert-header-content {
+  flex: 1;
+}
+
+.cert-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #2D1A16;
+  letter-spacing: 2rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  display: block;
+}
+
+.cert-sub {
+  font-size: 20rpx;
+  color: #8C7B75;
+  margin-top: 6rpx;
+  display: block;
+}
+
+/* 宾客概览行 */
+.cert-guest-row {
+  display: flex;
+  align-items: center;
+  gap: 22rpx;
+  background: rgba(250, 245, 238, 0.85);
+  border-radius: 24rpx;
+  padding: 20rpx 26rpx;
+  border: 1rpx solid rgba(225, 215, 205, 0.85);
+  margin-bottom: 24rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.cert-avatar-img {
+  width: 90rpx;
+  height: 90rpx;
+  border-radius: 50%;
+  border: 2rpx solid #D4AF37;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.cert-name-box {
+  flex: 1;
+}
+
+.cert-name-line {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 8rpx;
+}
+
+.cert-guest-name {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1A1311;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.cert-status-badge {
+  font-size: 20rpx;
+  padding: 6rpx 20rpx;
+  border-radius: 24rpx;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  line-height: 1.4;
+}
+
+.csb-icon {
+  font-size: 20rpx;
+}
+
+/* 准时赴宴：御制朱砂红金徽章 */
+.cert-status-badge.attending {
+  background: linear-gradient(135deg, #FFF0EC 0%, #FDE4DF 100%);
+  color: #8B1E1E;
+  border: 1.5rpx solid rgba(184, 34, 40, 0.4);
+  box-shadow: 0 4rpx 12rpx rgba(139, 30, 30, 0.1);
+}
+
+/* 遗憾缺席：优雅暖檀金霞徽章 (告别灰暗廉价感) */
+.cert-status-badge.absent {
+  background: linear-gradient(135deg, #FFF6F0 0%, #FAF0E8 100%);
+  color: #8D5447;
+  border: 1.5rpx solid rgba(212, 160, 140, 0.65);
+  box-shadow: 0 4rpx 12rpx rgba(141, 84, 71, 0.1);
+}
+
+.absent-seal {
+  background: radial-gradient(circle at 35% 35%, #B37D72 0%, #9C665A 70%, #70443B 100%) !important;
+  border-color: #F8E2A6 !important;
+}
+
+.cert-phone-val {
+  font-size: 22rpx;
+  color: #7A6963;
+  display: block;
+}
+
+/* 规格席签网格 */
+.cert-specs-grid {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.cert-spec-item {
+  flex: 1;
+  background: #FFFFFF;
+  border-radius: 18rpx;
+  border: 1rpx solid rgba(212, 175, 55, 0.3);
+  padding: 16rpx 10rpx;
+  text-align: center;
+}
+
+.spec-label {
+  font-size: 18rpx;
+  color: #9A8982;
+  display: block;
+  margin-bottom: 6rpx;
+}
+
+.spec-val {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #8B1E1E;
+  display: block;
+}
+
+/* 祝福语引文框 */
+.cert-blessing-box {
+  background: rgba(255, 255, 255, 0.85);
+  border-left: 4rpx solid #D4AF37;
+  padding: 16rpx 20rpx;
+  border-radius: 0 16rpx 16rpx 0;
+  margin-bottom: 20rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.cert-blessing-quote {
+  color: #D4AF37;
+  font-family: serif;
+  font-size: 26rpx;
+  font-weight: bold;
+}
+
+.cert-blessing-content {
+  font-size: 22rpx;
+  color: #4D3B35;
+  font-style: italic;
+  line-height: 1.6;
+}
+
+.cert-edit-action {
+  margin-top: 28rpx;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+}
+
+.btn-cert-edit {
+  background: linear-gradient(135deg, #FFFDF9 0%, #FAF3E6 100%);
+  border: 1.5rpx solid rgba(212, 175, 55, 0.65);
+  border-radius: 40rpx;
+  padding: 12rpx 44rpx;
+  color: #7D4E19;
+  font-size: 24rpx;
+  font-weight: 700;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  box-shadow: 0 6rpx 18rpx rgba(197, 160, 89, 0.18);
+  line-height: 1.5;
+  margin: 0 auto;
+  transition: all 0.2s ease;
+}
+
+.btn-cert-edit::after {
+  border: none;
+}
+
+.btn-cert-edit:active {
+  transform: scale(0.96);
+  background: #F3E6D0;
+}
+
+.bce-icon {
+  font-size: 22rpx;
+  color: #C5A059;
+}
+
+.bce-text {
+  letter-spacing: 2rpx;
+}
+
+/* =========================================================================
+   2. 高定席位表单卡片 (The Main Luxury Form Card)
+   ========================================================================= */
+.rsvp-ceremony-card {
+  background: radial-gradient(ellipse at 50% 0%, #FFFFFF 0%, #FDFBF7 60%, #FAF5ED 100%);
+  border: 1.5rpx solid rgba(212, 175, 55, 0.5);
+  border-radius: 40rpx;
+  padding: 44rpx 36rpx;
+  margin: 20rpx 28rpx 48rpx;
+  box-shadow: 0 18rpx 50rpx rgba(120, 32, 28, 0.08), 0 4rpx 16rpx rgba(0, 0, 0, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.rsvp-gold-inner-border {
+  position: absolute;
+  top: 16rpx;
+  left: 16rpx;
+  right: 16rpx;
+  bottom: 16rpx;
+  border: 1rpx solid rgba(212, 175, 55, 0.25);
+  border-radius: 30rpx;
+  pointer-events: none;
+}
+
+/* 顶端引言 */
+.rsvp-card-top {
+  text-align: center;
+  margin-bottom: 32rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.rsvp-top-en {
+  font-size: 20rpx;
+  letter-spacing: 6rpx;
+  color: #B59B7C;
+  font-family: serif;
+  text-transform: uppercase;
+}
+
+.rsvp-top-title {
+  font-size: 38rpx;
+  font-weight: 700;
+  color: #2D1A16;
+  letter-spacing: 3rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  margin: 10rpx 0 8rpx;
+}
+
+.rsvp-top-quote {
+  font-size: 22rpx;
+  color: #8C746E;
+  font-style: italic;
+  letter-spacing: 2rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.rsvp-top-line {
+  width: 90rpx;
+  height: 2rpx;
+  background: linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.7) 50%, transparent 100%);
+  margin: 20rpx auto 0;
+}
+
+/* 区块小标题 */
+.form-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  margin-bottom: 24rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.fst-diamond {
+  font-size: 14rpx;
+  color: #C5A059;
+}
+
+.fst-text {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #5C3D36;
+  letter-spacing: 2rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+/* 字段组 */
+.field-item {
+  position: relative;
+  z-index: 2;
+}
+
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.field-label {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #2D1A16;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.req {
+  color: #B82228;
+  margin-left: 4rpx;
+}
+
+.field-sub-tip {
+  font-size: 20rpx;
+  color: #9C8983;
+}
+
+/* 头像交互区 */
+.avatar-action-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.btn-avatar-pick-plain {
+  background: rgba(245, 238, 228, 0.9);
+  border: 1rpx solid rgba(212, 175, 55, 0.35);
+  border-radius: 26rpx;
+  padding: 6rpx 18rpx;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  line-height: 1.4;
+  font-size: 20rpx;
+  color: #7D5D54;
+}
+
+.btn-avatar-pick-plain::after {
+  border: none;
+}
+
+.bap-icon {
+  font-size: 20rpx;
+}
+
+.avatar-bubble-btn {
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.avatar-bubble-btn::after {
+  border: none;
+}
+
+.avatar-bubble-img {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  border: 2rpx solid #D4AF37;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.avatar-bubble-tag {
+  font-size: 18rpx;
+  color: #8B1E1E;
+  background: #FFF0ED;
+  border: 1rpx solid rgba(139, 30, 30, 0.2);
+  padding: 4rpx 12rpx;
+  border-radius: 16rpx;
+}
+
+.avatar-del-btn {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: #EEE7DD;
+  color: #88746E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18rpx;
+}
+
+/* 输入框外壳 */
+.input-shell {
+  background: #FAF7F2;
+  border: 1.5rpx solid rgba(225, 215, 205, 0.95);
+  border-radius: 22rpx;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.input-shell:focus-within {
+  background: #FFFFFF;
+  border-color: #C5A059;
+  box-shadow: 0 4rpx 16rpx rgba(197, 160, 89, 0.18);
+}
+
+.luxury-input {
+  height: 84rpx;
+  padding: 0 24rpx;
+  font-size: 26rpx;
+  color: #2D1A16;
+  font-family: -apple-system, BlinkMacSystemFont, "Songti SC", serif;
+}
+
+.input-placeholder {
+  color: #B2A29B;
+  font-size: 24rpx;
+}
+
+/* 手机号组合行 */
+.phone-composite-wrap {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+}
+
+.phone-luxury-input {
+  flex: 1;
+  background: #FAF7F2;
+  border: 1.5rpx solid rgba(225, 215, 205, 0.95);
+  border-radius: 22rpx;
+}
+
+.phone-luxury-input:focus {
+  background: #FFFFFF;
+  border-color: #C5A059;
+}
+
+.btn-wx-quick-phone {
+  background: linear-gradient(135deg, #FFF9ED 0%, #F5E8D0 100%);
+  border: 1.5rpx solid rgba(212, 175, 55, 0.55);
+  color: #7D4E19;
+  font-size: 22rpx;
+  font-weight: 700;
+  height: 84rpx;
+  border-radius: 22rpx;
+  padding: 0 22rpx;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  box-shadow: 0 4rpx 12rpx rgba(197, 160, 89, 0.15);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.btn-wx-quick-phone::after {
+  border: none;
+}
+
+.btn-wx-quick-phone:active {
+  transform: scale(0.96);
+  background: #ECD9B8;
+}
+
+.wx-icon-sym {
+  font-size: 22rpx;
+}
+
+/* 决策卡片 (出席 vs 缺席) */
+.decision-cards-row {
+  display: flex;
+  gap: 20rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.decision-card {
+  flex: 1;
+  padding: 30rpx 20rpx 26rpx;
+  border-radius: 26rpx;
+  background: #FAF7F2;
+  border: 1.5rpx solid rgba(225, 215, 205, 0.9);
+  text-align: center;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.decision-card:active {
+  transform: scale(0.97);
+}
+
+.dec-badge {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  background: rgba(139, 30, 30, 0.1);
+  color: #8B1E1E;
+  font-size: 26rpx;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12rpx;
+  border: 1rpx solid rgba(139, 30, 30, 0.2);
+}
+
+.dec-badge.absent-badge {
+  background: rgba(162, 112, 101, 0.12);
+  color: #87554B;
+  border-color: rgba(162, 112, 101, 0.3);
+}
+
+.dec-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #2D1A16;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  display: block;
+}
+
+.dec-sub {
+  font-size: 20rpx;
+  color: #8C7B75;
+  margin-top: 6rpx;
+  display: block;
+}
+
+/* 准时赴宴 - 激活高定华贵朱砂红渐变 */
+.decision-card.active-yes {
+  background: linear-gradient(145deg, #A82424 0%, #8B1E1E 70%, #6E1212 100%);
+  border-color: #D4AF37;
+  box-shadow: 0 10rpx 28rpx rgba(139, 30, 30, 0.3);
+}
+
+.decision-card.active-yes .dec-badge {
+  background: #F8E2A6;
+  color: #8B1E1E;
+  border-color: #FFEFC4;
+}
+
+.decision-card.active-yes .dec-title {
+  color: #FFFFFF;
+}
+
+.decision-card.active-yes .dec-sub {
+  color: #F8E2A6;
+}
+
+/* 遗憾缺席 - 激活优雅暖檀玫瑰色 (暖和喜庆，得体优雅) */
+.decision-card.active-no {
+  background: linear-gradient(145deg, #9C665A 0%, #834F44 100%);
+  border-color: #E2BCB2;
+  box-shadow: 0 10rpx 28rpx rgba(131, 79, 68, 0.28);
+}
+
+.decision-card.active-no .dec-badge {
+  background: #FFEBE6;
+  color: #834F44;
+  border-color: #FFFFFF;
+}
+
+.decision-card.active-no .dec-title {
+  color: #FFFFFF;
+}
+
+.decision-card.active-no .dec-sub {
+  color: #F8D9D2;
+}
+
+.dec-check-mark {
+  position: absolute;
+  top: 10rpx;
+  right: 14rpx;
+  font-size: 20rpx;
+  color: #F8E2A6;
+  font-weight: bold;
+}
+
+/* 同行人数段落药丸条 */
+.guests-count-bar {
+  display: flex;
+  gap: 12rpx;
+}
+
+.count-segment {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  border-radius: 20rpx;
+  background: #FAF7F2;
+  border: 1.5rpx solid rgba(225, 215, 205, 0.95);
+  transition: all 0.2s ease;
+}
+
+.cs-num {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #3E2923;
+  display: block;
+  line-height: 1;
+}
+
+.cs-unit {
+  font-size: 18rpx;
+  color: #8C7B75;
+  margin-top: 4rpx;
+  display: block;
+}
+
+.count-segment.active {
+  background: #8B1E1E;
+  border-color: #D4AF37;
+  box-shadow: 0 6rpx 18rpx rgba(139, 30, 30, 0.25);
+}
+
+.count-segment.active .cs-num {
+  color: #FFFFFF;
+}
+
+.count-segment.active .cs-unit {
+  color: #F8E2A6;
+}
+
+/* 饮食偏好标签组 */
+.diet-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+}
+
+.diet-tag-btn {
+  padding: 14rpx 28rpx;
+  border-radius: 32rpx;
+  background: #FAF7F2;
+  border: 1.5rpx solid rgba(225, 215, 205, 0.95);
+  font-size: 22rpx;
+  color: #5C4740;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  transition: all 0.2s ease;
+}
+
+.diet-tag-btn:active {
+  transform: scale(0.95);
+}
+
+.diet-tag-btn.active {
+  background: linear-gradient(135deg, #C5A059 0%, #AA7F1A 100%);
+  border-color: #F8E2A6;
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 6rpx 16rpx rgba(170, 127, 26, 0.28);
+}
+
+/* 班车按钮对 */
+.shuttle-toggle-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.shuttle-choice-btn {
+  flex: 1;
+  padding: 22rpx 16rpx;
+  border-radius: 22rpx;
+  background: #FAF7F2;
+  border: 1.5rpx solid rgba(225, 215, 205, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  transition: all 0.2s ease;
+}
+
+.sc-icon {
+  font-size: 26rpx;
+}
+
+.sc-text {
+  font-size: 22rpx;
+  color: #5C4740;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.shuttle-choice-btn.active {
+  background: #FFF8EE;
+  border-color: #8B1E1E;
+  box-shadow: 0 4rpx 14rpx rgba(139, 30, 30, 0.12);
+}
+
+.shuttle-choice-btn.active .sc-text {
+  color: #8B1E1E;
+  font-weight: 700;
+}
+
+/* 快捷祝词小药丸 */
+.quick-blessings-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.qb-chip {
+  background: rgba(245, 238, 228, 0.85);
+  border: 1rpx solid rgba(212, 175, 55, 0.35);
+  padding: 8rpx 18rpx;
+  border-radius: 20rpx;
+  font-size: 20rpx;
+  color: #7D5D54;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  transition: all 0.15s ease;
+}
+
+.qb-chip:active {
+  background: #8B1E1E;
+  color: #FFFFFF;
+  border-color: #8B1E1E;
+}
+
+/* 寄语文本域外壳 */
+.textarea-shell {
+  background: #FAF7F2;
+  border: 1.5rpx solid rgba(225, 215, 205, 0.95);
+  border-radius: 24rpx;
+  padding: 20rpx 24rpx 16rpx;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.textarea-shell:focus-within {
+  background: #FFFFFF;
+  border-color: #C5A059;
+  box-shadow: 0 4rpx 16rpx rgba(197, 160, 89, 0.18);
+}
+
+.luxury-textarea {
+  width: 100%;
+  height: 160rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #2D1A16;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.textarea-counter {
+  text-align: right;
+  display: block;
+  font-size: 18rpx;
+  color: #B2A29B;
+  margin-top: 6rpx;
+}
+
+/* 提交按钮区域 */
+.submit-action-box {
+  margin-top: 48rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.luxury-submit-btn {
+  background: linear-gradient(135deg, #A82424 0%, #8B1E1E 60%, #6E1212 100%);
+  border: 2rpx solid #F3DA98;
+  color: #FFFFFF;
+  height: 96rpx;
+  border-radius: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  box-shadow: 0 12rpx 36rpx rgba(139, 30, 30, 0.35), 0 4rpx 10rpx rgba(0, 0, 0, 0.1);
+  margin: 0;
+  width: 100% !important;
+  transition: transform 0.15s ease;
+}
+
+.luxury-submit-btn::after {
+  border: none;
+}
+
+.luxury-submit-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 6rpx 20rpx rgba(139, 30, 30, 0.25);
+}
+
+.sub-btn-seal {
+  font-size: 32rpx;
+  color: #FDE5B3;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-weight: bold;
+}
+
+.sub-btn-text {
+  font-size: 28rpx;
+  font-weight: 700;
+  letter-spacing: 3rpx;
+  color: #FFFFFF;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.sub-btn-arrow {
+  font-size: 28rpx;
+  color: #FDE5B3;
+}

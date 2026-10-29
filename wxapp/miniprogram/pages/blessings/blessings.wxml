@@ -1,0 +1,83 @@
+<!-- pages/blessings/blessings.wxml - 亲友真挚祝福与留言墙 -->
+<view class="container">
+  <!-- 标题 -->
+  <view class="section-header">
+    <text class="section-en">BLESSINGS & WISHES</text>
+    <text class="section-cn">亲友祝福 · 美好寄语</text>
+    <view class="section-divider"></view>
+  </view>
+
+  <!-- 祝福互动区 -->
+  <view class="card heart-energy-card">
+    <view class="he-title">已收到亲友真挚祝福</view>
+    <view class="he-count">
+      <text class="he-number">{{heartsCount || 1314}}</text>
+      <text class="he-unit"> 条心意</text>
+    </view>
+    <button class="btn-send-heart" bindtap="sendHeart">
+      <text class="heart-icon">♥</text>
+      <text>为新人送上新婚祝愿</text>
+    </button>
+  </view>
+
+  <!-- 发布祝福卡片 -->
+  <view class="card post-card">
+    <view class="post-header">
+      <view class="author-info">
+        <image class="post-avatar" wx:if="{{guestAvatar}}" src="{{guestAvatar}}" mode="aspectFill"></image>
+        <view class="post-avatar-seal" wx:else>囍</view>
+        <text class="post-name">{{guestName || '亲朋好友'}}</text>
+      </view>
+    </view>
+
+    <!-- 预设祝福快捷选词 -->
+    <view class="preset-chips-wrap">
+      <view
+        wx:for="{{presetBlessings}}"
+        wx:key="*this"
+        class="preset-chip"
+        bindtap="selectPreset"
+        data-text="{{item}}"
+      >
+        {{item}}
+      </view>
+    </view>
+
+    <view class="input-row">
+      <input
+        class="bless-input"
+        placeholder="写下对新人的真挚新婚祝愿..."
+        value="{{inputContent}}"
+        bindinput="onInput"
+        confirm-type="send"
+        bindconfirm="sendBlessing"
+        maxlength="150"
+      />
+      <button class="btn-send-bless" bindtap="sendBlessing" loading="{{isSending}}">
+        送出祝福
+      </button>
+    </view>
+  </view>
+
+  <!-- 亲友祝福留言墙列表 (原版高定卡片设计) -->
+  <view class="blessings-list">
+    <view class="bless-card" wx:for="{{blessingsList}}" wx:key="id">
+      <view class="bc-head">
+        <view class="bc-user">
+          <view class="bc-avatar-init">{{item.author ? item.author[0] : '客'}}</view>
+          <text class="bc-author">{{item.author}}</text>
+        </view>
+        <text class="bc-time">{{item.createdAt || '刚刚'}}</text>
+      </view>
+      <text class="bc-content">{{item.content}}</text>
+      <view class="bc-footer">
+        <view class="like-btn" bindtap="likeBlessing" data-id="{{item.id}}">
+          <text class="like-heart">♥</text>
+          <text class="like-count">{{item.likes || 1}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view style="height: 40rpx;"></view>
+</view>

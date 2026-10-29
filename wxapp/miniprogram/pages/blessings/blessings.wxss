@@ -1,0 +1,252 @@
+/* pages/blessings/blessings.wxss - 高定亲友祝福留言样式 */
+.container {
+  padding-bottom: 80rpx;
+}
+
+/* 爱心能量卡片 */
+.heart-energy-card {
+  text-align: center;
+  padding: 44rpx 32rpx;
+}
+
+.he-title {
+  font-size: 22rpx;
+  color: #8C7B75;
+  margin-bottom: 6rpx;
+}
+
+.he-count {
+  margin-bottom: 24rpx;
+}
+
+.he-number {
+  font-size: 54rpx;
+  font-weight: 700;
+  color: #1A1311;
+  font-family: -apple-system, BlinkMacSystemFont, monospace;
+}
+
+.he-unit {
+  font-size: 22rpx;
+  color: #A8958E;
+}
+
+.btn-send-heart {
+  background: #8B1E1E;
+  color: #ffffff;
+  font-size: 24rpx;
+  font-weight: 600;
+  border-radius: 50rpx;
+  padding: 16rpx 40rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  box-shadow: 0 8rpx 20rpx rgba(139, 30, 30, 0.25);
+  border: none;
+  line-height: 1.5;
+}
+
+.btn-send-heart:active {
+  transform: scale(0.96);
+}
+
+.heart-icon {
+  font-size: 28rpx;
+  color: #ffffff;
+}
+
+/* 留言卡片 */
+.post-card {
+  padding: 36rpx 30rpx;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.author-info {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.post-avatar {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  border: 2rpx solid #C5A059;
+}
+
+.post-avatar-seal {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  background: #8B1E1E;
+  color: #F8E2A6;
+  border: 1.5rpx solid #C5A059;
+  font-size: 24rpx;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.post-name {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #2D2522;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.notion-badge {
+  font-size: 20rpx;
+  color: #8C7B75;
+}
+
+/* 快捷词条 */
+.preset-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+
+.preset-chip {
+  background: #FAF7F2;
+  border: 1rpx solid rgba(225, 215, 205, 0.9);
+  padding: 10rpx 20rpx;
+  border-radius: 30rpx;
+  font-size: 20rpx;
+  color: #5C4F4A;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.preset-chip:active {
+  background: #FFF8EE;
+  border-color: #8B1E1E;
+  color: #8B1E1E;
+}
+
+/* 输入行 */
+.input-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.bless-input {
+  flex: 1;
+  background: #FAF7F2;
+  border: 1rpx solid rgba(225, 215, 205, 0.9);
+  border-radius: 18rpx;
+  height: 76rpx;
+  padding: 0 24rpx;
+  font-size: 24rpx;
+  color: #2D2522;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.bless-input:focus {
+  background: #ffffff;
+  border-color: #8B1E1E;
+}
+
+.btn-send-bless {
+  background: #8B1E1E;
+  color: #ffffff;
+  font-size: 24rpx;
+  font-weight: bold;
+  height: 76rpx;
+  line-height: 76rpx;
+  border-radius: 18rpx;
+  padding: 0 32rpx;
+  margin: 0;
+  box-shadow: 0 4rpx 14rpx rgba(139, 30, 30, 0.25);
+  border: none;
+}
+
+/* 祝福留言墙列表 */
+.blessings-list {
+  padding: 0 28rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.bless-card {
+  background: #ffffff;
+  border-radius: 32rpx;
+  padding: 28rpx 30rpx;
+  box-shadow: 0 4rpx 16rpx rgba(45, 37, 34, 0.04);
+  border: 1rpx solid rgba(225, 215, 205, 0.7);
+}
+
+.bc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.bc-user {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.bc-avatar-init {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: #FAF4EC;
+  border: 1rpx solid #C5A059;
+  color: #8B1E1E;
+  font-size: 20rpx;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bc-author {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #2D2522;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.bc-time {
+  font-size: 18rpx;
+  color: #A8958E;
+  font-family: -apple-system, BlinkMacSystemFont, monospace;
+}
+
+.bc-content {
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #5C4F4A;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  display: block;
+}
+
+.bc-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10rpx;
+}
+
+.like-btn {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  font-size: 20rpx;
+  color: #8B1E1E;
+}
+
+.like-heart {
+  font-size: 22rpx;
+}

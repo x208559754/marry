@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="camBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A52A2A"/>
+      <stop offset="100%" stop-color="#7B1414"/>
+    </linearGradient>
+    <linearGradient id="lensGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEBB3"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+  </defs>
+  <!-- Active Camera -->
+  <path d="M16 13 L19 9 L29 9 L32 13 Z" fill="#7B1414" stroke="#D4AF37" stroke-width="1.5" stroke-linejoin="round"/>
+  <rect x="6" y="13" width="36" height="25" rx="6" fill="url(#camBody)" stroke="#D4AF37" stroke-width="1.8"/>
+  <!-- Gold Lens Rim -->
+  <circle cx="24" cy="25.5" r="8" fill="#5A0D0D" stroke="url(#lensGold)" stroke-width="2"/>
+  <circle cx="24" cy="25.5" r="5" fill="#3D0808"/>
+  <!-- Heart Aperture -->
+  <path d="M24 27.5 C22 25.5 21 24.2 21 23 C21 21.8 22 21 23 21 C23.6 21 24 21.4 24 21.4 C24 21.4 24.4 21 25 21 C26 21 27 21.8 27 23 C27 24.2 26 25.5 24 27.5 Z" fill="#FFEBB3"/>
+  <!-- Flash Dot -->
+  <circle cx="34" cy="18" r="2" fill="url(#lensGold)"/>
+</svg>

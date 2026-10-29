@@ -1,0 +1,69 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/story/story",
+    "pages/gallery/gallery",
+    "pages/schedule/schedule",
+    "pages/rsvp/rsvp",
+    "pages/blessings/blessings",
+    "pages/admin/admin"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#8B1E1E",
+    "navigationBarTitleText": "婚礼请柬",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#FDFBF7",
+    "enablePullDownRefresh": true
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#9A8982",
+    "selectedColor": "#8B1E1E",
+    "backgroundColor": "#FFFDF9",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "请柬",
+        "iconPath": "images/tab-home.png",
+        "selectedIconPath": "images/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/gallery/gallery",
+        "text": "相册",
+        "iconPath": "images/tab-gallery.png",
+        "selectedIconPath": "images/tab-gallery-active.png"
+      },
+      {
+        "pagePath": "pages/schedule/schedule",
+        "text": "盛典",
+        "iconPath": "images/tab-schedule.png",
+        "selectedIconPath": "images/tab-schedule-active.png"
+      },
+      {
+        "pagePath": "pages/rsvp/rsvp",
+        "text": "回执",
+        "iconPath": "images/tab-rsvp.png",
+        "selectedIconPath": "images/tab-rsvp-active.png"
+      },
+      {
+        "pagePath": "pages/blessings/blessings",
+        "text": "祝福",
+        "iconPath": "images/tab-bless.png",
+        "selectedIconPath": "images/tab-bless-active.png"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于在盛典日程中进行婚礼场地导航"
+    }
+  },
+  "requiredPrivateInfos": [
+    "chooseAddress",
+    "chooseLocation"
+  ],
+  "sitemapLocation": "sitemap.json",
+  "style": "v2"
+}

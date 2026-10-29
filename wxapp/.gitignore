@@ -1,0 +1,10 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+# 本地凭据与缓存数据（含真实 Notion token，禁止提交）
+data_store/

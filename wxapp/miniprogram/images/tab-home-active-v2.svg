@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="homeActiveEnv" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A52A2A"/>
+      <stop offset="100%" stop-color="#7B1414"/>
+    </linearGradient>
+    <linearGradient id="homeGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEBB3"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+  </defs>
+  <!-- Active Invitation Envelope -->
+  <rect x="6" y="11" width="36" height="26" rx="5" fill="url(#homeActiveEnv)" stroke="#D4AF37" stroke-width="1.8"/>
+  <path d="M7 12 L24 25 L41 12" fill="none" stroke="#FDE5B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7 36 L19 23 M41 36 L29 23" stroke="#5A0D0D" stroke-width="1.4" stroke-linecap="round"/>
+  <!-- Gold Wax Seal -->
+  <circle cx="24" cy="25" r="5.5" fill="url(#homeGold)" stroke="#A52A2A" stroke-width="1.2"/>
+  <circle cx="24" cy="25" r="3.2" fill="none" stroke="#7B1414" stroke-width="0.8"/>
+  <path d="M22.5 25 L25.5 25 M24 23.5 L24 26.5" stroke="#7B1414" stroke-width="0.9" stroke-linecap="round"/>
+</svg>

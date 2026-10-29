@@ -1,0 +1,70 @@
+<!-- pages/schedule/schedule.wxml -->
+<view class="container">
+  <view class="section-title">
+    <text class="title-cn">盛典日程安排</text>
+    <text class="title-en">SCHEDULE & ITINERARY</text>
+    <view class="divider"></view>
+  </view>
+
+  <!-- 盛典时间轴 -->
+  <view class="card timeline-card">
+    <view class="timeline-item" wx:for="{{scheduleList}}" wx:key="time">
+      <view class="time-badge">
+        <text class="tb-time">{{item.time}}</text>
+      </view>
+      <view class="timeline-line"></view>
+      <view class="timeline-content">
+        <view class="tc-header">
+          <text class="tc-dot">✦</text>
+          <text class="tc-title">{{item.title}}</text>
+        </view>
+        <text class="tc-desc">{{item.desc}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 宴会地点与导航 -->
+  <view class="section-title" style="margin-top: 50rpx;">
+    <text class="title-cn">盛典席设与导航</text>
+    <text class="title-en">VENUE & LOCATION</text>
+    <view class="divider"></view>
+  </view>
+
+  <view class="card venue-card">
+    <view class="venue-header">
+      <text class="vh-hotel">{{venue.hotel || '半岛国际大酒店'}}</text>
+      <text class="vh-hall">{{venue.hall || '三层金玉满堂宴会大厅'}}</text>
+    </view>
+
+    <view class="venue-address-row">
+      <text class="loc-tag">席设地址</text>
+      <text class="address-text">{{venue.address || '上海市黄浦区中山东一路128号'}}</text>
+    </view>
+
+    <!-- 地图导航按钮 -->
+    <button class="btn-primary nav-btn" bindtap="openMapNavigation">
+      <text>开启地图导航 ›</text>
+    </button>
+  </view>
+
+  <!-- 联络方式 -->
+  <view class="card contacts-card">
+    <view class="cc-title">
+      <text class="cc-diamond">✦</text>
+      <text>新人联络方式</text>
+      <text class="cc-diamond">✦</text>
+    </view>
+    <view class="contact-grid">
+      <view class="contact-item" bindtap="callPhone" data-phone="{{contacts.groomPhone}}">
+        <text class="ci-role">新郎电话</text>
+        <text class="ci-name">{{config.groomName || '陈长生'}}</text>
+        <text class="ci-phone">{{contacts.groomPhone || '13800000001'}}</text>
+      </view>
+      <view class="contact-item" bindtap="callPhone" data-phone="{{contacts.bridePhone}}">
+        <text class="ci-role">新娘电话</text>
+        <text class="ci-name">{{config.brideName || '徐有容'}}</text>
+        <text class="ci-phone">{{contacts.bridePhone || '13800000002'}}</text>
+      </view>
+    </view>
+  </view>
+</view>
