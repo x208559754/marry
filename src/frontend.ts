@@ -45,6 +45,9 @@ export const page = `<!DOCTYPE html>
 
 <script>
   var gallery = document.getElementById('gallery');
+  // 婚礼标识：从 URL 读取（二维码/分享链接带 ?wid=xxx）
+  var wid = '';
+  try { wid = new URLSearchParams(window.location.search).get('wid') || ''; } catch (e) {}
 
   // SQLite 的 datetime('now') 是 UTC，转成本地时间显示
   function fmtDate(s) {
@@ -83,7 +86,11 @@ export const page = `<!DOCTYPE html>
   }
 
   function load() {
-    fetch('/api/images')
+    if (!wid) {
+      gallery.innerHTML = '<div class="empty">请通过新人分享的二维码或链接（带 wid 参数）访问照片墙</div>';
+      return;
+    }
+    fetch('/api/images?wid=' + encodeURIComponent(wid))
       .then(function (r) { return r.json(); })
       .then(function (list) {
         gallery.innerHTML = '';

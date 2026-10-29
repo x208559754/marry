@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { page } from './frontend'
 import type { AppEnv } from './auth'
-import { requireAdmin } from './auth'
+import { requireAdmin, getWid } from './auth'
 import { wedding } from './wedding'
 
 // 绑定的资源与环境变量见 src/auth.ts 的 Bindings 类型
@@ -37,23 +37,28 @@ app.onError((err, c) => {
   return c.json({ error: '服务器内部错误：' + err.message }, 500)
 })
 
-// 首页：照片墙页面（只读，上传/删除已收敛到小程序管理后台）
+// 首页：照片墙页面（只读，需通过 ?wid= 指定婚礼）
 app.get('/', (c) => c.html(page))
 
-// 照片列表（新 → 旧）
+// 照片列表（新 → 旧；按婚礼隔离，必须带 ?wid=）
 app.get('/api/images', async (c) => {
+  const wid = (c.req.query('wid') || '').trim()
+  if (!wid) return c.json({ error: '缺少 wid 参数（请通过新人分享的二维码或链接访问）' }, 400)
   const { results } = await c.env.DB.prepare(
-    'SELECT id, title, url, thumb_url, created_at FROM images ORDER BY id DESC',
-  ).all<ImageRow>()
+    'SELECT id, title, url, thumb_url, created_at FROM images WHERE wedding_id = ? ORDER BY id DESC',
+  )
+    .bind(wid)
+    .all<ImageRow>()
   return c.json(results)
 })
 
-// 上传照片（管理员）：先把文件转存到 ImgBB，再把元数据写入 D1
+// 上传照片（该婚礼管理员）：先把文件转存到 ImgBB，再把元数据写入 D1
 app.post('/api/images', requireAdmin, async (c) => {
   const apiKey = c.env.IMGBB_API_KEY
   if (!apiKey) {
     return c.json({ error: '服务端未配置 IMGBB_API_KEY，请检查 .dev.vars 或 Wrangler Secret' }, 500)
   }
+  const wid = getWid(c)
 
   // 解析 multipart 表单：file（图片）+ title（可选标题）
   const body = await c.req.parseBody()
@@ -87,12 +92,13 @@ app.post('/api/images', requireAdmin, async (c) => {
     return c.json({ error: 'ImgBB 上传失败' + reason }, 502)
   }
 
-  // 2. 元数据写入 D1
+  // 2. 元数据写入 D1（带婚礼标识）
   const thumbUrl = imgbb.data.thumb?.url ?? imgbb.data.url
   const inserted = await c.env.DB.prepare(
-    'INSERT INTO images (imgbb_id, title, url, thumb_url, delete_url) VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO images (wedding_id, imgbb_id, title, url, thumb_url, delete_url) VALUES (?, ?, ?, ?, ?, ?)',
   )
     .bind(
+      wid,
       imgbb.data.id,
       typeof title === 'string' ? title.trim() || null : null,
       imgbb.data.url,
@@ -110,18 +116,22 @@ app.post('/api/images', requireAdmin, async (c) => {
   return c.json(row, 201)
 })
 
-// 删除照片（管理员）：尽力通知 ImgBB 删原图，然后删除 D1 记录
+// 删除照片（该婚礼管理员）：尽力通知 ImgBB 删原图，然后删除 D1 记录
 app.delete('/api/images/:id', requireAdmin, async (c) => {
+  const wid = getWid(c)
   const id = Number(c.req.param('id'))
   if (!Number.isInteger(id) || id <= 0) {
     return c.json({ error: '无效的 id' }, 400)
   }
 
-  const row = await c.env.DB.prepare('SELECT delete_url FROM images WHERE id = ?')
+  const row = await c.env.DB.prepare('SELECT delete_url, wedding_id FROM images WHERE id = ?')
     .bind(id)
-    .first<{ delete_url: string | null }>()
+    .first<{ delete_url: string | null; wedding_id: string }>()
   if (!row) {
     return c.json({ error: '照片不存在' }, 404)
+  }
+  if (row.wedding_id !== wid) {
+    return c.json({ error: '这张照片不属于当前婚礼' }, 403)
   }
 
   // 尽力而为：ImgBB 的删除链接失效也不影响本地记录删除
@@ -137,7 +147,7 @@ app.delete('/api/images/:id', requireAdmin, async (c) => {
   return c.json({ ok: true })
 })
 
-// 婚礼小程序 API（登录 / 配置 / 回执 / 祝福 / 手机号等，见 src/wedding.ts）
+// 婚礼小程序 API（登录 / 配置 / 回执 / 祝福 / 婚礼管理 / 小程序码等，见 src/wedding.ts）
 app.route('/api', wedding)
 
 export default app
