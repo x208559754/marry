@@ -11,7 +11,8 @@
     "db:create": "wrangler d1 create marry-images",
     "db:local": "wrangler d1 execute marry-images --local --file=./schema.sql",
     "db:remote": "wrangler d1 execute marry-images --remote --file=./schema.sql",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "export:notion": "node scripts/export-notion.mjs"
   },
   "dependencies": {
     "hono": "^4.13.13"

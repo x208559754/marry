@@ -1,11 +1,11 @@
 import { Hono } from 'hono'
 import { page } from './frontend'
+import type { AppEnv } from './auth'
+import { requireAdmin } from './auth'
+import { wedding } from './wedding'
 
-// 绑定的资源：D1 数据库（wrangler.jsonc）+ ImgBB 密钥（.dev.vars / Secret）
-type Bindings = {
-  DB: D1Database
-  IMGBB_API_KEY: string
-}
+// 绑定的资源与环境变量见 src/auth.ts 的 Bindings 类型
+// （DB / IMGBB_API_KEY / WX_APPID / WX_APPSECRET / WX_MOCK_LOGIN / SESSION_SECRET / ADMIN_OPENIDS）
 
 // images 表的一行（只列出接口会用到的字段）
 type ImageRow = {
@@ -29,7 +29,7 @@ type ImgbbUploadResult = {
   error?: { message: string; code: number }
 }
 
-const app = new Hono<{ Bindings: Bindings }>()
+const app = new Hono<AppEnv>()
 
 // 兜底错误处理：比如 D1 还没建表时，返回 JSON 而不是 500 纯文本
 app.onError((err, c) => {
@@ -37,7 +37,7 @@ app.onError((err, c) => {
   return c.json({ error: '服务器内部错误：' + err.message }, 500)
 })
 
-// 首页：照片墙页面
+// 首页：照片墙页面（只读，上传/删除已收敛到小程序管理后台）
 app.get('/', (c) => c.html(page))
 
 // 照片列表（新 → 旧）
@@ -48,8 +48,8 @@ app.get('/api/images', async (c) => {
   return c.json(results)
 })
 
-// 上传照片：先把文件转存到 ImgBB，再把元数据写入 D1
-app.post('/api/images', async (c) => {
+// 上传照片（管理员）：先把文件转存到 ImgBB，再把元数据写入 D1
+app.post('/api/images', requireAdmin, async (c) => {
   const apiKey = c.env.IMGBB_API_KEY
   if (!apiKey) {
     return c.json({ error: '服务端未配置 IMGBB_API_KEY，请检查 .dev.vars 或 Wrangler Secret' }, 500)
@@ -62,7 +62,11 @@ app.post('/api/images', async (c) => {
   if (!(file instanceof File) || file.size === 0) {
     return c.json({ error: '请选择要上传的图片文件' }, 400)
   }
-  if (file.type && !file.type.startsWith('image/')) {
+  // wx.uploadFile 的文件 part 常为 application/octet-stream 或空 type，此时改看文件名扩展名
+  const extOk = /\.(jpe?g|png|webp|gif|heic|heif|bmp)$/i.test(file.name || '')
+  const typeOk = Boolean(file.type) && file.type.startsWith('image/')
+  const octetLike = !file.type || file.type === 'application/octet-stream'
+  if (!typeOk && !(octetLike && extOk)) {
     return c.json({ error: '只能上传图片文件' }, 400)
   }
   if (file.size > 32 * 1024 * 1024) {
@@ -106,8 +110,8 @@ app.post('/api/images', async (c) => {
   return c.json(row, 201)
 })
 
-// 删除照片：尽力通知 ImgBB 删原图，然后删除 D1 记录
-app.delete('/api/images/:id', async (c) => {
+// 删除照片（管理员）：尽力通知 ImgBB 删原图，然后删除 D1 记录
+app.delete('/api/images/:id', requireAdmin, async (c) => {
   const id = Number(c.req.param('id'))
   if (!Number.isInteger(id) || id <= 0) {
     return c.json({ error: '无效的 id' }, 400)
@@ -132,5 +136,8 @@ app.delete('/api/images/:id', async (c) => {
   await c.env.DB.prepare('DELETE FROM images WHERE id = ?').bind(id).run()
   return c.json({ ok: true })
 })
+
+// 婚礼小程序 API（登录 / 配置 / 回执 / 祝福 / 手机号等，见 src/wedding.ts）
+app.route('/api', wedding)
 
 export default app

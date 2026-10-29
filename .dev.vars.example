@@ -1,4 +1,23 @@
-# ImgBB API Key（本地开发用）
-# 免费获取：https://api.imgbb.com/
-# 复制本文件为 .dev.vars 并填入你的 Key
+# ============================================================
+# 本地开发环境变量模板：复制为 .dev.vars 并填入真实值
+# .dev.vars 已被 gitignore，请勿提交
+# ============================================================
+
+# ImgBB API Key（照片上传/相册功能必需）；免费获取：https://api.imgbb.com/
 IMGBB_API_KEY=your_imgbb_api_key
+
+# 微信小程序凭据（生产必须配置；本地不配 + WX_MOCK_LOGIN=1 时走 mock 登录）
+WX_APPID=wx12a496fabe6eb244
+WX_APPSECRET=
+
+# 仅本地开发用：=1 且未配置 WX_APPSECRET 时启用 mock 登录（可离线联调）；线上严禁开启
+WX_MOCK_LOGIN=1
+
+# 登录 token 签名密钥：随机长字符串
+# 生成方式：node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
+SESSION_SECRET=
+
+# 管理员 openid 白名单（逗号分隔）
+# 本地开发：先运行小程序拿到 mock openid（wx_guest_xxx），填到这里测试管理功能
+# 线上：新人登录小程序后，把 admin 页显示的 OpenID 通过 wrangler secret put ADMIN_OPENIDS 配置
+ADMIN_OPENIDS=
