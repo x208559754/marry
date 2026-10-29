@@ -1,7 +1,8 @@
 // utils/config.js — 后端地址唯一配置点
-// 本地联调：用 http://127.0.0.1:8787（开发者工具「详情 → 本地设置」勾选“不校验合法域名”）
-// 真机预览：改成电脑的局域网 IP，如 http://192.168.1.100:8787（需 wrangler dev --ip 0.0.0.0 启动）
-// 线上正式：改成已绑定 Cloudflare Worker 的备案域名，如 https://wedding.example.com
+// 当前：线上 Cloudflare Worker（密钥与迁移数据已就绪；开发者工具勾选“不校验合法域名”即可直连）
+// 本地联调（mock 登录）：注释掉线上这行、改用 http://127.0.0.1:8787，并运行 npm run dev
+// 真机预览：本地可用电脑局域网 IP（wrangler dev --ip 0.0.0.0）；正式版需备案域名，见根 README
 module.exports = {
-  BASE_URL: 'http://127.0.0.1:8787'
+  // BASE_URL: 'http://127.0.0.1:8787'
+  BASE_URL: 'https://marry.x208559754.workers.dev'
 };
