@@ -4,7 +4,7 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-09-01",
 
-  // 非敏感环境变量；敏感信息（WX_APPSECRET / SESSION_SECRET / IMGBB_API_KEY / ADMIN_OPENIDS）用
+  // 非敏感环境变量；敏感信息（WX_APPSECRET / SESSION_SECRET / IMGBB_API_KEY）用
   // `npx wrangler secret put <名称>` 配置。
   // ADMIN_OPENIDS：管理员 openid 白名单（逗号分隔）；先部署，再把新人 openid 填进来重新 deploy 即生效。
   "vars": {
@@ -12,13 +12,12 @@
     "ADMIN_OPENIDS": ""
   },
 
-  // D1 数据库绑定：运行 `npm run db:create` 后，
-  // 把输出的 database_id 填到下面
+  // D1 数据库绑定（database_id 来自 `npm run db:create` 的输出）
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "marry-images",
-      "database_id": "REPLACE_WITH_YOUR_DATABASE_ID"
+      "database_id": "e7ea9a74-f602-4f2a-867c-168dfaed2b32"
     }
   ]
 }
