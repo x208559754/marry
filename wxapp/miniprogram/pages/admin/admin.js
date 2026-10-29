@@ -9,6 +9,10 @@ Page({
     currentOpenid: '',
     backend: '',
     curTab: 'guests',
+    wid: '',
+    qrEnv: 'release',
+    qrSrc: '',
+    qrError: '',
     rsvpList: [],
     loadingRsvps: false,
     photosList: [],
@@ -55,8 +59,10 @@ Page({
         isAuthorized: !!(me && me.isAdmin)
       });
       if (me && me.isAdmin) {
+        that.setData({ wid: api.getWid() });
         that.refreshAll();
         that.loadConfigForm();
+        that.loadQr();
       }
       if (typeof cb === 'function') cb();
     }).catch(function (err) {
@@ -269,6 +275,37 @@ Page({
         content: (err && err.message) || '请确认当前账号在管理员白名单（ADMIN_OPENIDS）中',
         showCancel: false
       });
+    });
+  },
+
+  // ---- 我的婚礼二维码 ----
+
+  loadQr: function (env) {
+    var e = env || this.data.qrEnv || 'release';
+    var base = api.getQrCodeUrl(e);
+    if (!base) {
+      this.setData({ qrSrc: '', qrError: '' });
+      return;
+    }
+    // 时间戳避免缓存旧图（例如上次生成失败）
+    this.setData({ qrEnv: e, qrError: '', qrSrc: base + '&t=' + Date.now() });
+  },
+
+  switchQrEnv: function (e) {
+    this.loadQr(e.currentTarget.dataset.env);
+  },
+
+  onQrError: function () {
+    this.setData({
+      qrError: '二维码生成失败：请确认小程序已有对应环境的版本（正式版上线后默认可用；开发阶段可在开发者工具用「编译模式-通过二维码编译」测试）'
+    });
+  },
+
+  copyWid: function () {
+    if (!this.data.wid) return;
+    wx.setClipboardData({
+      data: this.data.wid,
+      success: function () { wx.showToast({ title: '已复制婚礼标识', icon: 'success' }); }
     });
   }
 });

@@ -1503,3 +1503,28 @@
   opacity: 0.9;
   transform: scale(0.98);
 }
+
+
+/* ================= 推广页 / 婚礼不存在 覆盖层 ================= */
+.promo-overlay {
+  position: fixed; left: 0; top: 0; right: 0; bottom: 0;
+  z-index: 9999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 80rpx 64rpx;
+  background: linear-gradient(165deg, #8B1E1E 0%, #A93226 55%, #C75B4A 100%);
+}
+.promo-icon {
+  width: 220rpx; height: 220rpx; border-radius: 48rpx;
+  box-shadow: 0 18rpx 56rpx rgba(0, 0, 0, 0.30);
+}
+.promo-title {
+  margin-top: 44rpx; font-size: 44rpx; color: #FFF6E8;
+  font-weight: 600; letter-spacing: 4rpx;
+}
+.promo-subtitle {
+  margin-top: 22rpx; font-size: 26rpx; line-height: 1.7;
+  color: rgba(255, 244, 230, 0.85); text-align: center;
+}
+.promo-image { width: 100%; margin-top: 36rpx; border-radius: 16rpx; }
+.promo-tips { margin-top: 60rpx; display: flex; flex-direction: column; align-items: center; gap: 18rpx; }
+.promo-tip-line { font-size: 24rpx; color: rgba(255, 240, 224, 0.75); }

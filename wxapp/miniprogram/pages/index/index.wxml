@@ -441,4 +441,24 @@
       </view>
     </view>
   </view>
+<!-- =========================================================================
+       推广页覆盖层：没有任何扫码参数进入时展示（宣传本小程序）
+       ========================================================================= -->
+  <view class="promo-overlay" wx:if="{{isPromo}}">
+    <image class="promo-icon" src="/images/app-icon-512.png" mode="aspectFit"></image>
+    <view class="promo-title">{{promoTitle || '婚礼请柬小程序'}}</view>
+    <view class="promo-subtitle">{{promoSubtitle || '每对新人的专属电子请柬'}}</view>
+    <image class="promo-image" wx:if="{{promoImage}}" src="{{promoImage}}" mode="widthFix"></image>
+    <view class="promo-tips">
+      <text class="promo-tip-line">✦ 新人：创建婚礼后，把专属小程序码发给亲友</text>
+      <text class="promo-tip-line">✦ 宾客：扫描新人分享的小程序码，即可查看请柬</text>
+    </view>
+  </view>
+
+  <!-- 婚礼不存在/未开通提示层 -->
+  <view class="promo-overlay" wx:if="{{isWeddingNotFound}}">
+    <image class="promo-icon" src="/images/app-icon-512.png" mode="aspectFit"></image>
+    <view class="promo-title">该请柬不存在或未开通</view>
+    <view class="promo-subtitle">请确认扫码链接是否正确，或联系新人重新获取专属二维码</view>
+  </view>
 </view>

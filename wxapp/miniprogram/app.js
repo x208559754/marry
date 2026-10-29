@@ -1,6 +1,5 @@
-// app.js - 微信小程序全局入口逻辑（后端已迁移到 Cloudflare Worker，见 utils/api.js）
+// app.js - 微信小程序全局入口逻辑（多租户：扫码带 wid 进入对应婚礼；见 utils/api.js）
 // 安全说明：AppSecret 已从客户端移除，jscode2session 由 Worker 服务端完成
-const wechat = require('./utils/wechat.js');
 const api = require('./utils/api.js');
 
 App({
@@ -14,7 +13,12 @@ App({
     isLoggedIn: false,
     matchedGuest: null,
 
-    // 婚礼配置内置默认值（云端 /api/config 会 merge 覆盖；字段结构与后端一致）
+    // 当前进入的婚礼标识（扫码/分享链接带 wid=xxx；为空 = 推广页）
+    wid: '',
+    // 该 wid 对应的婚礼不存在或未开通
+    weddingNotFound: false,
+
+    // 婚礼配置内置默认值（云端 /api/config?wid= 会 merge 覆盖；字段结构与后端一致）
     weddingConfig: {
       groom: { name: '陈长生', pinyin: 'CHEN CHANGSHENG', phone: '13800000001' },
       bride: { name: '徐有容', pinyin: 'XU YOURONG', phone: '13800000002' },
@@ -45,24 +49,69 @@ App({
     bgmContext: null,
     isPlayingBgm: false,
 
-    // 管理员权限（由 api 登录结果写入）
+    // 是否当前婚礼的管理员（由 api 登录结果写入，按婚礼区分）
     isAdmin: false
   },
 
-  onLaunch: function () {
+  onLaunch: function (options) {
     console.log('[小程序] 婚礼请柬启动');
 
     // 1. 读取本地持久化的用户信息
     this.initUserStorage();
 
-    // 2. 静默微信登录（服务端 jscode2session；本地开发走 mock），换取 token 与 openid
+    // 2. 解析进入参数（扫码/分享链接里的 wid）
+    this.resolveEntry(options);
+
+    // 3. 静默微信登录（服务端 jscode2session；本地开发走 mock），换取 token 与 openid
     this.doWxLogin();
 
-    // 3. 从云端同步婚礼配置与相册
+    // 4. 从云端同步当前婚礼的配置与相册（无 wid 时跳过，展示推广页）
     this.syncWeddingConfig();
 
-    // 4. 初始化背景音乐
+    // 5. 初始化背景音乐
     this.initBackgroundMusic();
+  },
+
+  onShow: function (options) {
+    // 热启动（例如从聊天里再扫一次码进来）也要解析进入参数
+    var before = this.globalData.wid;
+    this.resolveEntry(options || (wx.getEnterOptionsSync ? wx.getEnterOptionsSync() : null));
+    if (this.globalData.wid && this.globalData.wid !== before) {
+      // 切到了另一场婚礼：重新登录刷新该婚礼的管理员身份，并同步新配置
+      this.doWxLogin();
+      this.syncWeddingConfig();
+    }
+    this.updateTabBarVisibility && this.updateTabBarVisibility();
+  },
+
+  // 解析启动参数：支持 query.wid 与小程序码 scene（scene 可为 "xxx" 或 "wid=xxx"）
+  resolveEntry: function (options) {
+    try {
+      var q = (options && options.query) || {};
+      var wid = '';
+      if (q.wid) {
+        wid = String(q.wid);
+      } else if (q.scene) {
+        var scene = '';
+        try { scene = decodeURIComponent(String(q.scene)); } catch (e) { scene = String(q.scene); }
+        var m = /(?:^|&)wid=([^&]+)/.exec(scene);
+        wid = m ? m[1] : scene;
+      }
+      wid = String(wid || '').trim().slice(0, 32);
+      if (wid) {
+        if (this.globalData.wid !== wid) {
+          console.log('[入口] 进入婚礼:', wid);
+          this.globalData.weddingNotFound = false;
+        }
+        wx.setStorageSync('wx_wedding_wid', wid);
+        this.globalData.wid = wid;
+      } else {
+        // 没有扫码参数：沿用上次进入的婚礼（若也没有 → 推广页）
+        this.globalData.wid = wx.getStorageSync('wx_wedding_wid') || '';
+      }
+    } catch (e) {
+      console.warn('解析进入参数失败:', e);
+    }
   },
 
   // 读取本地缓存
@@ -72,8 +121,8 @@ App({
       const phone = wx.getStorageSync('wx_wedding_phone');
       const openid = wx.getStorageSync('wx_wedding_openid');
       const unionid = wx.getStorageSync('wx_wedding_unionid');
-      const savedRsvp = wx.getStorageSync('wx_wedding_submitted_rsvp');
-      const cachedConfig = wx.getStorageSync('cached_wedding_config');
+      const savedRsvp = wx.getStorageSync('wx_wedding_submitted_rsvp_' + (this.globalData.wid || 'none'));
+      const cachedConfig = wx.getStorageSync('cached_wedding_config_' + (this.globalData.wid || 'none'));
 
       if (userInfo) this.globalData.userInfo = userInfo;
       if (phone) this.globalData.phoneNumber = phone;
@@ -94,11 +143,12 @@ App({
   doWxLogin: function (callback) {
     const that = this;
     api.login().then(function (d) {
-      console.log('[微信登录] 成功:', d.openid, d.mock ? '(mock 本地开发模式)' : '');
+      console.log('[微信登录] 成功:', d.openid, d.mock ? '(mock 本地开发模式)' : '', d.wid ? ('婚礼: ' + d.wid) : '(无 wid，推广页)');
       that.globalData.openid = d.openid;
       that.globalData.isAdmin = !!d.isAdmin;
       that.globalData.isLoggedIn = true;
-      // 登录成功后恢复云端档案
+      if (d.wid && d.widExists === false) that.globalData.weddingNotFound = true;
+      // 登录成功后恢复当前婚礼下的云端档案
       that.syncGuestAfterLogin(d.openid);
       if (typeof callback === 'function') callback(d);
     }).catch(function (err) {
@@ -116,10 +166,10 @@ App({
     if (typeof callback === 'function') callback({ openid: this.globalData.openid });
   },
 
-  // 登录成功后恢复用户云端档案（姓名、电话、祝福语、回执）
+  // 登录成功后恢复当前婚礼下的用户档案（姓名、电话、祝福语、回执）
   syncGuestAfterLogin: function (openid) {
     const that = this;
-    if (!openid) return;
+    if (!openid || !this.globalData.wid) return;
 
     // 1. 先把本地已填写的资料同步到云端（静默、失败不打扰）
     api.syncUserToNotion({
@@ -130,7 +180,7 @@ App({
     });
 
     // 2. 优先应用本地已提交记录（首屏即时恢复）
-    const savedRsvp = wx.getStorageSync('wx_wedding_submitted_rsvp');
+    const savedRsvp = wx.getStorageSync('wx_wedding_submitted_rsvp_' + that.globalData.wid);
     if (savedRsvp) {
       that.globalData.matchedGuest = savedRsvp;
       that.notifyGuestMatched(savedRsvp);
@@ -162,7 +212,7 @@ App({
           openid: openid
         });
         that.globalData.matchedGuest = guestObj;
-        wx.setStorageSync('wx_wedding_submitted_rsvp', guestObj);
+        wx.setStorageSync('wx_wedding_submitted_rsvp_' + that.globalData.wid, guestObj);
         that.notifyGuestMatched(guestObj);
       }
     }).catch(function (e) {
@@ -218,15 +268,25 @@ App({
     });
   },
 
-  // 从云端同步婚礼配置与相册资源（失败时静默沿用本地/默认配置）
+  // 从云端同步当前婚礼的配置与相册资源（无 wid 跳过；婚礼不存在时标记 weddingNotFound）
   syncWeddingConfig: function (callback) {
     const that = this;
+    if (!this.globalData.wid) {
+      if (typeof callback === 'function') callback(that.globalData.weddingConfig);
+      return;
+    }
     api.getWeddingConfig().then(function (cfg) {
       that.globalData.weddingConfig = cfg;
+      that.globalData.weddingNotFound = false;
       console.log('[配置] 已同步云端婚礼配置');
       if (typeof callback === 'function') callback(cfg);
-    }).catch(function () {
-      console.log('[配置] 使用本地/默认婚礼配置');
+    }).catch(function (err) {
+      if (err && err.notFound) {
+        that.globalData.weddingNotFound = true;
+        console.warn('[配置] 婚礼不存在或未开通:', that.globalData.wid);
+      } else {
+        console.log('[配置] 使用本地/默认婚礼配置');
+      }
       if (typeof callback === 'function') callback(that.globalData.weddingConfig);
     });
   },
@@ -314,12 +374,12 @@ App({
     });
   },
 
-  // 将当前微信身份绑定到新人预填的宾客名单（按姓名/手机号匹配）
+  // 将当前微信身份绑定到「当前婚礼」新人预填的宾客名单（按姓名/手机号匹配）
   bindGuestOpenid: function (guestInfo, callback) {
     const that = this;
     const openid = this.globalData.openid || wx.getStorageSync('wx_wedding_openid');
-    if (!openid) {
-      if (typeof callback === 'function') callback({ success: false, message: '尚未完成微信登录' });
+    if (!openid || !this.globalData.wid) {
+      if (typeof callback === 'function') callback({ success: false, message: '尚未完成微信登录或未进入婚礼' });
       return;
     }
 

@@ -4,7 +4,7 @@
   <view class="card lock-card" wx:if="{{!isAuthorized}}">
     <view class="lock-seal">囍</view>
     <text class="lock-title">新人专属管理后台</text>
-    <text class="lock-desc">管理功能使用微信 OpenID 白名单鉴权：把当前账号的 OpenID 加入服务端白名单后即可进入。</text>
+    <text class="lock-desc">管理功能使用微信 OpenID 鉴权：把当前账号设为「该婚礼的管理员」（users.is_admin=1）后即可进入。</text>
 
     <view class="diag-row" wx:if="{{currentOpenid}}">
       <text class="diag-label">当前 OpenID:</text>
@@ -22,8 +22,9 @@
       重新检测权限
     </button>
 
-    <text class="col-tip">本地开发：把上方 OpenID 填入根目录 .dev.vars 的 ADMIN_OPENIDS，重启 wrangler dev 即生效。</text>
-    <text class="col-tip">线上：把 OpenID 填入 wrangler.jsonc 的 ADMIN_OPENIDS（或用 wrangler secret put ADMIN_OPENIDS），重新 deploy 即生效。</text>
+    <text class="col-tip">婚礼管理员：把上方 OpenID 交给平台方设为该婚礼管理员（或跑 SQL：UPDATE users SET is_admin=1 WHERE openid='…' AND wedding_id='…'）。</text>
+    <text class="col-tip">平台超级管理员：把 OpenID 填入 wrangler.jsonc 的 ADMIN_OPENIDS 后重新 deploy（可管理所有婚礼）。</text>
+    <text class="col-tip">当前婚礼: {{wid || '（未进入任何婚礼，请先扫码进入）'}}</text>
     <text class="col-tip">当前后端: {{backend}}</text>
   </view>
 
@@ -229,6 +230,25 @@
           保存婚礼信息
         </button>
         <text class="col-tip">保存后请到各页面下拉刷新（首页/盛典/流程会自动读取最新配置）。</text>
+      </view>
+
+      <view class="card notion-status-card" style="margin-bottom: 24rpx;">
+        <text class="nsc-title">我的婚礼二维码（宾客扫码进入）</text>
+        <view class="diag-row">
+          <text class="diag-label">婚礼标识:</text>
+          <text class="diag-val color-green" style="font-size: 22rpx;">{{wid}}</text>
+          <text bindtap="copyWid" style="color: #B23A3A; font-size: 24rpx; padding: 4rpx 16rpx;">复制</text>
+        </view>
+        <view style="display: flex; gap: 12rpx; margin-top: 16rpx;">
+          <button class="{{qrEnv === 'release' ? 'btn-primary' : 'btn-gold'}}" style="flex: 1; font-size: 24rpx; padding: 12rpx 0;" bindtap="switchQrEnv" data-env="release">正式版码</button>
+          <button class="{{qrEnv === 'trial' ? 'btn-primary' : 'btn-gold'}}" style="flex: 1; font-size: 24rpx; padding: 12rpx 0;" bindtap="switchQrEnv" data-env="trial">体验版码</button>
+          <button class="{{qrEnv === 'develop' ? 'btn-primary' : 'btn-gold'}}" style="flex: 1; font-size: 24rpx; padding: 12rpx 0;" bindtap="switchQrEnv" data-env="develop">开发版码</button>
+        </view>
+        <view style="display: flex; justify-content: center; margin-top: 20rpx;">
+          <image wx:if="{{qrSrc}}" src="{{qrSrc}}" style="width: 360rpx; height: 360rpx; border-radius: 16rpx; background: #FFFFFF;" mode="aspectFit" show-menu-by-longpress="{{true}}" binderror="onQrError"></image>
+        </view>
+        <text class="col-tip" wx:if="{{qrError}}">{{qrError}}</text>
+        <text class="col-tip">长按二维码可保存到相册；把二维码发给亲友，扫码即可进入你们的专属请柬。</text>
       </view>
 
       <view class="card notion-status-card">

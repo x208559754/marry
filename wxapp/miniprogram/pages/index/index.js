@@ -45,12 +45,29 @@ Page({
 
     // 屏幕顶部安全预留空间 (留足梅花枝头与胶囊的舒朗空间)
     topSafeHeight: 118,
-    statusBarHeight: 44
+    statusBarHeight: 44,
+
+    // 推广页 / 婚礼不存在（无扫码参数进入时展示）
+    isPromo: false,
+    isWeddingNotFound: false,
+    promoTitle: '',
+    promoSubtitle: '',
+    promoImage: ''
   },
 
   timerId: null,
 
   onLoad: function () {
+    // 无 wid（未扫码进入）→ 展示平台推广页
+    if (!app.globalData.wid) {
+      this.enterPromoMode();
+      return;
+    }
+    // 扫码进入但婚礼不存在/未开通
+    if (app.globalData.weddingNotFound) {
+      this.setData({ isWeddingNotFound: true });
+    }
+
     // 动态精确计算屏幕顶部安全留白 (避开状态栏与微信右上角胶囊，留出开阔大气的呼吸空间与梅花枝头)
     let sHeight = 44;
     let mBottom = 88;
@@ -125,6 +142,20 @@ Page({
     app.addBgmListener(this.bgmListener);
   },
 
+  // 展示平台推广页（没有任何扫码参数进入时）
+  enterPromoMode: function () {
+    var that = this;
+    this.setData({ isPromo: true });
+    api.getPromo().then(function (p) {
+      p = p || {};
+      that.setData({
+        promoTitle: p.title || '婚礼请柬小程序',
+        promoSubtitle: p.subtitle || '每对新人的专属电子请柬 · 相册 · 回执 · 祝福墙',
+        promoImage: p.imageUrl || ''
+      });
+    }).catch(function () {});
+  },
+
   onShow: function () {
     this.setData({
       isPlayingBgm: app.globalData.isPlayingBgm
@@ -167,7 +198,12 @@ Page({
         coverImage: cover
       });
       if (typeof callback === 'function') callback();
-    }).catch(() => {
+    }).catch((err) => {
+      if (err && err.notFound) {
+        this.setData({ isWeddingNotFound: true });
+        if (typeof callback === 'function') callback();
+        return;
+      }
       const localCfg = app.globalData.weddingConfig || {};
       this.setData({ config: localCfg });
       if (typeof callback === 'function') callback();
@@ -560,7 +596,7 @@ Page({
     const bride = (this.data.config.bride && this.data.config.bride.name) || '徐有容';
     return {
       title: `喜帖：${groom} ＆ ${bride} 的结婚请柬，诚邀您的莅临！`,
-      path: '/pages/index/index',
+      path: '/pages/index/index' + (app.globalData.wid ? ('?wid=' + app.globalData.wid) : ''),
       imageUrl: this.data.coverImage
     };
   },
