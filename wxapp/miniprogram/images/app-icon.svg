@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="婚礼请柬">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B5E"/>
+      <stop offset="55%" stop-color="#D9384D"/>
+      <stop offset="100%" stop-color="#9B1B30"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 红色渐变圆角底 -->
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+
+  <!-- 新娘剪影：头纱 + 发髻 + 头 + 收腰白婚纱 -->
+  <g transform="translate(0,-8)">
+    <path d="M 256 76 C 172 76 122 148 122 242 C 122 324 112 400 104 464 L 408 464 C 400 400 390 324 390 242 C 390 148 340 76 256 76 Z" fill="#FFFFFF" opacity="0.26"/>
+    <circle cx="256" cy="112" r="17" fill="#FFFFFF"/>
+    <circle cx="256" cy="168" r="50" fill="#FFFFFF"/>
+    <path d="M 256 212 C 230 212 210 226 204 247 C 201 262 204 284 212 298 C 197 342 163 404 141 436 L 371 436 C 349 404 315 342 300 298 C 308 284 311 262 308 247 C 302 226 282 212 256 212 Z" fill="#FFFFFF"/>
+  </g>
+
+  <!-- 星芒点缀 -->
+  <g fill="#FFFFFF" opacity="0.55">
+    <path transform="translate(396,120)" d="M0,-11 C1.9,-1.9 1.9,-1.9 11,0 C1.9,1.9 1.9,1.9 0,11 C-1.9,1.9 -1.9,1.9 -11,0 C-1.9,-1.9 -1.9,-1.9 0,-11 Z"/>
+    <path transform="translate(112,180) scale(0.72)" d="M0,-11 C1.9,-1.9 1.9,-1.9 11,0 C1.9,1.9 1.9,1.9 0,11 C-1.9,1.9 -1.9,1.9 -11,0 C-1.9,-1.9 -1.9,-1.9 0,-11 Z"/>
+  </g>
+</svg>
