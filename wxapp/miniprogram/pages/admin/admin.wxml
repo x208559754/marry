@@ -7,7 +7,7 @@
     <text class="lock-desc">请输入总管口令。本场婚礼管理员身份不能进入平台总后台，必须通过口令验证。</text>
 
     <view style="margin: 30rpx 0;">
-      <input class="pin-input" password placeholder="请输入总管口令" value="{{inputPasscode}}" bindinput="onPasscodeInput" />
+      <input class="pin-input" password placeholder="请输入总管口令" bindinput="onPasscodeInput" />
       <button class="btn-primary unlock-btn" bindtap="submitSuperPasscode" loading="{{verifyingPasscode}}">
         验证口令并进入总后台
       </button>

@@ -55,11 +55,22 @@ Page({
 
   onLoad: function () {
     // 入口参数（如 ?role=superadmin）不再授予总管身份，必须通过口令验证
-    this.refreshAdminState();
+    // onLoad 与 onShow 会连续触发，加 _booting 避免两次复查互相踩踏
+    this._booting = true;
+    this._authSeq = 0;
+    const that = this;
+    this.refreshAdminState(function () {
+      that._booting = false;
+    });
   },
 
   onShow: function () {
-    // 每次进入复查一次权限
+    // 首次进入时 onLoad 已在验证；已通过的会话不再重新登录，避免失败把口令清掉
+    if (this._booting) return;
+    if (this.data.isAuthorized && this.data.isSuperAdmin) {
+      this.refreshAll();
+      return;
+    }
     this.refreshAdminState();
   },
 
@@ -70,23 +81,30 @@ Page({
   },
 
   onPasscodeInput: function (e) {
+    // 同步到实例变量，避免受控输入在其它 setData 时丢掉最后一次按键
+    this._inputPasscode = e.detail.value;
     this.setData({ inputPasscode: e.detail.value });
   },
 
   submitSuperPasscode: function () {
     const that = this;
-    const code = (this.data.inputPasscode || '').trim();
+    const code = (this._inputPasscode || this.data.inputPasscode || '').trim();
     if (!code) {
       wx.showToast({ title: '请输入口令', icon: 'none' });
       return;
     }
     this.setData({ verifyingPasscode: true });
-    api.superAdminLogin(code).then(function (res) {
+    const seq = this._nextAuthSeq();
+    api.superAdminLogin(code).then(function () {
+      if (seq !== that._authSeq) return;
+      that._booting = false;
+      that._inputPasscode = '';
       that.setData({
         verifyingPasscode: false,
         isAuthorized: true,
         isSuperAdmin: true,
-        currentOpenid: api.getOpenid() || ''
+        currentOpenid: api.getOpenid() || '',
+        inputPasscode: ''
       });
       wx.showToast({ title: '总管理员验证通过', icon: 'success' });
       that.loadAllWeddings();
@@ -94,6 +112,7 @@ Page({
       that.loadConfigForm();
       that.loadQr();
     }).catch(function (err) {
+      if (seq !== that._authSeq) return;
       that.setData({ verifyingPasscode: false });
       wx.showModal({
         title: '认证未通过',
@@ -229,13 +248,20 @@ Page({
     });
   },
 
+  _nextAuthSeq: function () {
+    this._authSeq = (this._authSeq || 0) + 1;
+    return this._authSeq;
+  },
+
   // 复查登录态：总后台只认总管口令，本场婚礼管理员不能跳过口令页
   refreshAdminState: function (cb) {
     const that = this;
     this.setData({ backend: api.BASE_URL, wid: api.getWid() || 'demo' });
     const savedPass = api.getSuperAdminPasscode();
+    const seq = this._nextAuthSeq();
     if (savedPass) {
       api.superAdminLogin(savedPass).then(function () {
+        if (seq !== that._authSeq) return;
         that.setData({
           isAuthorized: true,
           isSuperAdmin: true,
@@ -247,9 +273,17 @@ Page({
         that.loadConfigForm();
         that.loadQr();
         if (typeof cb === 'function') cb();
-      }).catch(function () {
-        if (typeof api.setSuperAdminPasscode === 'function') {
+      }).catch(function (err) {
+        if (seq !== that._authSeq) return;
+        // 仅在服务端明确说口令错误时才清本地口令；网络失败不清、不踢出已登录会话
+        var msg = (err && err.message) || '';
+        var wrong = msg.indexOf('超级管理员口令错误') !== -1;
+        if (wrong && typeof api.setSuperAdminPasscode === 'function') {
           api.setSuperAdminPasscode('');
+        }
+        if (!wrong && that.data.isAuthorized) {
+          if (typeof cb === 'function') cb();
+          return;
         }
         that.showPasscodeLock(cb);
       });
