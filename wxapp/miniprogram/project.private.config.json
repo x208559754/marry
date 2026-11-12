@@ -1,7 +1,25 @@
 {
   "libVersion": "3.17.4",
   "projectname": "wedding-invitation-miniprogram",
-  "condition": {},
+  "condition": {
+    "miniprogram": {
+      "current": 0,
+      "list": [
+        {
+          "name": "请柬首页体验",
+          "pathName": "pages/index/index",
+          "query": "wid=demo",
+          "scene": null
+        },
+        {
+          "name": "总管理员专属后台",
+          "pathName": "pages/admin/admin",
+          "query": "role=superadmin",
+          "scene": null
+        }
+      ]
+    }
+  },
   "setting": {
     "urlCheck": false,
     "coverView": true,

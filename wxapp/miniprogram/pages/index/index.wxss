@@ -274,12 +274,14 @@
   box-sizing: border-box;
   z-index: 102;
   padding-bottom: 80rpx;
-  animation: slideUpLetter 0.6s ease-out;
+  animation: slideUpLetter 0.6s ease-out forwards;
+  /* 确保动画结束后不保留 transform，防止 iOS 微信 input 原生组件错位漂移到屏幕顶部 */
+  transform: none;
 }
 
 @keyframes slideUpLetter {
   from { opacity: 0; transform: translateY(40rpx); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 
 .letter-paper-card {
@@ -353,16 +355,57 @@
   text-transform: uppercase;
 }
 
-/* 专属迎宾抬头（实时展示输入名字，提交时伴随落印动效） */
-.letter-guest-salute {
+/* 专属迎宾信笺抬头（支持直接在抬头横线上题写称谓，也可联动下方表单） */
+.letter-guest-salute-box {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12rpx;
-  margin: 24rpx 0 12rpx;
-  padding: 10rpx 16rpx;
-  border-radius: 16rpx;
-  transition: all 0.4s ease;
+  margin: 20rpx 0 16rpx;
+  padding: 12rpx 20rpx;
+  background: rgba(245, 237, 226, 0.45);
+  border: 1.5rpx dashed #DEC8B0;
+  border-radius: 20rpx;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.salute-left-badge {
+  background: #8B1E1E;
+  color: #F8E2A6;
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.salute-inline-input {
+  flex: 1;
+  min-width: 0;
+  height: 64rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #3E221E;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  text-align: center;
+  border-bottom: 2rpx solid #C89D91;
+  padding: 0 8rpx;
+}
+
+.salute-inline-placeholder {
+  color: #B59B92;
+  font-size: 22rpx;
+  font-weight: normal;
+}
+
+.salute-right-text {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #3E221E;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  flex-shrink: 0;
 }
 
 .salute-stamping-glow {
@@ -559,9 +602,10 @@
 .lform-slip-label-row {
   display: flex;
   align-items: center;
-  gap: 6rpx;
-  width: 136rpx;
+  gap: 8rpx;
+  min-width: 168rpx;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .lform-slip-label {
@@ -590,7 +634,7 @@
   width: 2rpx;
   height: 28rpx;
   background: #E8DDD2;
-  margin: 0 14rpx;
+  margin: 0 16rpx;
   flex-shrink: 0;
 }
 

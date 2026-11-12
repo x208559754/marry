@@ -96,15 +96,23 @@
           <view class="letter-en">WEDDING INVITATION</view>
         </view>
 
-        <!-- 专属迎宾抬头（实时展示输入名字，提交时伴随落印动效） -->
-        <view class="letter-guest-salute {{isStamping ? 'salute-stamping-glow' : ''}}">
-          <text class="salute-badge">谨呈</text>
-          <block wx:if="{{guestInputName || (guestName && guestName !== '特邀宾客' && guestName !== '亲朋好友')}}">
-            <text class="salute-name">{{guestInputName || guestName}} 亲启</text>
-          </block>
-          <block wx:else>
-            <text class="salute-name salute-empty-hint">（请于下方题写您的称谓） 亲启</text>
-          </block>
+        <!-- 专属迎宾信笺抬头（直接在抬头横线上题写，自然典雅） -->
+        <view class="letter-guest-salute-box {{isStamping ? 'salute-stamping-glow' : ''}}">
+          <view class="salute-left-badge">谨呈</view>
+          <input
+            name="guestNameTop"
+            type="text"
+            class="salute-inline-input"
+            placeholder="在此题写称谓 (如: 表姐 / 大伯一家)"
+            placeholder-class="salute-inline-placeholder"
+            value="{{guestInputName}}"
+            bindinput="onNameInput"
+            bindblur="onNameBlur"
+            cursor-spacing="60"
+            always-embed="{{true}}"
+            adjust-position="{{true}}"
+          />
+          <view class="salute-right-text">亲启</view>
           <!-- 动效落款章 (点击提交时盖印到信上) -->
           <view class="salute-stamp-badge {{isStamping ? 'stamp-show' : ''}}" wx:if="{{isStamping || (guestName && guestName !== '特邀宾客' && guestName !== '亲朋好友')}}">
             <text class="ssb-text">芳名已录</text>
@@ -163,6 +171,9 @@
               bindchange="onNicknameChange"
               bindinput="onNameInput"
               bindblur="onNameBlur"
+              cursor-spacing="60"
+              always-embed="{{true}}"
+              adjust-position="{{true}}"
             />
           </view>
 
@@ -184,6 +195,9 @@
                 value="{{guestInputPhone}}"
                 bindinput="onPhoneInput"
                 bindblur="onPhoneBlur"
+                cursor-spacing="60"
+                always-embed="{{true}}"
+                adjust-position="{{true}}"
               />
               <button
                 class="btn-wx-auth-phone-elegant"

@@ -1,38 +1,64 @@
 <!-- pages/admin/admin.wxml -->
 <view class="container">
-  <!-- 非管理员态：展示当前 OpenID + 白名单引导 -->
+  <!-- 非管理员态：支持通过数据库总管口令验证，或复制 OpenID -->
   <view class="card lock-card" wx:if="{{!isAuthorized}}">
-    <view class="lock-seal">囍</view>
-    <text class="lock-title">新人专属管理后台</text>
-    <text class="lock-desc">管理功能使用微信 OpenID 鉴权：把当前账号设为「该婚礼的管理员」（users.is_admin=1）后即可进入。</text>
+    <view class="lock-seal">👑</view>
+    <text class="lock-title">平台总管理员认证</text>
+    <text class="lock-desc">输入数据库存储的总管口令（如 root@123），即可解锁全平台所有婚礼管理权限。</text>
+
+    <view style="margin: 30rpx 0;">
+      <input class="pin-input" password placeholder="请输入总管口令 (root@123)" value="{{inputPasscode}}" bindinput="onPasscodeInput" />
+      <button class="btn-primary unlock-btn" bindtap="submitSuperPasscode" loading="{{verifyingPasscode}}">
+        验证口令并进入总后台
+      </button>
+    </view>
+
+    <view class="diag-divider" style="margin: 36rpx 0; border-top: 1rpx dashed #E5D5BA;"></view>
 
     <view class="diag-row" wx:if="{{currentOpenid}}">
-      <text class="diag-label">当前 OpenID:</text>
+      <text class="diag-label">当前微信 OpenID:</text>
       <text class="diag-val color-green" style="font-size: 22rpx; word-break: break-all;">{{currentOpenid}}</text>
     </view>
     <view class="diag-row" wx:else>
       <text class="diag-label">登录状态:</text>
-      <text class="diag-val color-red">未获取到 OpenID（请检查后端地址与网络）</text>
+      <text class="diag-val color-red">未获取到 OpenID（请检查网络）</text>
     </view>
 
-    <button class="btn-primary unlock-btn" bindtap="copyOpenid" wx:if="{{currentOpenid}}">
+    <button class="btn-gold unlock-btn" bindtap="copyOpenid" wx:if="{{currentOpenid}}" style="margin-top: 16rpx;">
       复制 OpenID
     </button>
-    <button class="btn-gold unlock-btn" bindtap="refreshAdminState" style="margin-top: 16rpx;">
-      重新检测权限
+    <button class="btn-gold unlock-btn" bindtap="refreshAdminState" style="margin-top: 16rpx; background: #EFE9DD; color: #555;">
+      重新检测白名单
     </button>
 
-    <text class="col-tip">婚礼管理员：把上方 OpenID 交给平台方设为该婚礼管理员（或跑 SQL：UPDATE users SET is_admin=1 WHERE openid='…' AND wedding_id='…'）。</text>
-    <text class="col-tip">平台超级管理员：把 OpenID 填入 wrangler.jsonc 的 ADMIN_OPENIDS 后重新 deploy（可管理所有婚礼）。</text>
-    <text class="col-tip">当前婚礼: {{wid || '（未进入任何婚礼，请先扫码进入）'}}</text>
-    <text class="col-tip">当前后端: {{backend}}</text>
+    <text class="col-tip">提示：口令校验直连 Cloudflare 数据库，首次输入验证成功后将自动将当前设备提权为总管。</text>
   </view>
 
   <block wx:else>
     <!-- 顶部状态栏与退出 -->
     <view class="admin-top-bar">
-      <view class="badge-role">婚礼管理后台</view>
-      <text class="exit-link" bindtap="logoutAdmin">退出管理</text>
+      <view class="badge-role">{{isSuperAdmin ? '👑 平台总管理员' : '婚礼管理员'}}</view>
+      <view style="display: flex; align-items: center;">
+        <text class="preview-link" bindtap="goToPreviewCurrentWedding">进入请柬预览 ›</text>
+        <text class="exit-link" bindtap="logoutAdmin" style="margin-left: 20rpx;">退出管理</text>
+      </view>
+    </view>
+
+    <!-- 全平台婚礼调度与管理中心 -->
+    <view class="card super-weddings-card">
+      <view class="sc-title" style="display: flex; justify-content: space-between; align-items: center;">
+        <text>💒 全平台婚礼调度中心</text>
+        <view class="btn-pill-create" bindtap="openNewWeddingModal">➕ 新建婚礼</view>
+      </view>
+      
+      <picker range="{{weddingOptions}}" range-key="label" value="{{selectedWeddingIndex}}" bindchange="onSelectWedding">
+        <view class="wedding-picker-display">
+          <text class="wp-label">当前管理婚礼：</text>
+          <text class="wp-val">{{currentWeddingDisplay || wid || 'demo (演示婚礼)'}}</text>
+          <text class="wp-arrow">▼ 切换</text>
+        </view>
+      </picker>
+      <view class="wp-sub-tip">💡 在此切换婚礼，下方「新娘新郎信息」、「回执名单」、「相册」与「专属二维码」均自动跟随联动</view>
     </view>
 
     <!-- 统计看板 -->
@@ -272,4 +298,50 @@
       </view>
     </view>
   </block>
+
+  <!-- 新建婚礼弹窗 -->
+  <view class="modal-mask" wx:if="{{showNewWeddingModal}}">
+    <view class="modal-card">
+      <view class="modal-title">创建新婚礼档期</view>
+      <view class="modal-subtitle">在 Cloudflare 数据库中建立新人的专属请柬档案</view>
+      
+      <view class="modal-form-item">
+        <text class="mf-label">专属短标识 (wid) *</text>
+        <input class="mf-input" placeholder="如 zhangli 或 20261018 (纯字母数字)" value="{{newWeddingForm.wid}}" bindinput="onNewWeddingInput" data-field="wid" />
+      </view>
+      <view class="modal-form-row">
+        <view class="modal-form-item" style="flex: 1; margin-right: 12rpx;">
+          <text class="mf-label">新郎姓名 *</text>
+          <input class="mf-input" placeholder="新郎名字" value="{{newWeddingForm.groomName}}" bindinput="onNewWeddingInput" data-field="groomName" />
+        </view>
+        <view class="modal-form-item" style="flex: 1; margin-left: 12rpx;">
+          <text class="mf-label">新娘姓名 *</text>
+          <input class="mf-input" placeholder="新娘名字" value="{{newWeddingForm.brideName}}" bindinput="onNewWeddingInput" data-field="brideName" />
+        </view>
+      </view>
+      <view class="modal-form-row">
+        <view class="modal-form-item" style="flex: 1; margin-right: 12rpx;">
+          <text class="mf-label">婚礼吉日</text>
+          <input class="mf-input" placeholder="如 2026年10月18日" value="{{newWeddingForm.date}}" bindinput="onNewWeddingInput" data-field="date" />
+        </view>
+        <view class="modal-form-item" style="flex: 1; margin-left: 12rpx;">
+          <text class="mf-label">吉时</text>
+          <input class="mf-input" placeholder="如 11:58" value="{{newWeddingForm.time}}" bindinput="onNewWeddingInput" data-field="time" />
+        </view>
+      </view>
+      <view class="modal-form-item">
+        <text class="mf-label">宴席酒店/华堂</text>
+        <input class="mf-input" placeholder="如 静安瑞吉酒店 · 阿斯特宴会厅" value="{{newWeddingForm.venueName}}" bindinput="onNewWeddingInput" data-field="venueName" />
+      </view>
+      <view class="modal-form-item">
+        <text class="mf-label">详细地址</text>
+        <input class="mf-input" placeholder="酒店详细地址" value="{{newWeddingForm.venueAddress}}" bindinput="onNewWeddingInput" data-field="venueAddress" />
+      </view>
+
+      <view class="modal-btn-row">
+        <button class="modal-btn-cancel" bindtap="closeNewWeddingModal">取消</button>
+        <button class="modal-btn-confirm" bindtap="submitNewWedding" loading="{{submittingNewWedding}}">创建并保存</button>
+      </view>
+    </view>
+  </view>
 </view>

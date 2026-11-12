@@ -12,6 +12,7 @@ import {
   getOpenid,
   getWid,
   isAdminOpenid,
+  isSuperAdminOpenid,
   isWeddingAdmin,
 } from './auth'
 import type { AppEnv } from './auth'
@@ -522,11 +523,125 @@ wedding.post('/blessings/:id/like', async (c) => {
   return ok(c, { likes: row.likes })
 })
 
-// ---------------- 平台：婚礼管理（仅平台超级管理员 ADMIN_OPENIDS） ----------------
+// ---------------- 平台：婚礼管理（支持超级管理员口令与 ADMIN_OPENIDS 鉴权） ----------------
 
-// GET /api/weddings（平台超管）→ 婚礼列表
-wedding.get('/weddings', requireAuth, async (c) => {
-  if (!isAdminOpenid(c.env, getOpenid(c))) return fail(c, '仅平台超级管理员可访问', 403)
+// 辅助：从数据库获取当前设置的超级管理员口令（默认 'root@123' 并自动持久化在 config 表）
+async function getSuperAdminPasscode(db: D1Database): Promise<string> {
+  const row = await db.prepare("SELECT value FROM config WHERE key = 'super_admin_passcode'").first<{ value: string }>()
+  if (row?.value) return row.value
+  const def = 'root@123'
+  await db.prepare("INSERT INTO config (key, value, updated_at) VALUES ('super_admin_passcode', ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .bind(def).run().catch(() => {})
+  return def
+}
+
+async function checkSuperAdminAuth(c: any): Promise<boolean> {
+  const headerCode = c.req.header('x-admin-passcode') || c.req.query('passcode') || ''
+  const valid = await getSuperAdminPasscode(c.env.DB)
+  if (headerCode && headerCode === valid) return true
+  const openid = getOpenid(c)
+  if (openid && (await isSuperAdminOpenid(c.env, openid))) return true
+  return false
+}
+
+// POST /api/superadmin/login → 校验超级管理员口令
+wedding.post('/superadmin/login', optionalAuth, async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const passcode = str(body.passcode, 64)
+  const validPasscode = await getSuperAdminPasscode(c.env.DB)
+  if (!passcode || passcode !== validPasscode) {
+    return fail(c, '超级管理员口令错误，请重新输入', 403)
+  }
+
+  const openid = getOpenid(c)
+  if (openid) {
+    // 将该 openid 写入数据库超管白名单，后续永久免输口令
+    try {
+      const row = await c.env.DB.prepare("SELECT value FROM config WHERE key = 'super_admin_openids'").first<{ value: string }>()
+      const existing = (row?.value || '').split(',').map((s) => s.trim()).filter(Boolean)
+      if (!existing.includes(openid)) {
+        existing.push(openid)
+        await c.env.DB.prepare("INSERT INTO config (key, value, updated_at) VALUES ('super_admin_openids', ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+          .bind(existing.join(',')).run()
+      }
+    } catch (e) {
+      console.warn('记录超级管理员 openid 异常:', e)
+    }
+  }
+
+  // 顺带查询出当前所有婚礼
+  const { results } = await c.env.DB.prepare(
+    'SELECT w.id, w.groom_name, w.bride_name, w.config, w.created_at, w.updated_at, ' +
+      '(SELECT COUNT(*) FROM users u WHERE u.wedding_id = w.id) AS user_count, ' +
+      '(SELECT COUNT(*) FROM rsvps r WHERE r.wedding_id = w.id) AS rsvp_count ' +
+      'FROM weddings w ORDER BY w.updated_at DESC LIMIT 500',
+  ).all<Record<string, unknown>>()
+
+  return ok(c, {
+    isSuperAdmin: true,
+    passcode: validPasscode,
+    openid: openid || '',
+    weddings: results || []
+  })
+})
+
+// GET /api/superadmin/weddings → 超管拉取全部婚礼列表
+wedding.get('/superadmin/weddings', optionalAuth, async (c) => {
+  if (!(await checkSuperAdminAuth(c))) return fail(c, '口令无效或未授权', 403)
+  const { results } = await c.env.DB.prepare(
+    'SELECT w.id, w.groom_name, w.bride_name, w.config, w.created_at, w.updated_at, ' +
+      '(SELECT COUNT(*) FROM users u WHERE u.wedding_id = w.id) AS user_count, ' +
+      '(SELECT COUNT(*) FROM rsvps r WHERE r.wedding_id = w.id) AS rsvp_count ' +
+      'FROM weddings w ORDER BY w.updated_at DESC LIMIT 500',
+  ).all<Record<string, unknown>>()
+  return ok(c, results || [])
+})
+
+// POST /api/superadmin/wedding → 超管创建/保存任意婚礼信息
+wedding.post('/superadmin/wedding', optionalAuth, async (c) => {
+  if (!(await checkSuperAdminAuth(c))) return fail(c, '口令无效或未授权', 403)
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const id = str(body.wid || body.id, 32)
+  if (!/^[A-Za-z0-9_-]{2,32}$/.test(id)) return fail(c, '婚礼标识(wid)需为 2-32 位字母/数字/下划线/中划线', 400)
+  const groom = str(body.groomName, 64)
+  const bride = str(body.brideName, 64)
+  const adminOpenid = str(body.adminOpenid, 128)
+  const cfg = body.config && typeof body.config === 'object' && !Array.isArray(body.config) ? body.config : {}
+
+  const now = nowIso()
+  await c.env.DB.prepare(
+    'INSERT INTO weddings (id, groom_name, bride_name, config, updated_at) VALUES (?, ?, ?, ?, ?) ' +
+      'ON CONFLICT(id) DO UPDATE SET groom_name = excluded.groom_name, bride_name = excluded.bride_name, config = excluded.config, updated_at = excluded.updated_at',
+  )
+    .bind(id, groom, bride, JSON.stringify(cfg), now)
+    .run()
+
+  if (adminOpenid) {
+    await c.env.DB.prepare(
+      'INSERT INTO users (openid, wedding_id, is_admin, first_seen, last_seen, login_count) VALUES (?, ?, 1, ?, ?, 0) ' +
+        'ON CONFLICT(openid, wedding_id) DO UPDATE SET is_admin = 1',
+    )
+      .bind(adminOpenid, id, now, now)
+      .run()
+  }
+  return ok(c, { id, saved: true })
+})
+
+// PUT /api/superadmin/passcode → 修改超级管理员口令（存入数据库）
+wedding.put('/superadmin/passcode', optionalAuth, async (c) => {
+  if (!(await checkSuperAdminAuth(c))) return fail(c, '口令无效或未授权', 403)
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const newPasscode = str(body.newPasscode, 64)
+  if (!newPasscode || newPasscode.length < 4) return fail(c, '口令至少需 4 位字符', 400)
+  await c.env.DB.prepare("INSERT INTO config (key, value, updated_at) VALUES ('super_admin_passcode', ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .bind(newPasscode)
+    .run()
+  return ok(c, { updated: true, passcode: newPasscode })
+})
+
+// GET /api/weddings（兼容原有平台超管接口）→ 婚礼列表
+wedding.get('/weddings', optionalAuth, async (c) => {
+  if (!(await checkSuperAdminAuth(c))) return fail(c, '仅平台超级管理员可访问', 403)
   const { results } = await c.env.DB.prepare(
     'SELECT w.id, w.groom_name, w.bride_name, w.created_at, w.updated_at, ' +
       '(SELECT COUNT(*) FROM users u WHERE u.wedding_id = w.id) AS user_count, ' +

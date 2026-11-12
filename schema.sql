@@ -71,9 +71,12 @@ CREATE TABLE IF NOT EXISTS blessings (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- 平台级键值配置：key='wx_access_token' 缓存 access_token；key='promo' 推广页文案
+-- 平台级键值配置：key='wx_access_token' 缓存 access_token；key='promo' 推广页文案；key='super_admin_passcode' 总管口令
 CREATE TABLE IF NOT EXISTS config (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- 初始化超级管理员口令（默认 root@123，支持管理员在后台在线修改）
+INSERT OR IGNORE INTO config (key, value, updated_at) VALUES ('super_admin_passcode', 'root@123', datetime('now'));

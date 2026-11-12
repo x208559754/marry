@@ -332,7 +332,7 @@ Page({
   // 恭启喜帖步入盛典
   handleConfirmAndEnter: function (e) {
     const formVals = (e && e.detail && e.detail.value) || {};
-    const inputName = (formVals.guestName !== undefined ? formVals.guestName : this.data.guestInputName) || '';
+    const inputName = formVals.guestName || formVals.guestNameTop || this.data.guestInputName || '';
     const rawName = inputName.trim();
     const inputPhone = (formVals.guestPhone !== undefined ? formVals.guestPhone : this.data.guestInputPhone) || '';
     const phone = inputPhone.trim();

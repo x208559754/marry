@@ -6,6 +6,24 @@ const wechat = require('../../utils/wechat.js');
 Page({
   data: {
     isAuthorized: false,
+    isSuperAdmin: false,
+    inputPasscode: '',
+    verifyingPasscode: false,
+    weddingsList: [],
+    weddingOptions: [],
+    selectedWeddingIndex: 0,
+    currentWeddingDisplay: '',
+    showNewWeddingModal: false,
+    submittingNewWedding: false,
+    newWeddingForm: {
+      wid: '',
+      groomName: '',
+      brideName: '',
+      date: '',
+      time: '',
+      venueName: '',
+      venueAddress: ''
+    },
     currentOpenid: '',
     backend: '',
     curTab: 'guests',
@@ -34,12 +52,15 @@ Page({
     }
   },
 
-  onLoad: function () {
+  onLoad: function (options) {
+    if (options && (options.role === 'superadmin' || options.superadmin === '1')) {
+      this.setData({ isSuperAdmin: true });
+    }
     this.refreshAdminState();
   },
 
   onShow: function () {
-    // 每次进入复查一次权限：ADMIN_OPENIDS 变更（重新部署）后无需清缓存即生效
+    // 每次进入复查一次权限
     this.refreshAdminState();
   },
 
@@ -49,17 +70,201 @@ Page({
     });
   },
 
+  onPasscodeInput: function (e) {
+    this.setData({ inputPasscode: e.detail.value });
+  },
+
+  submitSuperPasscode: function () {
+    const that = this;
+    const code = (this.data.inputPasscode || '').trim();
+    if (!code) {
+      wx.showToast({ title: '请输入口令', icon: 'none' });
+      return;
+    }
+    this.setData({ verifyingPasscode: true });
+    api.superAdminLogin(code).then(function (res) {
+      that.setData({
+        verifyingPasscode: false,
+        isAuthorized: true,
+        isSuperAdmin: true,
+        currentOpenid: api.getOpenid() || ''
+      });
+      wx.showToast({ title: '总管理员验证通过', icon: 'success' });
+      that.loadAllWeddings();
+      that.refreshAll();
+      that.loadConfigForm();
+      that.loadQr();
+    }).catch(function (err) {
+      that.setData({ verifyingPasscode: false });
+      wx.showModal({
+        title: '认证未通过',
+        content: (err && err.message) || '口令不正确或后端未就绪',
+        showCancel: false
+      });
+    });
+  },
+
+  loadAllWeddings: function () {
+    const that = this;
+    api.getSuperAdminWeddings().then(function (list) {
+      list = list || [];
+      const curWid = api.getWid() || 'demo';
+      const options = list.map(function (w) {
+        return {
+          wid: w.id,
+          label: w.id + ': ' + (w.groom_name || '新郎') + ' ＆ ' + (w.bride_name || '新娘')
+        };
+      });
+      let selIdx = options.findIndex(function (o) { return o.wid === curWid; });
+      if (selIdx === -1) selIdx = 0;
+      that.setData({
+        weddingsList: list,
+        weddingOptions: options,
+        selectedWeddingIndex: selIdx,
+        currentWeddingDisplay: options[selIdx] ? options[selIdx].label : curWid,
+        wid: options[selIdx] ? options[selIdx].wid : curWid
+      });
+    }).catch(function () {});
+  },
+
+  onSelectWedding: function (e) {
+    const idx = parseInt(e.detail.value, 10);
+    const item = this.data.weddingOptions[idx];
+    if (!item) return;
+    this.setData({
+      selectedWeddingIndex: idx,
+      currentWeddingDisplay: item.label,
+      wid: item.wid
+    });
+    api.setWid(item.wid);
+    this.refreshAll();
+    this.loadConfigForm();
+    this.loadQr();
+    wx.showToast({ title: '已切换至 ' + item.wid, icon: 'none' });
+  },
+
+  openNewWeddingModal: function () {
+    this.setData({
+      showNewWeddingModal: true,
+      newWeddingForm: {
+        wid: '',
+        groomName: '',
+        brideName: '',
+        date: '',
+        time: '',
+        venueName: '',
+        venueAddress: ''
+      }
+    });
+  },
+
+  closeNewWeddingModal: function () {
+    this.setData({ showNewWeddingModal: false });
+  },
+
+  onNewWeddingInput: function (e) {
+    const field = e.currentTarget.dataset.field;
+    const update = {};
+    update['newWeddingForm.' + field] = e.detail.value;
+    this.setData(update);
+  },
+
+  submitNewWedding: function () {
+    const that = this;
+    const f = this.data.newWeddingForm;
+    const wid = (f.wid || '').trim();
+    const groom = (f.groomName || '').trim();
+    const bride = (f.brideName || '').trim();
+
+    if (!wid || !/^[A-Za-z0-9_-]{2,32}$/.test(wid)) {
+      wx.showToast({ title: '标识需为2-32位英文数字', icon: 'none' });
+      return;
+    }
+    if (!groom || !bride) {
+      wx.showToast({ title: '请填写新郎与新娘姓名', icon: 'none' });
+      return;
+    }
+
+    this.setData({ submittingNewWedding: true });
+    const cfg = {
+      groom: { name: groom },
+      bride: { name: bride },
+      date: f.date ? (f.date + (f.time ? (' ' + f.time) : '')) : '',
+      time: f.time || '',
+      venue: {
+        name: f.venueName || '',
+        address: f.venueAddress || ''
+      }
+    };
+
+    api.saveSuperAdminWedding({
+      wid: wid,
+      groomName: groom,
+      brideName: bride,
+      config: cfg
+    }).then(function () {
+      that.setData({
+        submittingNewWedding: false,
+        showNewWeddingModal: false
+      });
+      wx.showToast({ title: '创建成功！', icon: 'success' });
+      api.setWid(wid);
+      that.loadAllWeddings();
+      that.refreshAll();
+      that.loadConfigForm();
+      that.loadQr();
+    }).catch(function (err) {
+      that.setData({ submittingNewWedding: false });
+      wx.showModal({
+        title: '创建失败',
+        content: (err && err.message) || '请检查网络或口令鉴权',
+        showCancel: false
+      });
+    });
+  },
+
+  goToPreviewCurrentWedding: function () {
+    const targetWid = api.getWid() || 'demo';
+    wx.reLaunch({
+      url: '/pages/index/index?wid=' + encodeURIComponent(targetWid)
+    });
+  },
+
   // 复查登录态与管理员权限
   refreshAdminState: function (cb) {
     const that = this;
     this.setData({ backend: api.BASE_URL });
+    const savedPass = api.getSuperAdminPasscode();
+    if (savedPass) {
+      api.superAdminLogin(savedPass).then(function () {
+        that.setData({
+          isAuthorized: true,
+          isSuperAdmin: true,
+          currentOpenid: api.getOpenid() || '',
+          wid: api.getWid() || 'demo'
+        });
+        that.loadAllWeddings();
+        that.refreshAll();
+        that.loadConfigForm();
+        that.loadQr();
+        if (typeof cb === 'function') cb();
+      }).catch(function () {
+        that.checkStandardAdmin(cb);
+      });
+      return;
+    }
+    this.checkStandardAdmin(cb);
+  },
+
+  checkStandardAdmin: function (cb) {
+    const that = this;
     api.getMe().then(function (me) {
       that.setData({
         currentOpenid: api.getOpenid() || '',
         isAuthorized: !!(me && me.isAdmin)
       });
       if (me && me.isAdmin) {
-        that.setData({ wid: api.getWid() });
+        that.setData({ wid: api.getWid() || 'demo' });
         that.refreshAll();
         that.loadConfigForm();
         that.loadQr();

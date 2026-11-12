@@ -7,10 +7,19 @@ const TOKEN_KEY = 'wx_wedding_token';
 const TOKEN_EXP_KEY = 'wx_wedding_token_exp';
 const OPENID_KEY = 'wx_wedding_openid';
 const ADMIN_KEY = 'wx_wedding_is_admin';
+const SUPER_PASSCODE_KEY = 'wx_super_admin_passcode';
 const MOCK_ID_KEY = 'wx_wedding_mock_id';
 const WID_KEY = 'wx_wedding_wid';
 
 // ---------------- 登录态 / 婚礼标识 ----------------
+
+function getSuperAdminPasscode() {
+  try { return wx.getStorageSync(SUPER_PASSCODE_KEY) || ''; } catch (e) { return ''; }
+}
+
+function setSuperAdminPasscode(code) {
+  try { wx.setStorageSync(SUPER_PASSCODE_KEY, code); } catch (e) {}
+}
 
 function getToken() {
   try { return wx.getStorageSync(TOKEN_KEY) || ''; } catch (e) { return ''; }
@@ -23,6 +32,14 @@ function getOpenid() {
 // 当前处于哪场婚礼（扫码进入时由 app.js 写入）
 function getWid() {
   try { return wx.getStorageSync(WID_KEY) || ''; } catch (e) { return ''; }
+}
+
+function setWid(wid) {
+  try {
+    wx.setStorageSync(WID_KEY, wid || '');
+    var app = typeof getApp === 'function' ? getApp() : null;
+    if (app && app.globalData) app.globalData.wid = wid || '';
+  } catch (e) {}
 }
 
 function isAdmin() {
@@ -57,6 +74,8 @@ function request(method, path, data) {
     var header = {};
     var token = getToken();
     if (token) header['Authorization'] = 'Bearer ' + token;
+    var pass = getSuperAdminPasscode();
+    if (pass) header['x-admin-passcode'] = pass;
     return rawRequest(method, path, data, header).then(function (res) {
       if (res.statusCode === 401 && !retried) {
         return ensureLogin(true).then(function () { return attempt(true); });
@@ -381,12 +400,38 @@ function saveConfig(cfg) {
   return request('PUT', widPath('/api/config'), out);
 }
 
+function superAdminLogin(passcode) {
+  return rawRequest('POST', '/api/superadmin/login', { passcode: passcode }).then(function (res) {
+    if (res.statusCode >= 200 && res.statusCode < 300 && res.data && res.data.ok) {
+      setSuperAdminPasscode(passcode);
+      wx.setStorageSync(ADMIN_KEY, '1');
+      var app = typeof getApp === 'function' ? getApp() : null;
+      if (app && app.globalData) app.globalData.isAdmin = true;
+      return res.data.data;
+    }
+    throw new Error((res.data && res.data.error) || '超级管理员口令错误');
+  });
+}
+
+function getSuperAdminWeddings() {
+  return request('GET', '/api/superadmin/weddings');
+}
+
+function saveSuperAdminWedding(data) {
+  return request('POST', '/api/superadmin/wedding', data);
+}
+
+function updateSuperAdminPasscode(newPasscode) {
+  return request('PUT', '/api/superadmin/passcode', { newPasscode: newPasscode });
+}
+
 // 退出登录：清除本地 token（下次请求会自动重新静默登录）
 function logout() {
   try {
     wx.removeStorageSync(TOKEN_KEY);
     wx.removeStorageSync(TOKEN_EXP_KEY);
     wx.removeStorageSync(ADMIN_KEY);
+    wx.removeStorageSync(SUPER_PASSCODE_KEY);
   } catch (e) {}
   var app = typeof getApp === 'function' ? getApp() : null;
   if (app && app.globalData) app.globalData.isAdmin = false;
@@ -400,10 +445,17 @@ module.exports = {
   getToken: getToken,
   getOpenid: getOpenid,
   getWid: getWid,
+  setWid: setWid,
   isAdmin: isAdmin,
   getMe: getMe,
   getPromo: getPromo,
   getQrCodeUrl: getQrCodeUrl,
+  // 超级管理员功能
+  getSuperAdminPasscode: getSuperAdminPasscode,
+  superAdminLogin: superAdminLogin,
+  getSuperAdminWeddings: getSuperAdminWeddings,
+  saveSuperAdminWedding: saveSuperAdminWedding,
+  updateSuperAdminPasscode: updateSuperAdminPasscode,
   // 业务（与旧版同名，页面侧改动最小）
   getWeddingConfig: getWeddingConfig,
   getConfig: getConfig,

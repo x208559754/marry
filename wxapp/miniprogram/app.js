@@ -106,8 +106,8 @@ App({
         wx.setStorageSync('wx_wedding_wid', wid);
         this.globalData.wid = wid;
       } else {
-        // 没有扫码参数：沿用上次进入的婚礼（若也没有 → 推广页）
-        this.globalData.wid = wx.getStorageSync('wx_wedding_wid') || '';
+        // 没有扫码参数：沿用上次进入的婚礼；若首次进入默认进入 demo 示例婚礼以便预览体验
+        this.globalData.wid = wx.getStorageSync('wx_wedding_wid') || 'demo';
       }
     } catch (e) {
       console.warn('解析进入参数失败:', e);
