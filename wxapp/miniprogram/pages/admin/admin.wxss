@@ -3,6 +3,58 @@
   padding-bottom: 80rpx;
 }
 
+/* 微信原生 button 自带内边距、默认行高和 ::after 边框，中文会视觉靠下 */
+button {
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+button::after {
+  border: none;
+}
+
+/* 本页此前引用了 .btn-gold 但没有定义 */
+.btn-gold {
+  background: linear-gradient(135deg, #F6E7C1 0%, #E8D5A3 100%);
+  color: #6D4E1E;
+  font-size: 28rpx;
+  font-weight: 600;
+  border-radius: 50rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  padding: 0 32rpx;
+  text-align: center;
+  border: 1rpx solid rgba(197, 160, 89, 0.45);
+  box-shadow: none;
+}
+
+/* 覆盖全局 .btn-primary 的 padding + line-height，避免文字掉到底部 */
+button.btn-primary,
+button.btn-gold,
+button.unlock-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  line-height: 88rpx;
+  padding: 0 32rpx;
+}
+
+.qr-env-btn {
+  flex: 1;
+  height: 72rpx !important;
+  line-height: 72rpx !important;
+  font-size: 24rpx;
+  padding: 0 8rpx !important;
+  letter-spacing: 0;
+  margin: 0;
+}
+
 .lock-card {
   margin-top: 100rpx;
   text-align: center;
@@ -168,9 +220,13 @@
   border: 1rpx solid #E6CA65;
   color: #8B1E1E;
   border-radius: 30rpx;
-  padding: 6rpx 20rpx;
+  padding: 0 20rpx;
   margin: 0;
-  line-height: 1.4;
+  height: 56rpx;
+  line-height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .guest-card {
@@ -520,8 +576,12 @@
   font-size: 26rpx;
   height: 80rpx;
   line-height: 80rpx;
+  padding: 0;
   border-radius: 16rpx;
   border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .modal-btn-confirm {
@@ -532,7 +592,11 @@
   font-weight: bold;
   height: 80rpx;
   line-height: 80rpx;
+  padding: 0;
   border-radius: 16rpx;
   border: none;
   box-shadow: 0 6rpx 18rpx rgba(139, 30, 30, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

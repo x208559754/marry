@@ -358,25 +358,58 @@ Page({
 
   chooseAndUploadPhoto: function () {
     const that = this;
+    if (this.data.uploading) return;
     wx.chooseMedia({
-      count: 1,
+      count: 9,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
+      sizeType: ['original', 'compressed'],
       success: function (res) {
-        const tempPath = res.tempFiles[0].tempFilePath;
+        const files = (res.tempFiles || []).map(function (f) { return f.tempFilePath; }).filter(Boolean);
+        if (!files.length) {
+          wx.showToast({ title: '未选取到图片', icon: 'none' });
+          return;
+        }
         that.setData({ uploading: true });
-        api.uploadPhoto(tempPath, '婚纱照').then(function () {
-          that.setData({ uploading: false });
-          wx.showToast({ title: '上传成功', icon: 'success' });
-          that.loadPhotos();
-        }).catch(function (err) {
-          that.setData({ uploading: false });
-          wx.showModal({
-            title: '上传失败',
-            content: (err && err.message) || '请检查网络或服务端 IMGBB_API_KEY',
-            showCancel: false
+        var i = 0;
+        var okCount = 0;
+        var lastErr = '';
+        var next = function () {
+          if (i >= files.length) {
+            that.setData({ uploading: false });
+            that.loadPhotos();
+            if (okCount === files.length) {
+              wx.showToast({ title: okCount === 1 ? '上传成功' : '已上传 ' + okCount + ' 张', icon: 'success' });
+            } else if (okCount > 0) {
+              wx.showModal({
+                title: '部分上传失败',
+                content: '成功 ' + okCount + ' 张，失败 ' + (files.length - okCount) + ' 张。' + (lastErr || ''),
+                showCancel: false
+              });
+            } else {
+              wx.showModal({
+                title: '上传失败',
+                content: lastErr || '请检查网络后重试',
+                showCancel: false
+              });
+            }
+            return;
+          }
+          var path = files[i++];
+          api.uploadPhoto(path, '婚纱照').then(function () {
+            okCount++;
+            next();
+          }).catch(function (err) {
+            lastErr = (err && err.message) || '上传失败';
+            next();
           });
-        });
+        };
+        next();
+      },
+      fail: function (err) {
+        var msg = (err && err.errMsg) || '';
+        if (msg.indexOf('cancel') !== -1) return;
+        wx.showToast({ title: msg || '无法打开相册', icon: 'none' });
       }
     });
   },

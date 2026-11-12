@@ -19,5 +19,13 @@
       "database_name": "marry-images",
       "database_id": "e7ea9a74-f602-4f2a-867c-168dfaed2b32"
     }
+  ],
+
+  // 婚纱照文件存储（ImgBB 已封禁 Cloudflare，改走 Worker 自身域名）
+  "kv_namespaces": [
+    {
+      "binding": "PHOTOS",
+      "id": "b9d3551154a347ef924a1b11eea881d2"
+    }
   ]
 }

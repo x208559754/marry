@@ -267,9 +267,9 @@
           <text bindtap="copyWid" style="color: #B23A3A; font-size: 24rpx; padding: 4rpx 16rpx;">复制</text>
         </view>
         <view style="display: flex; gap: 12rpx; margin-top: 16rpx;">
-          <button class="{{qrEnv === 'release' ? 'btn-primary' : 'btn-gold'}}" style="flex: 1; font-size: 24rpx; padding: 12rpx 0;" bindtap="switchQrEnv" data-env="release">正式版码</button>
-          <button class="{{qrEnv === 'trial' ? 'btn-primary' : 'btn-gold'}}" style="flex: 1; font-size: 24rpx; padding: 12rpx 0;" bindtap="switchQrEnv" data-env="trial">体验版码</button>
-          <button class="{{qrEnv === 'develop' ? 'btn-primary' : 'btn-gold'}}" style="flex: 1; font-size: 24rpx; padding: 12rpx 0;" bindtap="switchQrEnv" data-env="develop">开发版码</button>
+          <button class="qr-env-btn {{qrEnv === 'release' ? 'btn-primary' : 'btn-gold'}}" bindtap="switchQrEnv" data-env="release">正式版码</button>
+          <button class="qr-env-btn {{qrEnv === 'trial' ? 'btn-primary' : 'btn-gold'}}" bindtap="switchQrEnv" data-env="trial">体验版码</button>
+          <button class="qr-env-btn {{qrEnv === 'develop' ? 'btn-primary' : 'btn-gold'}}" bindtap="switchQrEnv" data-env="develop">开发版码</button>
         </view>
         <view style="display: flex; justify-content: center; margin-top: 20rpx;">
           <image wx:if="{{qrSrc}}" src="{{qrSrc}}" style="width: 360rpx; height: 360rpx; border-radius: 16rpx; background: #FFFFFF;" mode="aspectFit" show-menu-by-longpress="{{true}}" binderror="onQrError"></image>

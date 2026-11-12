@@ -101,12 +101,20 @@ view, text, image, input, textarea, button {
   font-size: 28rpx;
   font-weight: 600;
   border-radius: 50rpx;
-  padding: 24rpx 0;
+  padding: 0 32rpx;
+  height: 88rpx;
+  line-height: 88rpx;
   text-align: center;
   box-shadow: 0 8rpx 24rpx rgba(139, 30, 30, 0.22);
   border: none;
-  line-height: 1.4;
   letter-spacing: 2rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+button.btn-primary::after {
+  border: none;
 }
 
 .btn-primary:active {

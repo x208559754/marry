@@ -5,6 +5,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status'
 // Worker 绑定的资源与环境变量（wrangler.jsonc vars / .dev.vars / Wrangler Secret）
 export type Bindings = {
   DB: D1Database
+  PHOTOS: KVNamespace
   IMGBB_API_KEY: string
   WX_APPID: string
   WX_APPSECRET: string

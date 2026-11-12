@@ -104,25 +104,36 @@ function request(method, path, data) {
 
 // wx.uploadFile 封装（multipart：file + formData 字段）
 function uploadFile(path, filePath, formData) {
-  return new Promise(function (resolve, reject) {
-    var header = {};
-    var token = getToken();
-    if (token) header['Authorization'] = 'Bearer ' + token;
-    wx.uploadFile({
-      url: BASE_URL + path,
-      filePath: filePath,
-      name: 'file',
-      formData: formData || {},
-      header: header,
-      success: function (res) {
-        var body = {};
-        try { body = JSON.parse(res.data || '{}'); } catch (e) {}
-        if (res.statusCode >= 200 && res.statusCode < 300 && !body.error) return resolve(body);
-        reject(new Error((body && body.error) || ('上传失败（HTTP ' + res.statusCode + '）')));
-      },
-      fail: function (err) { reject(new Error((err && err.errMsg) || '上传失败')); }
+  var attempt = function (retried) {
+    return new Promise(function (resolve, reject) {
+      var header = {};
+      var token = getToken();
+      if (token) header['Authorization'] = 'Bearer ' + token;
+      var pass = getSuperAdminPasscode();
+      if (pass) header['x-admin-passcode'] = pass;
+      wx.uploadFile({
+        url: BASE_URL + path,
+        filePath: filePath,
+        name: 'file',
+        formData: formData || {},
+        header: header,
+        success: function (res) {
+          var body = {};
+          try { body = JSON.parse(res.data || '{}'); } catch (e) {}
+          if (res.statusCode === 401 && !retried) {
+            ensureLogin(true).then(function () { attempt(true).then(resolve, reject); }).catch(reject);
+            return;
+          }
+          if (res.statusCode >= 200 && res.statusCode < 300 && body && body.ok !== false && !body.error) {
+            return resolve(body.data !== undefined ? body.data : body);
+          }
+          reject(new Error((body && body.error) || ('上传失败（HTTP ' + res.statusCode + '）')));
+        },
+        fail: function (err) { reject(new Error((err && err.errMsg) || '上传失败')); }
+      });
     });
-  });
+  };
+  return attempt(false);
 }
 
 // ---------------- 登录 ----------------
