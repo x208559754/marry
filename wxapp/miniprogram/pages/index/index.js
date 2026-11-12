@@ -163,13 +163,32 @@ Page({
     this.updateCustomTabBar();
   },
 
+  onReady: function () {
+    // 自定义底栏组件有时在 onShow 时尚未挂上，onReady 再同步一次
+    this.updateCustomTabBar();
+  },
+
+  // getTabBar() 在首页首次进入时经常还是 undefined（概率性丢底栏），短间隔重试直到拿到
   updateCustomTabBar: function () {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({
-        selected: 0,
-        visible: !!this.data.isAppOpened
-      });
+    var that = this;
+    if (this._tabBarTimer) {
+      clearTimeout(this._tabBarTimer);
+      this._tabBarTimer = null;
     }
+    var trySet = function (n) {
+      var bar = typeof that.getTabBar === 'function' && that.getTabBar();
+      if (bar) {
+        bar.setData({
+          selected: 0,
+          visible: !!that.data.isAppOpened
+        });
+        return;
+      }
+      if (n < 20) {
+        that._tabBarTimer = setTimeout(function () { trySet(n + 1); }, 50);
+      }
+    };
+    trySet(0);
   },
 
   onUnload: function () {
@@ -249,6 +268,8 @@ Page({
       update.guestInputBlessing = blessing;
     }
     this.setData(update);
+    // 云端档案会把请柬直接打开，必须同步底栏，否则内容出来了 tab 还藏着
+    if (update.isAppOpened) this.updateCustomTabBar();
   },
 
   // ==========================================================
