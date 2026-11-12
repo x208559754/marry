@@ -94,6 +94,16 @@ async function upsertUser(
     .run()
 }
 
+
+// 心动次数
+async function heartsCountOf(db: D1Database, wid: string): Promise<number> {
+  const row = await db
+    .prepare('SELECT COUNT(*) AS n FROM heart_clicks WHERE wedding_id = ?')
+    .bind(wid)
+    .first<{ n: number }>()
+  return Number(row?.n) || 0
+}
+
 // 写祝福墙（同一婚礼内 同 openid 同内容去重；返回是否新插入）
 async function insertBlessingIfNew(
   db: D1Database,
@@ -583,6 +593,40 @@ wedding.post('/blessings/:id/like', async (c) => {
     .first<{ likes: number }>()
   if (!row) return fail(c, '祝福不存在', 404)
   return ok(c, { likes: row.likes })
+})
+
+
+// GET /api/hearts?wid= → { count }  「为新人送上新婚祝愿」累计点击次数
+wedding.get('/hearts', requireWid, async (c) => {
+  const wid = getWid(c)
+  const count = await heartsCountOf(c.env.DB, wid)
+  return ok(c, { count })
+})
+
+// POST /api/hearts?wid=（登录可选）→ 记一次点击并返回最新 count
+wedding.post('/hearts', requireWid, optionalAuth, async (c) => {
+  const wid = getWid(c)
+  const openid = getOpenid(c)
+  // 同一登录用户 20 秒内最多 40 次，防止误触刷屏；未登录不按人限流
+  if (openid) {
+    const since = new Date(Date.now() - 20 * 1000).toISOString()
+    const recent = await c.env.DB
+      .prepare(
+        'SELECT COUNT(*) AS n FROM heart_clicks WHERE wedding_id = ? AND openid = ? AND created_at >= ?',
+      )
+      .bind(wid, openid, since)
+      .first<{ n: number }>()
+    if ((Number(recent?.n) || 0) >= 40) {
+      const count = await heartsCountOf(c.env.DB, wid)
+      return ok(c, { created: false, count })
+    }
+  }
+  await c.env.DB
+    .prepare('INSERT INTO heart_clicks (wedding_id, openid, created_at) VALUES (?, ?, ?)')
+    .bind(wid, openid || null, nowIso())
+    .run()
+  const count = await heartsCountOf(c.env.DB, wid)
+  return ok(c, { created: true, count })
 })
 
 // ---------------- 平台：婚礼管理（支持超级管理员口令与 ADMIN_OPENIDS 鉴权） ----------------

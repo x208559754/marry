@@ -334,6 +334,16 @@ function submitBlessing(blessingData) {
   });
 }
 
+
+// 「为新人送上新婚祝愿」心动次数（真实落库）
+function getHearts() {
+  return request('GET', widPath('/api/hearts'));
+}
+
+function sendHeart() {
+  return request('POST', widPath('/api/hearts'), {});
+}
+
 // 点赞（本地兜底默认条的 def_ 前缀 id 不请求服务端，仅本地 +1）
 function likeBlessing(id) {
   var numId = parseInt(id, 10);
@@ -479,6 +489,8 @@ module.exports = {
   getBlessingsList: getBlessingsList,
   submitBlessing: submitBlessing,
   likeBlessing: likeBlessing,
+  getHearts: getHearts,
+  sendHeart: sendHeart,
   syncUserToNotion: syncUserToNotion,
   bindGuestOpenid: bindGuestOpenid,
   getPhoneNumber: getPhoneNumber,

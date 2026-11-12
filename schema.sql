@@ -80,3 +80,13 @@ CREATE TABLE IF NOT EXISTS config (
 
 -- 初始化超级管理员口令（默认 root@123，支持管理员在后台在线修改）
 INSERT OR IGNORE INTO config (key, value, updated_at) VALUES ('super_admin_passcode', 'root@123', datetime('now'));
+
+-- 心动点击记录：「为新人送上新婚祝愿」每一次点击一行（按婚礼隔离）
+CREATE TABLE IF NOT EXISTS heart_clicks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  wedding_id TEXT NOT NULL,
+  openid TEXT,                       -- 点击者 openid（未登录可空）
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_heart_clicks_wedding ON heart_clicks(wedding_id);
+CREATE INDEX IF NOT EXISTS idx_heart_clicks_wid_openid ON heart_clicks(wedding_id, openid);
