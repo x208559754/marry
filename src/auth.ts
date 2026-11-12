@@ -137,9 +137,13 @@ function readToken(c: Context<AppEnv>): string {
   return c.req.query('token') || ''
 }
 
+// 默认测试场：请求未带 wid 时落入 demo，方便本地预览和未扫码进入
+export const DEFAULT_WID = 'demo'
+
 // 婚礼标识：所有婚礼接口统一用 ?wid= 指定（GET/POST/PUT 一致以 query 为准）
 export function getWid(c: Context<AppEnv>): string {
-  return (c.req.query('wid') || '').trim().slice(0, 64)
+  const wid = (c.req.query('wid') || '').trim().slice(0, 64)
+  return wid || DEFAULT_WID
 }
 
 // 可选鉴权：无 token / token 无效都不拦，能解析出 openid 就写入变量
@@ -175,7 +179,6 @@ export async function requireAuth(c: Context<AppEnv>, next: Next) {
 // 婚礼级接口：必须带 wid（无 wid 属于推广页场景，不该请求婚礼数据）
 export async function requireWid(c: Context<AppEnv>, next: Next) {
   const wid = getWid(c)
-  if (!wid) return fail(c, '缺少 wid 参数（请通过新人分享的二维码或链接进入）', 400)
   c.set('wid', wid)
   await next()
 }

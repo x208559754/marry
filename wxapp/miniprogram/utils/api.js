@@ -29,9 +29,19 @@ function getOpenid() {
   try { return wx.getStorageSync(OPENID_KEY) || ''; } catch (e) { return ''; }
 }
 
-// 当前处于哪场婚礼（扫码进入时由 app.js 写入）
+// 当前处于哪场婚礼（扫码进入时由 app.js 写入；没有则落到测试场 demo）
+var DEFAULT_WID = 'demo';
+
 function getWid() {
-  try { return wx.getStorageSync(WID_KEY) || ''; } catch (e) { return ''; }
+  try {
+    var stored = wx.getStorageSync(WID_KEY) || '';
+    if (stored) return stored;
+  } catch (e) {}
+  try {
+    var app = typeof getApp === 'function' ? getApp() : null;
+    if (app && app.globalData && app.globalData.wid) return app.globalData.wid;
+  } catch (e) {}
+  return DEFAULT_WID;
 }
 
 function setWid(wid) {
@@ -48,8 +58,7 @@ function isAdmin() {
 
 // 给婚礼级接口拼接 ?wid=
 function widPath(path) {
-  var wid = getWid();
-  if (!wid) return path;
+  var wid = getWid() || DEFAULT_WID;
   return path + (path.indexOf('?') === -1 ? '?' : '&') + 'wid=' + encodeURIComponent(wid);
 }
 

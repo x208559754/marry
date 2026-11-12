@@ -54,8 +54,7 @@ app.get('/', (c) => c.html(page))
 
 // 照片列表（新 → 旧；按婚礼隔离，必须带 ?wid=）
 app.get('/api/images', async (c) => {
-  const wid = (c.req.query('wid') || '').trim()
-  if (!wid) return c.json({ error: '缺少 wid 参数（请通过新人分享的二维码或链接访问）' }, 400)
+  const wid = getWid(c)
   const { results } = await c.env.DB.prepare(
     'SELECT id, title, url, thumb_url, created_at FROM images WHERE wedding_id = ? ORDER BY id DESC',
   )
