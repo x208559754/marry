@@ -471,6 +471,7 @@ module.exports = {
   getQrCodeUrl: getQrCodeUrl,
   // 超级管理员功能
   getSuperAdminPasscode: getSuperAdminPasscode,
+  setSuperAdminPasscode: setSuperAdminPasscode,
   superAdminLogin: superAdminLogin,
   getSuperAdminWeddings: getSuperAdminWeddings,
   saveSuperAdminWedding: saveSuperAdminWedding,

@@ -1,13 +1,13 @@
 <!-- pages/admin/admin.wxml -->
 <view class="container">
-  <!-- 非管理员态：支持通过数据库总管口令验证，或复制 OpenID -->
+  <!-- 未通过总管口令：显示认证页。本场婚礼管理员也不能跳过。 -->
   <view class="card lock-card" wx:if="{{!isAuthorized}}">
     <view class="lock-seal">👑</view>
     <text class="lock-title">平台总管理员认证</text>
-    <text class="lock-desc">输入数据库存储的总管口令（如 root@123），即可解锁全平台所有婚礼管理权限。</text>
+    <text class="lock-desc">请输入总管口令。本场婚礼管理员身份不能进入平台总后台，必须通过口令验证。</text>
 
     <view style="margin: 30rpx 0;">
-      <input class="pin-input" password placeholder="请输入总管口令 (root@123)" value="{{inputPasscode}}" bindinput="onPasscodeInput" />
+      <input class="pin-input" password placeholder="请输入总管口令" value="{{inputPasscode}}" bindinput="onPasscodeInput" />
       <button class="btn-primary unlock-btn" bindtap="submitSuperPasscode" loading="{{verifyingPasscode}}">
         验证口令并进入总后台
       </button>
@@ -28,10 +28,11 @@
       复制 OpenID
     </button>
     <button class="btn-gold unlock-btn" bindtap="refreshAdminState" style="margin-top: 16rpx; background: #EFE9DD; color: #555;">
-      重新检测白名单
+      刷新登录状态
     </button>
 
-    <text class="col-tip">提示：口令校验直连 Cloudflare 数据库，首次输入验证成功后将自动将当前设备提权为总管。</text>
+    <text class="col-tip" wx:if="{{isWeddingAdmin}}">你当前是本场婚礼管理员，可管理本场请柬；进入平台总后台仍需输入总管口令。</text>
+    <text class="col-tip" wx:else>口令校验直连 Cloudflare 数据库。验证成功后，本设备会记住口令，下次长按进入可自动登录；点「退出管理」会清除。</text>
   </view>
 
   <block wx:else>
@@ -44,8 +45,8 @@
       </view>
     </view>
 
-    <!-- 全平台婚礼调度与管理中心 -->
-    <view class="card super-weddings-card">
+    <!-- 全平台婚礼调度：仅总管口令验证通过后显示 -->
+    <view class="card super-weddings-card" wx:if="{{isSuperAdmin}}">
       <view class="sc-title" style="display: flex; justify-content: space-between; align-items: center;">
         <text>💒 全平台婚礼调度中心</text>
         <view class="btn-pill-create" bindtap="openNewWeddingModal">➕ 新建婚礼</view>

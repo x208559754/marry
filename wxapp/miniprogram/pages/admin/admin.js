@@ -7,6 +7,7 @@ Page({
   data: {
     isAuthorized: false,
     isSuperAdmin: false,
+    isWeddingAdmin: false,
     inputPasscode: '',
     verifyingPasscode: false,
     weddingsList: [],
@@ -52,10 +53,8 @@ Page({
     }
   },
 
-  onLoad: function (options) {
-    if (options && (options.role === 'superadmin' || options.superadmin === '1')) {
-      this.setData({ isSuperAdmin: true });
-    }
+  onLoad: function () {
+    // 入口参数（如 ?role=superadmin）不再授予总管身份，必须通过口令验证
     this.refreshAdminState();
   },
 
@@ -230,10 +229,10 @@ Page({
     });
   },
 
-  // 复查登录态与管理员权限
+  // 复查登录态：总后台只认总管口令，本场婚礼管理员不能跳过口令页
   refreshAdminState: function (cb) {
     const that = this;
-    this.setData({ backend: api.BASE_URL });
+    this.setData({ backend: api.BASE_URL, wid: api.getWid() || 'demo' });
     const savedPass = api.getSuperAdminPasscode();
     if (savedPass) {
       api.superAdminLogin(savedPass).then(function () {
@@ -249,29 +248,27 @@ Page({
         that.loadQr();
         if (typeof cb === 'function') cb();
       }).catch(function () {
-        that.checkStandardAdmin(cb);
+        if (typeof api.setSuperAdminPasscode === 'function') {
+          api.setSuperAdminPasscode('');
+        }
+        that.showPasscodeLock(cb);
       });
       return;
     }
-    this.checkStandardAdmin(cb);
+    this.showPasscodeLock(cb);
   },
 
-  checkStandardAdmin: function (cb) {
+  showPasscodeLock: function (cb) {
     const that = this;
+    this.setData({ isAuthorized: false, isSuperAdmin: false });
     api.getMe().then(function (me) {
       that.setData({
         currentOpenid: api.getOpenid() || '',
-        isAuthorized: !!(me && me.isAdmin)
+        isWeddingAdmin: !!(me && me.isAdmin)
       });
-      if (me && me.isAdmin) {
-        that.setData({ wid: api.getWid() || 'demo' });
-        that.refreshAll();
-        that.loadConfigForm();
-        that.loadQr();
-      }
       if (typeof cb === 'function') cb();
     }).catch(function (err) {
-      that.setData({ currentOpenid: api.getOpenid() || '' });
+      that.setData({ currentOpenid: api.getOpenid() || '', isWeddingAdmin: false });
       console.warn('[admin] 获取登录态失败:', err && err.message);
       if (typeof cb === 'function') cb();
     });
@@ -287,7 +284,16 @@ Page({
 
   logoutAdmin: function () {
     api.logout();
-    this.setData({ isAuthorized: false, rsvpList: [], photosList: [] });
+    this.setData({
+      isAuthorized: false,
+      isSuperAdmin: false,
+      isWeddingAdmin: false,
+      inputPasscode: '',
+      rsvpList: [],
+      photosList: [],
+      weddingsList: [],
+      weddingOptions: []
+    });
     wx.showToast({ title: '已退出管理', icon: 'none' });
   },
 
