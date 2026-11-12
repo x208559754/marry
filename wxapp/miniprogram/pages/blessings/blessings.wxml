@@ -6,48 +6,42 @@
     <view class="section-divider"></view>
   </view>
 
-  <!-- 锦书弹幕 + 心动计数，合为一张烫金信笺 -->
-  <view class="bless-hero">
-    <view class="bless-hero-inner">
-      <text class="bless-hero-seal">囍</text>
-
-      <view class="danmaku-stage">
-        <view
-          wx:for="{{danmakuList}}"
-          wx:key="key"
-          class="danmaku-item danmaku-style-{{item.style}} danmaku-lane-{{item.lane}}"
-          style="animation-duration: {{item.duration}}s; animation-delay: {{item.delay}}s;"
-        >
-          <text class="dm-seal">囍</text>
-          <text class="dm-author" wx:if="{{item.author}}">{{item.author}}</text>
-          <text class="dm-author-sep" wx:if="{{item.author}}">·</text>
-          <text class="dm-text">{{item.text}}</text>
+  <!-- 三轨无缝弹幕：每轨内容复制一份，向左走一半宽度后无缝循环 -->
+  <view class="danmaku-stage" wx:if="{{danmakuLanes.length}}">
+    <view class="dm-lane" wx:for="{{danmakuLanes}}" wx:key="id">
+      <view class="dm-track" style="animation-duration: {{item.duration}}s; animation-delay: {{item.delay}}s;">
+        <view class="dm-half" wx:for="{{item.copies}}" wx:for-item="copy" wx:key="*this">
+          <view class="danmaku-item" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="key">
+            <text class="dm-author" wx:if="{{tag.author}}">{{tag.author}}</text>
+            <text class="dm-text">{{tag.text}}</text>
+          </view>
         </view>
-      </view>
-
-      <view class="heart-energy">
-        <view class="heart-burst-layer">
-          <view
-            wx:for="{{heartBurst}}"
-            wx:key="key"
-            class="burst-heart"
-            style="left: {{item.left}}%; --drift: {{item.drift}}rpx;"
-          >♥</view>
-        </view>
-        <view class="he-title">已收到亲友真挚祝福</view>
-        <view class="he-count">
-          <text class="he-number">{{heartsCount}}</text>
-          <text class="he-unit">条心意</text>
-        </view>
-        <button class="btn-send-heart" hover-class="btn-send-heart-hover" bindtap="sendHeart">
-          <text class="heart-icon">♥</text>
-          <text>为新人送上新婚祝愿</text>
-        </button>
       </view>
     </view>
   </view>
 
-  <!-- 发布祝福卡片 -->
+  <view class="card heart-energy-card">
+    <view class="heart-burst-layer">
+      <view
+        wx:for="{{heartBurst}}"
+        wx:key="key"
+        class="burst-heart"
+        style="left: {{item.left}}%;"
+      >♥</view>
+    </view>
+    <view class="he-title">已收到亲友真挚祝福</view>
+    <view class="he-count">
+      <text class="he-number">{{heartsCount}}</text>
+      <text class="he-unit">条心意</text>
+    </view>
+    <view class="btn-wrap">
+      <view class="btn-send-heart" bindtap="sendHeart" hover-class="btn-send-heart-hover" hover-stay-time="80">
+        <text class="heart-icon">♥</text>
+        <text>为新人送上新婚祝愿</text>
+      </view>
+    </view>
+  </view>
+
   <view class="card post-card">
     <view class="post-header">
       <view class="author-info">
@@ -64,9 +58,7 @@
         class="preset-chip {{inputContent === item ? 'preset-chip-on' : ''}}"
         bindtap="selectPreset"
         data-text="{{item}}"
-      >
-        {{item}}
-      </view>
+      >{{item}}</view>
     </view>
 
     <view class="input-row">
@@ -79,13 +71,15 @@
         bindconfirm="sendBlessing"
         maxlength="150"
       />
-      <button class="btn-send-bless" bindtap="sendBlessing" loading="{{isSending}}" hover-class="btn-send-bless-hover">
-        送出祝福
-      </button>
+      <view
+        class="btn-send-bless {{isSending ? 'btn-send-bless-disabled' : ''}}"
+        bindtap="sendBlessing"
+        hover-class="btn-send-bless-hover"
+        hover-stay-time="80"
+      >{{isSending ? '发送中' : '送出祝福'}}</view>
     </view>
   </view>
 
-  <!-- 亲友祝福留言墙 -->
   <view class="blessings-list" wx:if="{{blessingsList.length}}">
     <view class="bless-card" wx:for="{{blessingsList}}" wx:key="id">
       <view class="bc-head">
@@ -106,9 +100,8 @@
     </view>
   </view>
   <view class="bless-empty" wx:else>
-    <text class="bless-empty-seal">囍</text>
     <text class="bless-empty-text">还没有祝福，来写下第一条寄语吧</text>
   </view>
 
-  <view style="height: 40rpx;"></view>
+  <view class="bottom-space"></view>
 </view>

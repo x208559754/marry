@@ -1,140 +1,95 @@
-/* pages/blessings/blessings.wxss - 锦书弹幕祝福墙 */
+/* pages/blessings/blessings.wxss */
 .container {
   padding-bottom: 80rpx;
+  overflow-x: hidden;
 }
 
-/* ---------------- 烫金信笺：弹幕 + 心意 ---------------- */
-.bless-hero {
-  margin: 8rpx 28rpx 28rpx;
-  background: linear-gradient(165deg, #FFFCF7 0%, #F8F0E4 72%, #F3E6D2 100%);
-  border-radius: 36rpx;
-  border: 1.5rpx solid rgba(197, 160, 89, 0.48);
-  box-shadow: 0 12rpx 36rpx rgba(139, 30, 30, 0.07);
-  overflow: hidden;
-  position: relative;
-}
-
-.bless-hero-inner {
-  margin: 10rpx;
-  border: 1rpx solid rgba(197, 160, 89, 0.22);
-  border-radius: 28rpx;
-  overflow: hidden;
-  position: relative;
-  padding-bottom: 8rpx;
-}
-
-.bless-hero-seal {
-  position: absolute;
-  left: 50%;
-  top: 72rpx;
-  transform: translateX(-50%);
-  font-size: 200rpx;
-  line-height: 1;
-  color: rgba(139, 30, 30, 0.06);
-  font-family: "Songti SC", "Noto Serif SC", serif;
-  font-weight: 700;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* 弹幕舞台：两侧淡出，轨道错落缓行 */
+/* ---------------- 三轨无缝弹幕 ---------------- */
 .danmaku-stage {
-  position: relative;
-  height: 292rpx;
+  margin: 0 28rpx 8rpx;
+  height: 236rpx;
+  padding: 20rpx 0;
+  border-radius: 32rpx;
+  background: linear-gradient(180deg, #FCF8F1 0%, #F4E9D8 100%);
+  border: 1rpx solid rgba(197, 160, 89, 0.32);
   overflow: hidden;
-  z-index: 1;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 56rpx, #000 calc(100% - 56rpx), transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0, #000 56rpx, #000 calc(100% - 56rpx), transparent 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 32rpx, #000 calc(100% - 32rpx), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 32rpx, #000 calc(100% - 32rpx), transparent 100%);
+}
+
+.dm-lane {
+  height: 60rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  line-height: 0;
+  width: 100%;
+}
+
+.dm-track {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  height: 60rpx;
+  width: max-content;
+  animation-name: dm-marquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.dm-half {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  height: 60rpx;
 }
 
 .danmaku-item {
-  position: absolute;
-  left: 100%;
-  display: flex;
-  align-items: center;
-  gap: 6rpx;
-  padding: 8rpx 22rpx 8rpx 14rpx;
-  border-radius: 999rpx;
-  white-space: nowrap;
-  max-width: none;
-  animation-name: danmaku-drift;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  will-change: transform;
-  box-shadow: 0 4rpx 14rpx rgba(45, 37, 34, 0.08);
-}
-
-.danmaku-style-0 {
-  background: rgba(255, 252, 246, 0.96);
-  color: #6D1414;
-  border: 1rpx solid rgba(197, 160, 89, 0.5);
-}
-
-.danmaku-style-1 {
-  background: linear-gradient(135deg, rgba(156, 36, 36, 0.94), rgba(109, 20, 20, 0.94));
-  color: #F8E2A6;
-  border: 1rpx solid rgba(248, 226, 166, 0.42);
-}
-
-.danmaku-style-2 {
-  background: rgba(255, 248, 234, 0.92);
-  color: #8B1E1E;
-  border: 1rpx solid rgba(139, 30, 30, 0.16);
-}
-
-.dm-seal {
-  font-size: 20rpx;
-  color: #C5A059;
-  font-family: "Songti SC", "Noto Serif SC", serif;
-  font-weight: 700;
-  line-height: 1;
   flex-shrink: 0;
-}
-
-.danmaku-style-1 .dm-seal {
-  color: #F8E2A6;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  height: 52rpx;
+  padding: 0 24rpx;
+  margin-right: 32rpx;
+  border-radius: 26rpx;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1rpx solid rgba(197, 160, 89, 0.42);
+  box-shadow: 0 2rpx 8rpx rgba(45, 37, 34, 0.05);
+  color: #6D1414;
+  white-space: nowrap;
 }
 
 .dm-author {
-  font-size: 20rpx;
-  opacity: 0.72;
+  font-size: 22rpx;
+  line-height: 52rpx;
+  color: #C5A059;
+  margin-right: 12rpx;
   font-family: "Songti SC", "Noto Serif SC", serif;
-  letter-spacing: 1rpx;
-  max-width: 8em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dm-author-sep {
-  font-size: 18rpx;
-  opacity: 0.45;
-  margin: 0 2rpx;
 }
 
 .dm-text {
   font-size: 24rpx;
+  line-height: 52rpx;
+  color: #6D1414;
   font-family: "Songti SC", "Noto Serif SC", serif;
-  letter-spacing: 1rpx;
-  line-height: 1.4;
 }
 
-.danmaku-lane-0 { top: 22rpx; }
-.danmaku-lane-1 { top: 88rpx; }
-.danmaku-lane-2 { top: 154rpx; }
-.danmaku-lane-3 { top: 220rpx; }
-
-/* 从舞台右缘进入，完整走出左缘（-100% 为自身宽度，再减一屏宽度） */
-@keyframes danmaku-drift {
+@keyframes dm-marquee {
   from { transform: translateX(0); }
-  to { transform: translateX(calc(-100% - 100vw)); }
+  to { transform: translateX(-50%); }
 }
 
-/* 心意计数 */
-.heart-energy {
-  position: relative;
+/* ---------------- 心意卡片 ---------------- */
+.heart-energy-card {
   text-align: center;
-  padding: 12rpx 32rpx 36rpx;
-  z-index: 2;
+  padding: 44rpx 32rpx;
+  position: relative;
+  overflow: hidden;
 }
 
 .heart-burst-layer {
@@ -142,99 +97,93 @@
   left: 0;
   right: 0;
   bottom: 88rpx;
-  height: 280rpx;
+  height: 260rpx;
   pointer-events: none;
-  overflow: visible;
-  z-index: 5;
+  overflow: hidden;
+  z-index: 2;
 }
 
 .burst-heart {
   position: absolute;
   bottom: 0;
-  font-size: 36rpx;
-  color: #8B1E1E;
+  width: 40rpx;
+  margin-left: -20rpx;
+  font-size: 32rpx;
   line-height: 1;
-  animation: heart-rise 1.15s ease-out forwards;
-  text-shadow: 0 4rpx 10rpx rgba(139, 30, 30, 0.22);
+  color: #8B1E1E;
+  text-align: center;
+  animation: heart-rise 1.1s ease-out forwards;
 }
 
 @keyframes heart-rise {
-  0% {
-    transform: translate(-50%, 0) scale(0.55);
-    opacity: 0;
-  }
-  18% {
-    opacity: 1;
-  }
-  100% {
-    transform: translate(calc(-50% + var(--drift, 0rpx)), -250rpx) scale(1.28);
-    opacity: 0;
-  }
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  18% { opacity: 1; }
+  100% { transform: translateY(-240rpx) scale(1.2); opacity: 0; }
 }
 
 .he-title {
   font-size: 22rpx;
-  letter-spacing: 4rpx;
   color: #8C7B75;
   margin-bottom: 4rpx;
-  font-family: "Songti SC", "Noto Serif SC", serif;
+  line-height: 1.4;
 }
 
 .he-count {
   display: flex;
+  flex-direction: row;
   align-items: baseline;
   justify-content: center;
-  gap: 8rpx;
-  margin-bottom: 22rpx;
+  margin-bottom: 28rpx;
 }
 
 .he-number {
-  font-size: 72rpx;
+  font-size: 54rpx;
   font-weight: 700;
   color: #1A1311;
-  font-family: "Songti SC", "Noto Serif SC", Georgia, serif;
-  letter-spacing: 2rpx;
-  line-height: 1.1;
+  line-height: 1.15;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 .he-unit {
   font-size: 22rpx;
   color: #A8958E;
-  letter-spacing: 2rpx;
+  margin-left: 8rpx;
+  line-height: 1.15;
+}
+
+.btn-wrap {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
 }
 
 .btn-send-heart {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 80rpx;
+  padding: 0 44rpx;
   background: linear-gradient(135deg, #9C2424 0%, #8B1E1E 100%);
   color: #ffffff;
   font-size: 26rpx;
   font-weight: 600;
-  letter-spacing: 2rpx;
-  border-radius: 50rpx;
-  padding: 0 44rpx;
-  height: 80rpx;
   line-height: 80rpx;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12rpx;
-  box-shadow: 0 8rpx 22rpx rgba(139, 30, 30, 0.26);
-  border: none;
-  margin: 0 auto;
-  width: auto;
-}
-
-.btn-send-heart::after {
-  border: none;
+  border-radius: 40rpx;
+  box-shadow: 0 8rpx 22rpx rgba(139, 30, 30, 0.25);
 }
 
 .btn-send-heart-hover {
   opacity: 0.92;
-  transform: scale(0.97);
 }
 
 .heart-icon {
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: #F8E2A6;
+  margin-right: 10rpx;
+  line-height: 80rpx;
 }
 
 /* ---------------- 发布卡片 ---------------- */
@@ -243,38 +192,39 @@
 }
 
 .post-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   margin-bottom: 20rpx;
 }
 
 .author-info {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 16rpx;
 }
 
-.post-avatar {
-  width: 52rpx;
-  height: 52rpx;
-  border-radius: 50%;
-  border: 2rpx solid #C5A059;
-}
-
+.post-avatar,
 .post-avatar-seal {
   width: 52rpx;
   height: 52rpx;
   border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 16rpx;
+}
+
+.post-avatar {
+  border: 2rpx solid #C5A059;
+}
+
+.post-avatar-seal {
   background: #8B1E1E;
   color: #F8E2A6;
   border: 1.5rpx solid #C5A059;
   font-size: 24rpx;
-  font-weight: bold;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: "Songti SC", "Noto Serif SC", serif;
+  line-height: 1;
 }
 
 .post-name {
@@ -282,26 +232,28 @@
   font-weight: 700;
   color: #2D2522;
   font-family: "Songti SC", "Noto Serif SC", serif;
+  line-height: 1.3;
 }
 
 .preset-chips-wrap {
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
-  gap: 12rpx;
-  margin-bottom: 20rpx;
+  margin: 0 0 20rpx -12rpx;
 }
 
 .preset-chip {
   background: #FAF7F2;
   border: 1rpx solid rgba(225, 215, 205, 0.9);
   padding: 10rpx 20rpx;
+  margin: 0 0 12rpx 12rpx;
   border-radius: 30rpx;
   font-size: 20rpx;
   color: #5C4F4A;
+  line-height: 1.4;
   font-family: "Songti SC", "Noto Serif SC", serif;
 }
 
-.preset-chip:active,
 .preset-chip-on {
   background: #FFF8EE;
   border-color: #8B1E1E;
@@ -310,7 +262,7 @@
 
 .input-row {
   display: flex;
-  gap: 16rpx;
+  flex-direction: row;
   align-items: center;
 }
 
@@ -328,46 +280,48 @@
 }
 
 .btn-send-bless {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  height: 76rpx;
+  padding: 0 32rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(135deg, #9C2424 0%, #8B1E1E 100%);
   color: #ffffff;
   font-size: 24rpx;
-  font-weight: bold;
-  height: 76rpx;
+  font-weight: 700;
   line-height: 76rpx;
   border-radius: 18rpx;
-  padding: 0 32rpx;
-  margin: 0;
   box-shadow: 0 4rpx 14rpx rgba(139, 30, 30, 0.25);
-  border: none;
-  flex-shrink: 0;
-}
-
-.btn-send-bless::after {
-  border: none;
 }
 
 .btn-send-bless-hover {
   opacity: 0.92;
 }
 
+.btn-send-bless-disabled {
+  opacity: 0.65;
+}
+
 /* ---------------- 留言墙 ---------------- */
 .blessings-list {
   padding: 0 28rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx;
 }
 
 .bless-card {
   background: #ffffff;
   border-radius: 32rpx;
   padding: 28rpx 30rpx;
+  margin-bottom: 20rpx;
   box-shadow: 0 4rpx 16rpx rgba(45, 37, 34, 0.04);
   border: 1rpx solid rgba(225, 215, 205, 0.7);
 }
 
 .bc-head {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12rpx;
@@ -375,8 +329,8 @@
 
 .bc-user {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 14rpx;
   min-width: 0;
 }
 
@@ -386,6 +340,7 @@
   height: 44rpx;
   border-radius: 50%;
   flex-shrink: 0;
+  margin-right: 14rpx;
 }
 
 .bc-avatar-img {
@@ -397,10 +352,11 @@
   border: 1rpx solid #C5A059;
   color: #8B1E1E;
   font-size: 20rpx;
-  font-weight: bold;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
 }
 
 .bc-author {
@@ -408,6 +364,7 @@
   font-weight: 700;
   color: #2D2522;
   font-family: "Songti SC", "Noto Serif SC", serif;
+  line-height: 1.3;
 }
 
 .bc-time {
@@ -415,6 +372,7 @@
   color: #A8958E;
   flex-shrink: 0;
   margin-left: 16rpx;
+  line-height: 1.3;
 }
 
 .bc-content {
@@ -427,43 +385,38 @@
 
 .bc-footer {
   display: flex;
+  flex-direction: row;
   justify-content: flex-end;
   margin-top: 10rpx;
 }
 
 .like-btn {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 6rpx;
   font-size: 20rpx;
   color: #8B1E1E;
   padding: 6rpx 4rpx;
+  line-height: 1;
 }
 
 .like-heart {
   font-size: 22rpx;
+  margin-right: 6rpx;
 }
 
 .bless-empty {
-  margin: 16rpx 28rpx 0;
-  padding: 64rpx 32rpx;
+  margin: 8rpx 28rpx 0;
+  padding: 56rpx 32rpx;
   text-align: center;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 32rpx;
-  border: 1rpx dashed rgba(197, 160, 89, 0.35);
-}
-
-.bless-empty-seal {
-  display: block;
-  font-size: 48rpx;
-  color: #C5A059;
-  font-family: "Songti SC", "Noto Serif SC", serif;
-  margin-bottom: 12rpx;
 }
 
 .bless-empty-text {
   font-size: 24rpx;
   color: #A8958E;
-  letter-spacing: 2rpx;
   font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.bottom-space {
+  height: 40rpx;
 }

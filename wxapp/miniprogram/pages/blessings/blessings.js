@@ -4,7 +4,7 @@ const api = require('../../utils/api.js');
 
 Page({
   data: {
-    danmakuList: [],
+    danmakuLanes: [],
     defaultAvatar: '',
     guestName: '',
     guestAvatar: '',
@@ -84,7 +84,7 @@ Page({
         });
         patch.blessingsList = formatted;
         that.buildDanmaku(formatted);
-      } else if (!that.data.danmakuList.length) {
+      } else if (!(that.data.danmakuLanes && that.data.danmakuLanes.length)) {
         that.buildDanmaku([]);
       }
       if (hearts && typeof hearts.count === 'number') {
@@ -95,7 +95,7 @@ Page({
     });
   },
 
-  // 组装弹幕：真实祝福优先；数量不够时循环补满，保证舞台不空场、同轨道错开
+  // 三轨无缝走马灯：每轨至少 6 条（不够就循环），内容复制一份后以 translateX(-50%) 循环，不再错位跳变
   buildDanmaku: function (list) {
     var source = [];
     (list || []).forEach(function (it) {
@@ -103,7 +103,7 @@ Page({
       if (!text) return;
       source.push({
         author: it.author || '',
-        text: text.length > 22 ? text.slice(0, 22) + '…' : text
+        text: text.length > 18 ? text.slice(0, 18) + '…' : text
       });
     });
     if (!source.length) {
@@ -111,21 +111,36 @@ Page({
         return { author: '', text: t };
       });
     }
-    var target = Math.max(12, Math.min(source.length * 2, 16));
-    var items = [];
-    for (var i = 0; i < target; i++) {
-      var src = source[i % source.length];
-      items.push({
-        key: 'dm_' + i,
-        author: src.author,
-        text: src.text,
-        style: i % 3,
-        lane: i % 4,
-        duration: 16 + (i % 5) * 3,
-        delay: -(i * 1.9 + (i % 4) * 0.35)
+    var durations = [28, 36, 32];
+    var delays = [0, -12, -6];
+    var minPerLane = 6;
+    var lanes = [];
+    for (var lane = 0; lane < 3; lane++) {
+      var pool = [];
+      for (var i = 0; i < source.length; i++) {
+        if (i % 3 === lane) pool.push(source[i]);
+      }
+      if (!pool.length) pool = source.slice();
+      var tags = [];
+      var n = 0;
+      while (tags.length < minPerLane) {
+        var s = pool[n % pool.length];
+        tags.push({
+          key: 'l' + lane + '_' + tags.length,
+          author: s.author,
+          text: s.text
+        });
+        n++;
+      }
+      lanes.push({
+        id: 'lane_' + lane,
+        duration: durations[lane],
+        delay: delays[lane],
+        copies: [0, 1],
+        tags: tags
       });
     }
-    this.setData({ danmakuList: items });
+    this.setData({ danmakuLanes: lanes });
   },
 
   sendHeart: function () {
@@ -137,8 +152,7 @@ Page({
 
     var burst = (this.data.heartBurst || []).concat([{
       key: 'hb_' + now + '_' + Math.floor(Math.random() * 1000),
-      left: 28 + Math.floor(Math.random() * 44),
-      drift: Math.floor(Math.random() * 40) - 20
+      left: 30 + Math.floor(Math.random() * 40)
     }]);
     if (burst.length > 10) burst = burst.slice(-10);
 
@@ -148,13 +162,6 @@ Page({
     });
 
     var that = this;
-    setTimeout(function () {
-      var remain = (that.data.heartBurst || []).filter(function (h) {
-        return h.key !== burst[burst.length - 1].key;
-      });
-      // 只清掉已经播完的，避免把后来的点击一并清掉
-    }, 1200);
-    // 延迟统一清掉过期动画，避免数组无限增长
     if (this._burstTimer) clearTimeout(this._burstTimer);
     this._burstTimer = setTimeout(function () {
       that.setData({ heartBurst: [] });
