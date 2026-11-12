@@ -409,6 +409,14 @@ Page({
       fail: function (err) {
         var msg = (err && err.errMsg) || '';
         if (msg.indexOf('cancel') !== -1) return;
+        if (msg.indexOf('privacy') !== -1 || msg.indexOf('scope is not declared') !== -1) {
+          wx.showModal({
+            title: '需要先配置隐私协议',
+            content: '微信要求在公众平台「设置 → 服务内容声明 → 用户隐私保护指引」中勾选「收集你选中的照片或视频信息」（用于上传婚纱照），如需拍照再勾选「访问你的摄像头」。提交后，在开发者工具里清缓存并重新编译即可。',
+            showCancel: false
+          });
+          return;
+        }
         wx.showToast({ title: msg || '无法打开相册', icon: 'none' });
       }
     });
