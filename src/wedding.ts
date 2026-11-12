@@ -211,12 +211,19 @@ wedding.get('/promo', async (c) => {
 // ---------------- 婚礼配置（按 wid） ----------------
 
 // 允许写入的顶层字段白名单
+// 小程序与网页版共用的可保存字段（photos 走 /api/images，不写入 config）
 const CONFIG_ALLOWED_KEYS = [
   'theme',
+  'envelopeStyle',
+  'sealVariant',
   'groom',
   'bride',
   'date',
   'time',
+  'lunarDate',
+  'invitationTitle',
+  'invitationProse',
+  'letterParagraphs',
   'venue',
   'music',
   'bgm',
@@ -225,11 +232,43 @@ const CONFIG_ALLOWED_KEYS = [
   'stories',
   'schedule',
   'contacts',
-  'letterParagraphs',
-  'lunarDate',
-  'invitationTitle',
-  'invitationProse',
+  'heartsCount',
+  'particlesEnabled',
+  'danmakuEnabled',
 ]
+
+// 场地坐标同时提供 lat/lng 与 latitude/longitude，兼容网页版与小程序
+function normalizeVenue(venue: unknown): unknown {
+  if (!venue || typeof venue !== 'object' || Array.isArray(venue)) return venue
+  const v = { ...(venue as Record<string, unknown>) }
+  const lat = v.latitude ?? v.lat
+  const lng = v.longitude ?? v.lng
+  if (lat != null && lat !== '') {
+    const n = Number(lat)
+    if (!Number.isNaN(n)) {
+      v.latitude = n
+      v.lat = n
+    }
+  }
+  if (lng != null && lng !== '') {
+    const n = Number(lng)
+    if (!Number.isNaN(n)) {
+      v.longitude = n
+      v.lng = n
+    }
+  }
+  return v
+}
+
+function pickAllowedConfig(input: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const key of CONFIG_ALLOWED_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(input, key) && input[key] !== undefined) {
+      out[key] = key === 'venue' ? normalizeVenue(input[key]) : input[key]
+    }
+  }
+  return out
+}
 
 // GET /api/config?wid= → 对应婚礼的配置 JSON（空则 {}，客户端与内置默认值 merge）
 wedding.get('/config', requireWid, async (c) => {
@@ -246,10 +285,15 @@ wedding.get('/config', requireWid, async (c) => {
       cfg = {}
     }
   }
+  if (cfg && typeof cfg === 'object' && !Array.isArray(cfg)) {
+    const obj = cfg as Record<string, unknown>
+    if (obj.venue) obj.venue = normalizeVenue(obj.venue)
+    cfg = obj
+  }
   return ok(c, cfg)
 })
 
-// PUT /api/config?wid=（该婚礼管理员）→ 保存婚礼配置
+// PUT /api/config?wid=（该婚礼管理员）→ 与已有配置合并后保存；未知字段和 photos 会被去掉，不再整单失败
 wedding.put('/config', requireAdmin, async (c) => {
   const wid = getWid(c)
   const raw = await c.req.text()
@@ -261,21 +305,39 @@ wedding.put('/config', requireAdmin, async (c) => {
     return fail(c, '内容不是有效的 JSON', 400)
   }
   if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) return fail(c, '配置必须是 JSON 对象', 400)
-  const badKeys = Object.keys(cfg as Record<string, unknown>).filter((k) => !CONFIG_ALLOWED_KEYS.includes(k))
-  if (badKeys.length > 0) return fail(c, '不支持的配置字段：' + badKeys.join(', '), 400)
 
-  // 顺带同步列表展示用的新人姓名
-  const obj = cfg as Record<string, any>
-  const groomName = obj.groom && typeof obj.groom === 'object' && obj.groom.name ? String(obj.groom.name).slice(0, 64) : ''
-  const brideName = obj.bride && typeof obj.bride === 'object' && obj.bride.name ? String(obj.bride.name).slice(0, 64) : ''
+  const incoming = pickAllowedConfig(cfg as Record<string, unknown>)
+
+  let existing: Record<string, unknown> = {}
+  const row = await c.env.DB.prepare('SELECT config FROM weddings WHERE id = ?')
+    .bind(wid)
+    .first<{ config: string | null }>()
+  if (!row) return fail(c, '婚礼不存在', 404)
+  if (row.config) {
+    try {
+      const parsed = JSON.parse(row.config)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) existing = parsed
+    } catch {
+      existing = {}
+    }
+  }
+  delete existing.photos
+  const merged = { ...existing, ...incoming }
+  if (merged.venue) merged.venue = normalizeVenue(merged.venue)
+
+  const obj = merged as Record<string, any>
+  const groomName =
+    obj.groom && typeof obj.groom === 'object' && obj.groom.name ? String(obj.groom.name).slice(0, 64) : ''
+  const brideName =
+    obj.bride && typeof obj.bride === 'object' && obj.bride.name ? String(obj.bride.name).slice(0, 64) : ''
 
   const res = await c.env.DB.prepare(
-    'UPDATE weddings SET config = ?, groom_name = ?, bride_name = ?, updated_at = ? WHERE id = ?',
+    'UPDATE weddings SET config = ?, groom_name = COALESCE(NULLIF(?, \'\'), groom_name), bride_name = COALESCE(NULLIF(?, \'\'), bride_name), updated_at = ? WHERE id = ?',
   )
-    .bind(JSON.stringify(cfg), groomName, brideName, nowIso(), wid)
+    .bind(JSON.stringify(merged), groomName, brideName, nowIso(), wid)
     .run()
   if (res.meta.changes === 0) return fail(c, '婚礼不存在', 404)
-  return ok(c, { saved: true })
+  return ok(c, { saved: true, config: merged })
 })
 
 // ---------------- 我的档案（按 婚礼+openid） ----------------

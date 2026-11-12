@@ -102,19 +102,24 @@ export function isAdminOpenid(env: Bindings, openid: string): boolean {
     .includes(openid)
 }
 
-// 婚礼管理员判定：平台超管 或 该婚礼 users.is_admin = 1
-export async function isWeddingAdmin(c: Context<AppEnv>, wid: string, openid: string): Promise<boolean> {
-  if (!wid || !openid) return false
-  if (await isSuperAdminOpenid(c.env, openid)) return true
-  // 额外支持请求头携带数据库总管理员口令直通
-  const headerCode = c.req.header('x-admin-passcode') || c.req.query('passcode') || ''
-  if (headerCode) {
-    try {
-      const row = await c.env.DB.prepare("SELECT value FROM config WHERE key = 'super_admin_passcode'").first<{ value: string }>()
-      const valid = row?.value || 'root@123'
-      if (headerCode === valid) return true
-    } catch {}
+// 请求是否携带了与数据库一致的总管口令（不回落到默认口令：库中没有则视为未配置）
+export async function hasSuperAdminPasscode(c: Context<AppEnv>): Promise<boolean> {
+  const headerCode = (c.req.header('x-admin-passcode') || c.req.query('passcode') || '').trim()
+  if (!headerCode) return false
+  try {
+    const row = await c.env.DB.prepare("SELECT value FROM config WHERE key = 'super_admin_passcode'").first<{ value: string }>()
+    return Boolean(row?.value && headerCode === row.value)
+  } catch {
+    return false
   }
+}
+
+// 婚礼管理员判定：总管口令 或 平台超管 openid 或 该婚礼 users.is_admin = 1
+export async function isWeddingAdmin(c: Context<AppEnv>, wid: string, openid: string): Promise<boolean> {
+  if (!wid) return false
+  if (await hasSuperAdminPasscode(c)) return true
+  if (!openid) return false
+  if (await isSuperAdminOpenid(c.env, openid)) return true
   try {
     const row = await c.env.DB.prepare('SELECT is_admin FROM users WHERE openid = ? AND wedding_id = ?')
       .bind(openid, wid)
@@ -175,18 +180,24 @@ export async function requireWid(c: Context<AppEnv>, next: Next) {
   await next()
 }
 
-// 婚礼管理员：登录 + （平台超管 或 该婚礼 users.is_admin=1）；否则 401/403
+// 婚礼管理员：总管口令（网页后台可免微信登录）或 已登录且（平台超管 / 该婚礼 is_admin=1）
 export async function requireAdmin(c: Context<AppEnv>, next: Next) {
   const secret = c.env.SESSION_SECRET
   if (!secret) return fail(c, '服务端未配置 SESSION_SECRET，请检查 .dev.vars 或 Wrangler Secret', 500)
-  const token = readToken(c)
-  const payload = token ? await verifyToken(secret, token) : null
-  if (!payload) return fail(c, '未登录（请先在小程序内完成登录）', 401)
   const wid = getWid(c)
   if (!wid) return fail(c, '缺少 wid 参数', 400)
+
+  const token = readToken(c)
+  const payload = token ? await verifyToken(secret, token) : null
+  if (payload) c.set('openid', payload.openid)
+  c.set('wid', wid)
+
+  if (await hasSuperAdminPasscode(c)) {
+    await next()
+    return
+  }
+  if (!payload) return fail(c, '未登录（请先在小程序内完成登录，或携带总管口令）', 401)
   const admin = await isWeddingAdmin(c, wid, payload.openid)
   if (!admin) return fail(c, '当前账号不是该婚礼的管理员（管理员在 users.is_admin 中配置）', 403)
-  c.set('openid', payload.openid)
-  c.set('wid', wid)
   await next()
 }

@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { page } from './frontend'
 import type { AppEnv } from './auth'
 import { requireAdmin, getWid } from './auth'
@@ -30,6 +31,17 @@ type ImgbbUploadResult = {
 }
 
 const app = new Hono<AppEnv>()
+
+// 允许网页版（本地 Vite / 任意源）调用 Worker；小程序 wx.request 不受 CORS 限制
+app.use(
+  '*',
+  cors({
+    origin: '*',
+    allowHeaders: ['Content-Type', 'Authorization', 'x-admin-passcode'],
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    maxAge: 86400,
+  }),
+)
 
 // 兜底错误处理：比如 D1 还没建表时，返回 JSON 而不是 500 纯文本
 app.onError((err, c) => {
