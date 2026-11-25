@@ -29,6 +29,9 @@ export const site = `<!DOCTYPE html>
   html { scroll-behavior: smooth; color-scheme: light; }
   body {
     margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
     color: var(--ink);
     background:
       radial-gradient(ellipse at 12% -8%, rgba(196, 122, 134, 0.18), transparent 42%),
@@ -156,7 +159,8 @@ export const site = `<!DOCTYPE html>
   }
   .step h3 { margin: 0 0 4px; font-size: 20px; }
   .step p { margin: 0; color: var(--muted); font-size: 14px; }
-  footer { padding: 36px 0 120px; color: var(--muted); font-size: 13px; }
+  main { flex: 1 0 auto; }
+  footer { margin-top: auto; padding: 64px 0 120px; color: var(--muted); font-size: 13px; text-align: center; }
   .fab {
     position: fixed; right: 16px; bottom: 16px; z-index: 30;
     display: flex; align-items: center; gap: 8px;

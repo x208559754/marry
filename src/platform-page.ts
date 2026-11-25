@@ -113,7 +113,7 @@ tr:hover td{background:#fffcf7}
 .pd-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}.pd-h b{font-size:20px}
 a.wtag{display:inline-flex;align-items:center;gap:4px;color:var(--ink);margin:0 6px 4px 0}
 
-@media(max-width:860px){aside{display:none}.grid2{grid-template-columns:1fr}main{padding:16px 16px 48px}}
+@media(max-width:860px){aside{display:none}.grid2{grid-template-columns:1fr}main{padding:16px 16px 80px}}
 ` + icpFooterPlatformStyle + `
 </style>
 </head>

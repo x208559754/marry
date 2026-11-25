@@ -13,8 +13,9 @@ export const page = `<!DOCTYPE html>
   body {
     font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     background: #f6f7fb; color: #24292f; min-height: 100vh;
+    display: flex; flex-direction: column;
   }
-  .container { max-width: 960px; margin: 0 auto; padding: 32px 20px 64px; }
+  .container { max-width: 960px; width: 100%; margin: 0 auto; padding: 32px 20px 24px; flex: 1 0 auto; }
   header { text-align: center; margin-bottom: 28px; }
   header h1 { font-size: 28px; }
   header p { color: #6b7280; margin-top: 8px; font-size: 14px; }
