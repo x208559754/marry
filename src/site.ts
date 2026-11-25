@@ -26,7 +26,8 @@ export const site = `<!DOCTYPE html>
     --guest: #7a4e32;
   }
   * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; color-scheme: light; }
+  :root { --nav-offset: 104px; }
+  html { scroll-behavior: smooth; color-scheme: light; scroll-padding-top: var(--nav-offset); }
   body {
     margin: 0;
     min-height: 100vh;
@@ -307,7 +308,11 @@ export const site = `<!DOCTYPE html>
     .grid { grid-template-columns: repeat(3, 1fr); }
     .steps { grid-template-columns: repeat(3, 1fr); }
   }
+  @media (max-width: 960px) {
+    :root { --nav-offset: 148px; }
+  }
   @media (max-width: 720px) {
+    :root { --nav-offset: 104px; }
     .nav-links a { display: none; }
     .brand span { font-size: 18px; }
     .lookbook { grid-template-columns: 1fr; }
@@ -565,6 +570,21 @@ export const site = `<!DOCTYPE html>
 
 <script>
 (function () {
+  function syncNavOffset() {
+    var nav = document.querySelector("header.nav");
+    if (!nav) return;
+    var gap = 24;
+    var h = Math.ceil(nav.getBoundingClientRect().height) + gap;
+    document.documentElement.style.setProperty("--nav-offset", h + "px");
+  }
+  syncNavOffset();
+  window.addEventListener("resize", syncNavOffset);
+  if (location.hash) {
+    var target = null;
+    try { target = document.querySelector(location.hash); } catch (e) {}
+    if (target && target.scrollIntoView) target.scrollIntoView();
+  }
+
   var couple = [
     { t: "开通这场婚礼", d: "平台为你们单独建一场婚礼。之后的照片、回执、祝福和宾客留下的称呼，都只属于这一场。" },
     { t: "写成你们的喜帖", d: "写上两个人的名字、吉日吉时、酒店和地址，排好当天行程，把故事放进岁月印记，再上传婚纱照。小程序首页长按新人姓名进入管理。若页面要总管口令，这一步由平台后台来改，你把想改的内容告诉平台即可。" },
