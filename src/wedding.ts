@@ -200,7 +200,7 @@ wedding.post('/login', async (c) => {
       const now = nowIso()
       await c.env.DB.prepare(
         'INSERT INTO users (openid, wedding_id, first_seen, last_seen, login_count) VALUES (?, ?, ?, ?, 1) ' +
-          'ON CONFLICT(openid, wedding_id) DO UPDATE SET last_seen = excluded.last_seen, login_count = login_count + 1',
+          'ON CONFLICT(openid, wedding_id) DO UPDATE SET last_seen = excluded.last_seen, login_count = users.login_count + 1',
       )
         .bind(openid, wid, now, now)
         .run()
