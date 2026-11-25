@@ -1,3 +1,5 @@
+import { icpFooterHtml, icpFooterStyle } from './icp-footer'
+
 // 照片墙页面（只读版：上传/删除已收敛到小程序「管理后台」）
 // 注意：这是模板字符串，内嵌脚本里不要用反引号和 ${}
 export const page = `<!DOCTYPE html>
@@ -33,6 +35,7 @@ export const page = `<!DOCTYPE html>
   .photo .meta .date { font-size: 12px; color: #9ca3af; margin-top: 2px; }
   .empty { text-align: center; color: #9ca3af; padding: 48px 0; grid-column: 1 / -1; }
   .error { text-align: center; color: #dc2626; padding: 48px 0; grid-column: 1 / -1; }
+` + icpFooterStyle + `
 </style>
 </head>
 <body>
@@ -115,5 +118,6 @@ export const page = `<!DOCTYPE html>
 
   load();
 </script>
+` + icpFooterHtml + `
 </body>
 </html>`

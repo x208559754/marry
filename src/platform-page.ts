@@ -1,3 +1,5 @@
+import { icpFooterHtml, icpFooterPlatformStyle } from './icp-footer'
+
 // src/platform-page.ts — 平台总后台网页（单页，原生 JS；接口见 src/platform.ts）
 // 注意：本文件是模板字符串，内嵌脚本里不要使用反引号和美元花括号
 export const platformPage = String.raw`<!doctype html>
@@ -111,7 +113,8 @@ tr:hover td{background:#fffcf7}
 .pd-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}.pd-h b{font-size:20px}
 a.wtag{display:inline-flex;align-items:center;gap:4px;color:var(--ink);margin:0 6px 4px 0}
 
-@media(max-width:860px){aside{display:none}.grid2{grid-template-columns:1fr}main{padding:16px}}
+@media(max-width:860px){aside{display:none}.grid2{grid-template-columns:1fr}main{padding:16px 16px 48px}}
+` + icpFooterPlatformStyle + `
 </style>
 </head>
 <body>
@@ -146,6 +149,7 @@ a.wtag{display:inline-flex;align-items:center;gap:4px;color:var(--ink);margin:0 
   <main id="main"></main>
 </div>
 <div id="toast"></div>
+` + icpFooterHtml + `
 <script>
 (function(){
 var TOKEN = sessionStorage.getItem('yx_platform_token') || '';

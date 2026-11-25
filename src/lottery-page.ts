@@ -1,3 +1,5 @@
+import { icpFooterHtml, icpFooterOverlayStyle } from './icp-footer'
+
 // 婚宴现场抽奖大屏（投影 / 电视浏览器全屏打开）：/lottery?wid=xxx 或 /l/xxx
 // 由小程序管理后台「现场抽奖」控制；本页通过 WebSocket /api/lottery/ws 接收推送（连不上时回退为轮询 GET /api/lottery），不参与抽人。
 // 注意：这是模板字符串，内嵌脚本里不要用反引号和 ${}
@@ -251,6 +253,7 @@ export const lotteryPage = `<!DOCTYPE html>
   #opening.open .door.r { transform: translateX(102%); }
   #opening.open .seal { opacity: 0; transform: scale(1.6); }
   @media (prefers-reduced-motion: reduce) { .vip { animation: none; } #opening { display: none !important; } }
+` + icpFooterOverlayStyle + `
 </style>
 </head>
 <body>
@@ -912,5 +915,6 @@ export const lotteryPage = `<!DOCTYPE html>
   connectWs();
 })();
 </script>
+` + icpFooterHtml + `
 </body>
 </html>`

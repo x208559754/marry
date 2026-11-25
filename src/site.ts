@@ -1,3 +1,5 @@
+import { icpFooterHtml, icpFooterStyle } from './icp-footer'
+
 // 官网：介绍微信小程序「有囍請柬」。
 // 这是模板字符串，内嵌脚本里不要用反引号和 ${}
 export const site = `<!DOCTYPE html>
@@ -10,6 +12,7 @@ export const site = `<!DOCTYPE html>
 <title>有囍請柬</title>
 <link rel="icon" href="/brand/mark.png">
 <style>
+` + icpFooterStyle + `
 
   :root {
     --ink: #3c2422;
@@ -468,6 +471,7 @@ export const site = `<!DOCTYPE html>
 
 <footer>
   <div class="wrap">有囍請柬 · 微信婚礼请柬。完整喜帖在小程序里打开。</div>
+` + icpFooterHtml + `
 </footer>
 
 <button class="fab" type="button" id="chat-fab" aria-expanded="false" aria-controls="chat-panel">
