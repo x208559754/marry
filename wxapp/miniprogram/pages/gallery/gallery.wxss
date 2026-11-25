@@ -95,16 +95,16 @@
   height: 44rpx;
   border-radius: 50%;
   background: #ffffff;
-  border: 2rpx solid #8B1E1E;
+  border: 2rpx solid var(--primary-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4rpx 10rpx rgba(139, 30, 30, 0.15);
+  box-shadow: 0 4rpx 10rpx var(--primary-shadow);
   z-index: 2;
 }
 
 .node-heart {
-  color: #8B1E1E;
+  color: var(--primary-color);
   font-size: 24rpx;
 }
 
@@ -113,7 +113,7 @@
   border-radius: 32rpx;
   padding: 30rpx;
   box-shadow: 0 6rpx 20rpx rgba(45, 37, 34, 0.05);
-  border: 1rpx solid rgba(225, 215, 205, 0.8);
+  border: 1rpx solid var(--border-color);
 }
 
 .story-head {
@@ -126,8 +126,8 @@
 .story-date {
   font-size: 20rpx;
   font-weight: 600;
-  color: #5C4F4A;
-  background: #FAF7F2;
+  color: var(--text-sub);
+  background: var(--bg-color);
   padding: 4rpx 14rpx;
   border-radius: 12rpx;
   font-family: -apple-system, BlinkMacSystemFont, monospace;
@@ -161,6 +161,37 @@
   color: #5C4F4A;
   font-family: "Songti SC", "Noto Serif SC", serif;
   display: block;
+}
+
+/* 岁月印记为空时的提示 */
+.story-empty {
+  margin: 36rpx 30rpx 0;
+  padding: 48rpx 30rpx;
+  background: #ffffff;
+  border-radius: 32rpx;
+  border: 1rpx dashed rgba(197, 160, 89, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.story-empty-icon {
+  font-size: 32rpx;
+  color: #C5A059;
+  margin-bottom: 12rpx;
+}
+
+.story-empty-text {
+  font-size: 26rpx;
+  color: #5C4F4A;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+}
+
+.story-empty-sub {
+  font-size: 20rpx;
+  color: #8C7B75;
+  margin-top: 8rpx;
 }
 
 .save-tip {

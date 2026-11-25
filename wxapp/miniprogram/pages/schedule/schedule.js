@@ -3,16 +3,23 @@ const app = getApp();
 const api = require('../../utils/api.js');
 const wechat = require('../../utils/wechat.js');
 
+function normalizeSchedule(list) {
+  return (list || []).filter(function (it) { return it && typeof it === 'object'; }).map(function (it, i) {
+    return {
+      id: String(it.id || ('t' + i)),
+      time: it.time || '',
+      title: it.title || '',
+      desc: it.desc || it.content || ''
+    };
+  });
+}
+
 Page({
   data: {
+    theme: 'red',
     config: {},
-    scheduleList: [
-      { time: '10:18', title: '宾客签到·雅乐迎宾', desc: '签到处签到，领取婚礼专属喜礼与席位卡' },
-      { time: '11:18', title: '花亭合影·挚友留念', desc: '与新人于花艺留影区同框合影，记录喜悦时光' },
-      { time: '11:58', title: '神圣仪式·执手此生', desc: '新郎新娘步入殿堂，交换婚戒与神圣誓言' },
-      { time: '12:28', title: '喜筵启席·举杯同庆', desc: '饕餮珍馐宴开，新人敬酒感恩亲朋' },
-      { time: '14:00', title: '甜品欢聚·圆满礼成', desc: '法式甜品台分享，抽取幸运捧花大奖' }
-    ],
+    scheduleLoaded: false,
+    scheduleList: [],
     venue: {
       hotel: '半岛国际大酒店',
       hall: '三层金玉满堂宴会大厅',
@@ -27,14 +34,19 @@ Page({
   },
 
   onLoad: function () {
+    if (app.syncPageTheme) app.syncPageTheme(this);
     this.loadData();
   },
 
   onShow: function () {
+    const t = (app.getTheme && app.getTheme()) || 'red';
+    this.setData({ theme: t });
+    if (app.syncPageTheme) app.syncPageTheme(this);
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({
         selected: 2,
-        visible: true
+        visible: true,
+        theme: t
       });
     }
   },
@@ -48,9 +60,11 @@ Page({
   loadData: function (callback) {
     api.getWeddingConfig().then((cfg) => {
       this.setData({ config: cfg });
-      if (cfg && cfg.schedule && cfg.schedule.length > 0) {
-        this.setData({ scheduleList: cfg.schedule });
-      }
+      // 只读云端行程，未配置则空列表，不用内置示例
+      this.setData({
+        scheduleLoaded: true,
+        scheduleList: (cfg && Array.isArray(cfg.schedule)) ? normalizeSchedule(cfg.schedule) : []
+      });
       if (cfg && cfg.venue) {
         this.setData({
           venue: {
@@ -67,6 +81,7 @@ Page({
       }
       if (typeof callback === 'function') callback();
     }).catch(() => {
+      if (!this.data.scheduleLoaded) this.setData({ scheduleLoaded: true, scheduleList: [] });
       if (typeof callback === 'function') callback();
     });
   },

@@ -1,8 +1,8 @@
 <!-- pages/admin/admin.wxml -->
-<view class="container">
+<view class="container theme-{{lotteryTheme || 'red'}}">
   <!-- 未通过总管口令：显示认证页。本场婚礼管理员也不能跳过。 -->
   <view class="card lock-card" wx:if="{{!isAuthorized}}">
-    <view class="lock-seal">👑</view>
+    <view class="lock-seal">囍</view>
     <text class="lock-title">平台总管理员认证</text>
     <text class="lock-desc">请输入总管口令。本场婚礼管理员身份不能进入平台总后台，必须通过口令验证。</text>
 
@@ -38,7 +38,7 @@
   <block wx:else>
     <!-- 顶部状态栏与退出 -->
     <view class="admin-top-bar">
-      <view class="badge-role">{{isSuperAdmin ? '👑 平台总管理员' : '婚礼管理员'}}</view>
+      <view class="badge-role">{{isSuperAdmin ? '平台总管理员' : '婚礼管理员'}}</view>
       <view style="display: flex; align-items: center;">
         <text class="preview-link" bindtap="goToPreviewCurrentWedding">进入请柬预览 ›</text>
         <text class="exit-link" bindtap="logoutAdmin" style="margin-left: 20rpx;">退出管理</text>
@@ -48,18 +48,44 @@
     <!-- 全平台婚礼调度：仅总管口令验证通过后显示 -->
     <view class="card super-weddings-card" wx:if="{{isSuperAdmin}}">
       <view class="sc-title" style="display: flex; justify-content: space-between; align-items: center;">
-        <text>💒 全平台婚礼调度中心</text>
-        <view class="btn-pill-create" bindtap="openNewWeddingModal">➕ 新建婚礼</view>
+        <text>婚礼场次管理</text>
+        <view class="btn-pill-create" bindtap="openNewWeddingModal">+ 新建婚礼</view>
       </view>
       
       <picker range="{{weddingOptions}}" range-key="label" value="{{selectedWeddingIndex}}" bindchange="onSelectWedding">
         <view class="wedding-picker-display">
           <text class="wp-label">当前管理婚礼：</text>
           <text class="wp-val">{{currentWeddingDisplay || wid || 'demo (演示婚礼)'}}</text>
-          <text class="wp-arrow">▼ 切换</text>
+          <text class="wp-arrow">切换 ›</text>
         </view>
       </picker>
-      <view class="wp-sub-tip">💡 在此切换婚礼，下方「新娘新郎信息」、「回执名单」、「相册」与「专属二维码」均自动跟随联动</view>
+      <view class="wp-sub-tip">切换场次后，下方回执名单、相册、婚礼信息与二维码将同步联动。</view>
+    </view>
+
+    <!-- 当前套餐：名称 / 到期 / 用量 / 已解锁与未解锁的权益（来自平台总后台套餐配置） -->
+    <view class="card plan-card plan-tier-{{planTier}}" wx:if="{{planLoaded}}">
+      <view class="plan-top" bindtap="goUpgrade">
+        <view class="plan-left">
+          <view class="plan-line">
+            <text class="plan-label">当前套餐</text>
+            <text class="plan-badge">{{planName}}</text>
+            <text class="plan-vip" wx:if="{{planBadge}}">{{planBadge}}</text>
+          </view>
+          <text class="plan-desc">{{planExpiryText}}</text>
+        </view>
+        <view class="plan-cta" wx:if="{{planCanUpgrade}}">{{planPremium ? '升级套餐' : '升级'}}{{planPriceText ? ' ' + planPriceText + (planMultiple ? ' 起' : '') : ''}} ›</view>
+        <text class="plan-more" wx:else>查看权益 ›</text>
+      </view>
+      <view class="plan-usage">
+        <view class="pu-row" wx:for="{{planUsage}}" wx:key="key">
+          <view class="pu-head"><text>{{item.label}}</text><text class="pu-num {{item.full ? 'pu-full' : ''}}">{{item.text}}</text></view>
+          <view class="pu-track"><view class="pu-fill {{item.cls}}" style="width: {{item.pct}}%;"></view></view>
+        </view>
+        <view class="pu-meta">祝福 / 弹幕 {{planBless}} 条 · 当前主题 {{planThemeName}}</view>
+      </view>
+      <view class="plan-perks">
+        <text wx:for="{{planPerks}}" wx:key="text" class="pp {{item.on ? 'pp-on' : 'pp-off'}}" bindtap="goUpgrade">{{item.on ? '✓ ' : '🔒 '}}{{item.text}}</text>
+      </view>
     </view>
 
     <!-- 统计看板 -->
@@ -87,8 +113,8 @@
       </view>
     </view>
 
-    <!-- Tab 切换: 宾客名单 / 婚纱照管理 / 婚礼信息 -->
-    <view class="tab-segment">
+    <!-- Tab 切换: 宾客名单 / 婚纱照管理 / 婚礼信息 / 现场抽奖 -->
+    <view class="tab-segment tab-segment-4">
       <view
         class="tab-item {{curTab === 'guests' ? 'active' : ''}}"
         bindtap="switchTab"
@@ -109,6 +135,13 @@
         data-tab="settings"
       >
         婚礼信息
+      </view>
+      <view
+        class="tab-item {{curTab === 'lottery' ? 'active' : ''}}"
+        bindtap="switchTab"
+        data-tab="lottery"
+      >
+        现场抽奖
       </view>
     </view>
 
@@ -185,78 +218,189 @@
       <view wx:if="{{photosList.length === 0}}" class="empty-tip">
         <text>相册还是空的，点击上方按钮上传第一张婚纱照</text>
       </view>
+
+      <!-- 岁月印记 · 恋爱纪事（存于婚礼配置 story 字段） -->
+      <view class="card record-card">
+        <view class="rc-head">
+          <text class="ug-title rc-title">岁月印记 · 恋爱纪事</text>
+          <text class="rc-status {{storyDirty ? 'rc-status-dirty' : (storyCloudSaved ? 'rc-status-ok' : '')}}">{{storyDirty ? '有未保存修改' : (storyCloudSaved ? '已保存到云端' : '尚未配置，宾客端不显示')}}</text>
+        </view>
+        <text class="ug-desc rc-desc">这里的纪事会显示在婚纱相册页「岁月印记」时间轴，也会显示在「我们相遇的故事」页。尚未保存时，宾客端不显示任何纪事；保存后只显示这里的列表。</text>
+
+        <view wx:for="{{storyList}}" wx:key="id" class="record-item">
+          <image wx:if="{{item.image}}" class="ri-thumb" src="{{item.image}}" mode="aspectFill"></image>
+          <view wx:else class="ri-thumb ri-thumb-empty"><text>无配图</text></view>
+          <view class="ri-body">
+            <view class="ri-line">
+              <text class="ri-tag" wx:if="{{item.date}}">{{item.date}}</text>
+              <text class="ri-title">{{item.title || '（未填标题）'}}</text>
+            </view>
+            <text class="ri-content">{{item.content || '（未填内容）'}}</text>
+            <view class="ri-actions">
+              <view class="ri-act {{index === 0 ? 'ri-act-disabled' : ''}}" bindtap="moveStoryItem" data-index="{{index}}" data-dir="-1">上移</view>
+              <view class="ri-act {{index === storyList.length - 1 ? 'ri-act-disabled' : ''}}" bindtap="moveStoryItem" data-index="{{index}}" data-dir="1">下移</view>
+              <view class="ri-act" bindtap="openStoryModal" data-index="{{index}}">编辑</view>
+              <view class="ri-act ri-act-danger" bindtap="deleteStoryItem" data-index="{{index}}">删除</view>
+            </view>
+          </view>
+        </view>
+
+        <view wx:if="{{storyList.length === 0}}" class="empty-tip record-empty">
+          <text>{{storyCloudSaved ? '已保存为空列表，宾客端不显示纪事' : '还没有自定义纪事，可新增或载入示例再改'}}</text>
+        </view>
+
+        <view class="rc-btn-row">
+          <view class="rc-btn rc-btn-gold" bindtap="openStoryModal">＋ 新增纪事</view>
+          <view class="rc-btn rc-btn-gold" bindtap="loadSampleStories">载入示例再改</view>
+        </view>
+        <button class="btn-primary rc-save-btn" bindtap="saveStories" loading="{{savingStory}}">保存岁月印记</button>
+        <view class="col-tip" wx:if="{{storyDirty}}"><text>修改尚未保存，宾客端暂不变化。</text><text class="rc-link" bindtap="discardStoryChanges">放弃修改</text></view>
+        <text class="col-tip" wx:else>删除纪事只会从列表移除，不会删除相册里的照片。</text>
+      </view>
     </view>
 
     <!-- 3. 婚礼信息编辑 -->
     <view class="tab-pane" wx:if="{{curTab === 'settings'}}">
-      <view class="card notion-status-card">
-        <text class="nsc-title">婚礼信息（保存后全局同步）</text>
-
-        <view class="diag-row">
-          <text class="diag-label">新郎姓名:</text>
-          <input value="{{configForm.groomName}}" bindinput="onFormInput" data-field="groomName" placeholder="新郎姓名"
-                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
-        </view>
-        <view class="diag-row">
-          <text class="diag-label">新郎电话:</text>
-          <input value="{{configForm.groomPhone}}" bindinput="onFormInput" data-field="groomPhone" placeholder="新郎电话"
-                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
-        </view>
-        <view class="diag-row">
-          <text class="diag-label">新娘姓名:</text>
-          <input value="{{configForm.brideName}}" bindinput="onFormInput" data-field="brideName" placeholder="新娘姓名"
-                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
-        </view>
-        <view class="diag-row">
-          <text class="diag-label">新娘电话:</text>
-          <input value="{{configForm.bridePhone}}" bindinput="onFormInput" data-field="bridePhone" placeholder="新娘电话"
-                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
-        </view>
-        <view class="diag-row">
-          <text class="diag-label">吉日良辰:</text>
-          <input value="{{configForm.date}}" bindinput="onFormInput" data-field="date" placeholder="如 2026年10月18日"
-                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
-        </view>
-        <view class="diag-row">
-          <text class="diag-label">典礼时间:</text>
-          <input value="{{configForm.time}}" bindinput="onFormInput" data-field="time" placeholder="如 11:58"
-                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
-        </view>
-        <view class="diag-row">
-          <text class="diag-label">酒店名称:</text>
-          <input value="{{configForm.venueName}}" bindinput="onFormInput" data-field="venueName" placeholder="酒店/会场名称"
-                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
-        </view>
-        <view class="diag-row">
-          <text class="diag-label">宴会厅号:</text>
-          <input value="{{configForm.venueHall}}" bindinput="onFormInput" data-field="venueHall" placeholder="宴会厅"
-                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
-        </view>
-        <view class="diag-row">
-          <text class="diag-label">详细地址:</text>
-          <input value="{{configForm.venueAddress}}" bindinput="onFormInput" data-field="venueAddress" placeholder="详细地址"
-                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
-        </view>
-        <view class="diag-row">
-          <text class="diag-label">纬度/经度:</text>
-          <input value="{{configForm.venueLat}}" bindinput="onFormInput" data-field="venueLat" placeholder="纬度 如 31.2304" style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
-          <input value="{{configForm.venueLng}}" bindinput="onFormInput" data-field="venueLng" placeholder="经度 如 121.4737" style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
-        </view>
-        <view class="diag-row">
-          <text class="diag-label">新郎联系电话:</text>
-          <input value="{{configForm.contactGroom}}" bindinput="onFormInput" data-field="contactGroom" placeholder="宾客拨打用"
-                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
-        </view>
-        <view class="diag-row">
-          <text class="diag-label">新娘联系电话:</text>
-          <input value="{{configForm.contactBride}}" bindinput="onFormInput" data-field="contactBride" placeholder="宾客拨打用"
-                 style="flex: 1; font-size: 24rpx; background: #FAF7F2; padding: 10rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #E6CA65; margin-left: 12rpx;" />
+      <view class="card info-card">
+        <view class="info-head">
+          <text class="info-title">婚礼信息</text>
+          <text class="info-sub">保存后，请柬各页将同步更新</text>
         </view>
 
-        <button class="btn-primary" style="margin-top: 24rpx;" bindtap="saveConfigForm" loading="{{savingConfig}}">
-          保存婚礼信息
-        </button>
-        <text class="col-tip">保存后请到各页面下拉刷新（首页/盛典/流程会自动读取最新配置）。</text>
+        <view class="info-section">
+          <view class="info-sec-title">
+            <view class="info-sec-line"></view>
+            <text>新人</text>
+            <view class="info-sec-line"></view>
+          </view>
+          <view class="info-pair">
+            <view class="info-field">
+              <text class="info-label">新郎</text>
+              <input class="info-input" value="{{configForm.groomName}}" bindinput="onFormInput" data-field="groomName" placeholder="姓名" placeholder-class="info-ph" />
+              <input class="info-input" value="{{configForm.groomPhone}}" bindinput="onFormInput" data-field="groomPhone" placeholder="电话（选填）" placeholder-class="info-ph" type="number" maxlength="13" />
+            </view>
+            <view class="info-field">
+              <text class="info-label">新娘</text>
+              <input class="info-input" value="{{configForm.brideName}}" bindinput="onFormInput" data-field="brideName" placeholder="姓名" placeholder-class="info-ph" />
+              <input class="info-input" value="{{configForm.bridePhone}}" bindinput="onFormInput" data-field="bridePhone" placeholder="电话（选填）" placeholder-class="info-ph" type="number" maxlength="13" />
+            </view>
+          </view>
+        </view>
+
+        <view class="info-section">
+          <view class="info-sec-title">
+            <view class="info-sec-line"></view>
+            <text>典礼</text>
+            <view class="info-sec-line"></view>
+          </view>
+          <view class="info-pair">
+            <view class="info-field">
+              <text class="info-label">婚礼日期</text>
+              <picker mode="date" value="{{configForm.dateISO}}" start="2024-01-01" end="2036-12-31" bindchange="onFormDateChange">
+                <view class="info-picker {{configForm.date ? '' : 'is-ph'}}">
+                  <text>{{configForm.date || '请选择日期'}}</text>
+                  <text class="info-chevron">›</text>
+                </view>
+              </picker>
+            </view>
+            <view class="info-field">
+              <text class="info-label">典礼时间</text>
+              <picker mode="time" value="{{configForm.timeISO}}" bindchange="onFormTimeChange">
+                <view class="info-picker {{configForm.time ? '' : 'is-ph'}}">
+                  <text>{{configForm.time || '请选择时间'}}</text>
+                  <text class="info-chevron">›</text>
+                </view>
+              </picker>
+            </view>
+          </view>
+        </view>
+
+        <view class="info-section">
+          <view class="info-sec-title">
+            <view class="info-sec-line"></view>
+            <text>场地</text>
+            <view class="info-sec-line"></view>
+          </view>
+          <view class="info-field info-field-full">
+            <text class="info-label">酒店 / 会场</text>
+            <input class="info-input" value="{{configForm.venueName}}" bindinput="onFormInput" data-field="venueName" placeholder="请填写会场名称" placeholder-class="info-ph" />
+          </view>
+          <view class="info-field info-field-full">
+            <text class="info-label">宴会厅</text>
+            <input class="info-input" value="{{configForm.venueHall}}" bindinput="onFormInput" data-field="venueHall" placeholder="宴会厅名称（选填）" placeholder-class="info-ph" />
+          </view>
+          <view class="info-field info-field-full">
+            <text class="info-label">详细地址</text>
+            <input class="info-input" value="{{configForm.venueAddress}}" bindinput="onFormInput" data-field="venueAddress" placeholder="用于宾客导航" placeholder-class="info-ph" />
+          </view>
+          <view class="info-field info-field-full">
+            <text class="info-label">地图导航（选填）</text>
+            <view class="info-map">
+              <view class="info-map-vals">
+                <text wx:if="{{configForm.venueLat && configForm.venueLng}}" class="info-coord">{{configForm.venueLat}}，{{configForm.venueLng}}</text>
+                <text wx:else class="info-coord is-ph">尚未选点，宾客将无法一键导航</text>
+              </view>
+              <view class="info-map-btn" bindtap="chooseVenueLocation">地图选点</view>
+            </view>
+          </view>
+        </view>
+
+        <view class="info-section">
+          <view class="info-sec-title">
+            <view class="info-sec-line"></view>
+            <text>宾客联络</text>
+            <view class="info-sec-line"></view>
+          </view>
+          <text class="info-hint">请柬上「联系新人」将拨打这里的号码</text>
+          <view class="info-pair">
+            <view class="info-field">
+              <text class="info-label">新郎</text>
+              <input class="info-input" value="{{configForm.contactGroom}}" bindinput="onFormInput" data-field="contactGroom" placeholder="电话" placeholder-class="info-ph" type="number" maxlength="13" />
+            </view>
+            <view class="info-field">
+              <text class="info-label">新娘</text>
+              <input class="info-input" value="{{configForm.contactBride}}" bindinput="onFormInput" data-field="contactBride" placeholder="电话" placeholder-class="info-ph" type="number" maxlength="13" />
+            </view>
+          </view>
+        </view>
+
+        <button class="btn-primary info-save" bindtap="saveConfigForm" loading="{{savingConfig}}">保存婚礼信息</button>
+        <text class="col-tip">保存后请到各页面下拉刷新，即可看到最新内容。</text>
+      </view>
+
+      <!-- 婚礼当日行程（存于婚礼配置 schedule 字段） -->
+      <view class="card record-card">
+        <view class="rc-head">
+          <text class="nsc-title rc-title">婚礼当日行程</text>
+          <text class="rc-status {{scheduleDirty ? 'rc-status-dirty' : (scheduleCloudSaved ? 'rc-status-ok' : '')}}">{{scheduleDirty ? '有未保存修改' : (scheduleCloudSaved ? '已保存到云端' : '尚未配置，宾客端不显示')}}</text>
+        </view>
+        <text class="ug-desc rc-desc">显示在「盛典日程安排」页的时间轴。尚未保存时，宾客端不显示行程；保存后只显示这里的列表。</text>
+
+        <view wx:for="{{scheduleList}}" wx:key="id" class="record-item">
+          <view class="ri-time"><text>{{item.time || '--:--'}}</text></view>
+          <view class="ri-body">
+            <text class="ri-title">{{item.title || '（未填环节）'}}</text>
+            <text class="ri-content" wx:if="{{item.desc}}">{{item.desc}}</text>
+            <view class="ri-actions">
+              <view class="ri-act {{index === 0 ? 'ri-act-disabled' : ''}}" bindtap="moveScheduleItem" data-index="{{index}}" data-dir="-1">上移</view>
+              <view class="ri-act {{index === scheduleList.length - 1 ? 'ri-act-disabled' : ''}}" bindtap="moveScheduleItem" data-index="{{index}}" data-dir="1">下移</view>
+              <view class="ri-act" bindtap="openScheduleModal" data-index="{{index}}">编辑</view>
+              <view class="ri-act ri-act-danger" bindtap="deleteScheduleItem" data-index="{{index}}">删除</view>
+            </view>
+          </view>
+        </view>
+
+        <view wx:if="{{scheduleList.length === 0}}" class="empty-tip record-empty">
+          <text>{{scheduleCloudSaved ? '已保存为空列表，宾客端显示“敬请期待”' : '还没有自定义行程，可新增或载入示例再改'}}</text>
+        </view>
+
+        <view class="rc-btn-row">
+          <view class="rc-btn rc-btn-gold" bindtap="openScheduleModal">＋ 新增行程</view>
+          <view class="rc-btn rc-btn-gold" bindtap="loadSampleSchedule">载入示例再改</view>
+        </view>
+        <button class="btn-primary rc-save-btn" bindtap="saveSchedule" loading="{{savingSchedule}}">保存当日行程</button>
+        <view class="col-tip" wx:if="{{scheduleDirty}}"><text>修改尚未保存，宾客端暂不变化。</text><text class="rc-link" bindtap="discardScheduleChanges">放弃修改</text></view>
+        <text class="col-tip" wx:else>与上方「保存婚礼信息」互不覆盖。</text>
       </view>
 
       <view class="card notion-status-card" style="margin-bottom: 24rpx;">
@@ -298,7 +442,271 @@
         </button>
       </view>
     </view>
+
+    <!-- 4. 现场抽奖（数据存 lotteries 表，与婚礼信息互不覆盖） -->
+    <view class="tab-pane lt-pane lt-th-{{lotteryTheme}}" wx:if="{{curTab === 'lottery'}}">
+      <!-- 抽奖大屏（随所选主题变色） -->
+      <view class="lt-hero">
+        <view class="lt-hero-deco lt-hero-deco-a"></view>
+        <view class="lt-hero-deco lt-hero-deco-b"></view>
+        <view class="lt-hero-top">
+          <view class="lt-hero-mark">囍</view>
+          <view class="lt-hero-tt">
+            <text class="lt-hero-kicker">LUCKY DRAW · {{lotteryThemeName}}</text>
+            <text class="lt-hero-title">幸运抽奖</text>
+          </view>
+          <view class="lt-hero-status {{lotteryStatus === 'rolling' ? 'lt-hero-status-live' : ''}}">
+            <view class="lt-dot"></view><text>{{lotteryStatusShort}}</text>
+          </view>
+        </view>
+        <text class="lt-hero-line">{{lotteryStatusText}}</text>
+        <view class="lt-stats">
+          <view class="lt-stat"><text class="lt-stat-n">{{lotteryPrizes.length}}</text><text class="lt-stat-l">奖项</text></view>
+          <view class="lt-stat"><text class="lt-stat-n">{{lotteryParticipants.length}}</text><text class="lt-stat-l">参与人</text></view>
+          <view class="lt-stat"><text class="lt-stat-n">{{lotteryRemaining}}</text><text class="lt-stat-l">剩余可抽</text></view>
+        </view>
+        <view class="lt-url" bindtap="copyLotteryUrl"><text selectable="{{true}}">{{lotteryUrl}}</text></view>
+        <view class="lt-hero-btns">
+          <view class="lt-hero-btn lt-hero-btn-main" bindtap="copyLotteryUrl">复制大屏网址</view>
+          <view class="lt-hero-btn" bindtap="loadLottery">刷新状态</view>
+        </view>
+        <text class="lt-hero-tip">在电脑或投影仪浏览器打开网址并全屏（双击画面或点右下角「全屏」）；大屏只负责展示，开奖都在这里操作。</text>
+      </view>
+
+      <!-- 婚礼与大屏主题 -->
+      <view class="card record-card">
+        <view class="rc-head">
+          <text class="ug-title rc-title">婚礼与大屏主题</text>
+          <text class="rc-status rc-status-ok">{{lotteryThemeName}}</text>
+        </view>
+        <text class="ug-desc rc-desc">选好后，请柬首页、相册、日程、回执、祝福页及现场抽奖大屏将同步切换为同一主题配色。</text>
+        <view class="lt-themes">
+          <view wx:for="{{lotteryThemes}}" wx:key="key" class="lt-theme {{item.key === lotteryTheme ? 'lt-theme-on' : ''}} {{item.locked ? 'lt-theme-locked' : ''}}" bindtap="chooseLotteryTheme" data-key="{{item.key}}" data-locked="{{item.locked ? 1 : ''}}">
+            <view class="lt-swatch" style="background: {{item.bg}};">
+              <text class="lt-swatch-mark" style="color: {{item.mark}}; border-color: {{item.mark}};">囍</text>
+              <view class="lt-swatch-bar" style="background: {{item.mark}};"></view>
+              <view class="lt-swatch-dots">
+                <view class="lt-swatch-dot" style="background: {{item.mark}};"></view>
+                <view class="lt-swatch-dot" style="background: {{item.mark}};"></view>
+                <view class="lt-swatch-dot" style="background: {{item.mark}};"></view>
+              </view>
+              <view class="lt-swatch-check" wx:if="{{item.key === lotteryTheme}}">✓</view>
+              <view class="lt-swatch-lock" wx:if="{{item.locked}}">高级版</view>
+            </view>
+            <text class="lt-theme-name">{{item.name}}</text>
+            <text class="lt-theme-desc">{{item.desc}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 奖项与开奖 -->
+      <view class="card record-card">
+        <view class="rc-head">
+          <text class="ug-title rc-title">奖项与开奖</text>
+          <text class="rc-status">剩余可抽 {{lotteryRemaining}} 人</text>
+        </view>
+        <text class="ug-desc rc-desc">奖品可以是红包金额，也可以是礼物，自由填写。点「开始抽奖」后由服务器随机抽出中奖人，大屏滚动约 5 秒后揭晓；每人本场最多中奖一次。</text>
+
+        <view wx:for="{{lotteryPrizes}}" wx:key="id" class="record-item lt-prize {{item.onScreen ? 'lt-prize-on' : ''}}">
+          <view class="ri-time lt-count"><text>{{item.count}} 名</text></view>
+          <view class="ri-body">
+            <view class="ri-line">
+              <text class="ri-title">{{item.label}}</text>
+              <text class="lt-tag lt-tag-live" wx:if="{{item.rolling}}">抽奖中</text>
+              <text class="lt-tag" wx:elif="{{item.onScreen}}">大屏展示中</text>
+            </view>
+            <text class="ri-content" wx:if="{{item.sub}}">{{item.sub}}</text>
+            <view class="lt-winners" wx:if="{{item.drawn && !item.rolling}}">
+              <text class="lt-w-label">中奖（{{item.winnerCount}}）</text><text class="lt-w-names">{{item.winnersText}}</text>
+            </view>
+            <view class="lt-winners lt-winners-wait" wx:elif="{{item.rolling}}">
+              <text>大屏滚动中，到时自动揭晓</text>
+            </view>
+
+            <view class="lt-ctrl-row">
+              <button wx:if="{{item.rolling}}" class="lt-ctrl lt-ctrl-primary" bindtap="revealNow" disabled="{{lotteryBusy}}">立即开奖</button>
+              <button wx:elif="{{!item.drawn}}" class="lt-ctrl lt-ctrl-primary" bindtap="startPrizeDraw" data-id="{{item.id}}" disabled="{{lotteryBusy || lotteryStatus === 'rolling'}}">开始抽奖</button>
+              <button wx:else class="lt-ctrl lt-ctrl-gold" bindtap="redrawPrize" data-id="{{item.id}}" disabled="{{lotteryBusy || lotteryStatus === 'rolling'}}">重新抽取</button>
+            </view>
+            <view class="ri-actions">
+              <view class="ri-act {{index === 0 ? 'ri-act-disabled' : ''}}" bindtap="movePrize" data-index="{{index}}" data-dir="-1">上移</view>
+              <view class="ri-act {{index === lotteryPrizes.length - 1 ? 'ri-act-disabled' : ''}}" bindtap="movePrize" data-index="{{index}}" data-dir="1">下移</view>
+              <view class="ri-act" bindtap="openPrizeModal" data-index="{{index}}">编辑</view>
+              <view class="ri-act ri-act-danger" bindtap="deletePrize" data-index="{{index}}">删除</view>
+            </view>
+          </view>
+        </view>
+
+        <view wx:if="{{lotteryLoaded && lotteryPrizes.length === 0}}" class="empty-tip record-empty">
+          <text>还没有设置奖项，大屏会显示「抽奖尚未设置奖项」</text>
+        </view>
+
+        <view class="rc-btn-row">
+          <view class="rc-btn rc-btn-gold" bindtap="openPrizeModal">＋ 新增奖项</view>
+        </view>
+        <view class="rc-btn-row lt-screen-row">
+          <view class="rc-btn rc-btn-plain lt-btn-flex {{lotteryStatus === 'rolling' ? 'ri-act-disabled' : ''}}" bindtap="screenIdle">大屏回到等待页</view>
+          <view class="rc-btn rc-btn-plain lt-btn-flex {{lotteryStatus === 'rolling' || !lotteryAnyDrawn ? 'ri-act-disabled' : ''}}" bindtap="screenBoard">大屏展示中奖名单</view>
+        </view>
+        <text class="col-tip">一个奖项揭晓后，直接点下一个奖项的「开始抽奖」即可。</text>
+      </view>
+
+      <!-- 全部揭晓：中奖总榜 -->
+      <view class="card record-card" wx:if="{{lotteryAllDrawn}}">
+        <view class="rc-head">
+          <text class="ug-title rc-title">中奖总榜</text>
+          <text class="rc-status rc-status-ok">全部奖项已揭晓</text>
+        </view>
+        <view wx:for="{{lotteryPrizes}}" wx:key="id" class="lt-board-row">
+          <view class="lt-board-h"><text class="lt-board-n">{{item.label}}</text><text class="lt-board-r" wx:if="{{item.sub}}">{{item.sub}}</text></view>
+          <text class="lt-board-w">{{item.winnersText || '—'}}</text>
+        </view>
+        <button class="btn-gold rc-save-btn" bindtap="screenBoard" disabled="{{lotteryBusy}}">在大屏展示中奖总榜</button>
+      </view>
+
+      <!-- 参与名单 -->
+      <view class="card record-card">
+        <view class="rc-head">
+          <text class="ug-title rc-title">参与名单</text>
+          <text class="rc-status {{lotteryParticipants.length ? 'rc-status-ok' : ''}}">共 {{lotteryParticipants.length}} 人</text>
+        </view>
+        <text class="ug-desc rc-desc">默认从宾客回执导入「确认出席」的宾客（按姓名去重），也可以手动添加。点名字可移出名单。</text>
+        <view class="lt-chips" wx:if="{{lotteryParticipants.length}}">
+          <view wx:for="{{lotteryParticipants}}" wx:key="id" class="lt-chip" bindtap="removeParticipant" data-id="{{item.id}}">
+            <text>{{item.name}}</text><text class="lt-chip-x">×</text>
+          </view>
+        </view>
+        <view wx:if="{{lotteryLoaded && lotteryParticipants.length === 0}}" class="empty-tip record-empty">
+          <text>名单为空，暂时无法开始抽奖</text>
+        </view>
+        <button class="btn-primary rc-save-btn" bindtap="importLotteryRsvp" loading="{{lotteryBusy}}">从回执名单导入出席宾客</button>
+        <view class="rc-btn-row" style="margin-top: 16rpx;">
+          <view class="rc-btn rc-btn-gold" bindtap="openParticipantModal">＋ 手动添加</view>
+          <view class="rc-btn rc-btn-plain lt-btn-flex {{lotteryParticipants.length ? '' : 'ri-act-disabled'}}" bindtap="clearParticipants">清空名单</view>
+        </view>
+      </view>
+
+      <!-- 重置 -->
+      <view class="card record-card">
+        <text class="nsc-title rc-title">重置本场抽奖</text>
+        <text class="ug-desc rc-desc">清空所有中奖结果、大屏回到等待页；奖项和参与名单保留。</text>
+        <button class="lt-reset-btn" bindtap="resetLotteryAll" disabled="{{lotteryBusy}}">重置本场抽奖</button>
+      </view>
+    </view>
   </block>
+
+  <!-- 抽奖奖项编辑弹窗 -->
+  <view class="modal-mask" wx:if="{{showPrizeModal}}">
+    <view class="modal-card">
+      <view class="modal-title">{{prizeEditIndex >= 0 ? '编辑奖项' : '新增奖项'}}</view>
+      <view class="modal-subtitle">奖项名称和奖品内容至少填一项，点「确定」即保存</view>
+      <view class="modal-form-item">
+        <text class="mf-label">奖项名称</text>
+        <input class="mf-input" placeholder="如 一等奖 / 幸运奖" value="{{prizeForm.name}}" bindinput="onPrizeInput" data-field="name" maxlength="40" />
+      </view>
+      <view class="modal-form-item">
+        <text class="mf-label">奖品内容（金额或礼物）</text>
+        <input class="mf-input" placeholder="如 888元红包 / 纪念礼盒" value="{{prizeForm.reward}}" bindinput="onPrizeInput" data-field="reward" maxlength="60" />
+      </view>
+      <view class="modal-form-item">
+        <text class="mf-label">中奖人数</text>
+        <input class="mf-input" type="number" placeholder="如 3" value="{{prizeForm.count}}" bindinput="onPrizeInput" data-field="count" maxlength="3" />
+      </view>
+      <view class="modal-btn-row">
+        <button class="modal-btn-cancel" bindtap="closePrizeModal">取消</button>
+        <button class="modal-btn-confirm" bindtap="confirmPrize">确定</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 手动添加参与人弹窗 -->
+  <view class="modal-mask" wx:if="{{showParticipantModal}}">
+    <view class="modal-card">
+      <view class="modal-title">手动添加参与人</view>
+      <view class="modal-subtitle">每行一个名字，也可以用逗号、顿号分隔；重名会自动跳过</view>
+      <view class="modal-form-item">
+        <textarea class="mf-textarea" fixed="{{true}}" maxlength="4000" placeholder="如：张三、李四、王五" value="{{participantInput}}" bindinput="onParticipantInput"></textarea>
+      </view>
+      <view class="modal-btn-row">
+        <button class="modal-btn-cancel" bindtap="closeParticipantModal">取消</button>
+        <button class="modal-btn-confirm" bindtap="confirmParticipants">添加</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 岁月印记编辑弹窗 -->
+  <view class="modal-mask" wx:if="{{showStoryModal}}">
+    <view class="modal-card">
+      <view class="modal-title">{{storyEditIndex >= 0 ? '编辑纪事' : '新增纪事'}}</view>
+      <view class="modal-subtitle">填写后点「确定」，再点列表下方「保存岁月印记」才会同步给宾客</view>
+
+      <view class="modal-form-item">
+        <text class="mf-label">日期</text>
+        <input class="mf-input" placeholder="如 2022.05.20" value="{{storyForm.date}}" bindinput="onStoryInput" data-field="date" />
+      </view>
+      <view class="modal-form-item">
+        <text class="mf-label">标题</text>
+        <input class="mf-input" placeholder="如 初遇 · 心动的序章" value="{{storyForm.title}}" bindinput="onStoryInput" data-field="title" />
+      </view>
+      <view class="modal-form-item">
+        <text class="mf-label">内容</text>
+        <textarea class="mf-textarea" fixed="{{true}}" maxlength="500" placeholder="写下这段故事" value="{{storyForm.content}}" bindinput="onStoryInput" data-field="content"></textarea>
+      </view>
+      <view class="modal-form-item">
+        <text class="mf-label">配图（可选）</text>
+        <image wx:if="{{storyForm.image}}" class="sf-preview" src="{{storyForm.image}}" mode="aspectFill"></image>
+        <view wx:else class="sf-preview sf-preview-empty"><text>暂无配图</text></view>
+        <view class="rc-btn-row sf-btn-row">
+          <view class="rc-btn rc-btn-gold" bindtap="toggleStoryPhotoPicker">{{showStoryPhotoPicker ? '收起相册' : '从相册选'}}</view>
+          <view class="rc-btn rc-btn-gold {{uploadingStoryImage ? 'ri-act-disabled' : ''}}" bindtap="uploadStoryImage">{{uploadingStoryImage ? '上传中…' : '上传新图'}}</view>
+          <view class="rc-btn rc-btn-plain" wx:if="{{storyForm.image}}" bindtap="clearStoryImage">移除</view>
+        </view>
+        <text class="sf-hint">「上传新图」只作纪事配图，不会出现在婚纱相册里。</text>
+        <view class="sf-picker" wx:if="{{showStoryPhotoPicker}}">
+          <image
+            wx:for="{{photosList}}"
+            wx:key="url"
+            class="sf-pick-img {{storyForm.image === item.url ? 'sf-pick-active' : ''}}"
+            src="{{item.thumbUrl || item.url}}"
+            mode="aspectFill"
+            bindtap="pickStoryPhoto"
+            data-url="{{item.url}}"
+          ></image>
+        </view>
+      </view>
+
+      <view class="modal-btn-row">
+        <button class="modal-btn-cancel" bindtap="closeStoryModal">取消</button>
+        <button class="modal-btn-confirm" bindtap="confirmStoryItem">确定</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 当日行程编辑弹窗 -->
+  <view class="modal-mask" wx:if="{{showScheduleModal}}">
+    <view class="modal-card">
+      <view class="modal-title">{{scheduleEditIndex >= 0 ? '编辑行程' : '新增行程'}}</view>
+      <view class="modal-subtitle">填写后点「确定」，再点「保存当日行程」才会同步给宾客</view>
+
+      <view class="modal-form-item">
+        <text class="mf-label">时间</text>
+        <input class="mf-input" placeholder="如 11:58" value="{{scheduleForm.time}}" bindinput="onScheduleInput" data-field="time" />
+      </view>
+      <view class="modal-form-item">
+        <text class="mf-label">环节名称 *</text>
+        <input class="mf-input" placeholder="如 神圣仪式·执手此生" value="{{scheduleForm.title}}" bindinput="onScheduleInput" data-field="title" />
+      </view>
+      <view class="modal-form-item">
+        <text class="mf-label">说明</text>
+        <textarea class="mf-textarea" fixed="{{true}}" maxlength="200" placeholder="如 新郎新娘步入殿堂，交换婚戒与神圣誓言" value="{{scheduleForm.desc}}" bindinput="onScheduleInput" data-field="desc"></textarea>
+      </view>
+
+      <view class="modal-btn-row">
+        <button class="modal-btn-cancel" bindtap="closeScheduleModal">取消</button>
+        <button class="modal-btn-confirm" bindtap="confirmScheduleItem">确定</button>
+      </view>
+    </view>
+  </view>
 
   <!-- 新建婚礼弹窗 -->
   <view class="modal-mask" wx:if="{{showNewWeddingModal}}">

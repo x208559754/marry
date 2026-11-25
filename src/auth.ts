@@ -5,7 +5,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status'
 // Worker 绑定的资源与环境变量（wrangler.jsonc vars / .dev.vars / Wrangler Secret）
 export type Bindings = {
   DB: D1Database
-  PHOTOS: KVNamespace
+  PHOTOS?: KVNamespace // 旧 Worker 部署用；自建服务器不配置，照片走 ImgBB
   IMGBB_API_KEY: string
   WX_APPID: string
   WX_APPSECRET: string
@@ -14,6 +14,34 @@ export type Bindings = {
   // 平台超级管理员 openid 白名单（逗号分隔）：可管理任意婚礼；
   // 单场婚礼的管理员在数据库 users.is_admin 中配置
   ADMIN_OPENIDS: string
+  // ---- 内容安全（微信 msgSecCheck / mediaCheckAsync）----
+  MODERATION_ENABLED?: string // '0' 关闭；默认开启
+  MODERATION_FAIL_OPEN?: string // '0' = 微信接口出错时拦截；默认放行并记录
+  MODERATION_BLOCK_REVIEW?: string // '1' = 「疑似」也拦截；默认放行但进入审核队列
+  MODERATION_MOCK?: string // '1' = 不请求微信，本地模拟（含「测试违规」视为违规）
+  WX_PUSH_TOKEN?: string // 小程序「消息推送」Token（图片异步审核结果回调）
+  // ---- 收费 / 微信支付 ----
+  PAY_MOCK?: string // '1' = 未接入微信支付时模拟支付成功（仅测试用）
+  PAY?: PayProvider // 自建 Node 部署注入（server/wxpay.ts）；Worker 部署没有
+  // ---- 平台总后台（仅在库中尚无哈希时作为种子；之后以数据库为准）----
+  PLATFORM_ADMIN_PASSWORD?: string
+}
+
+// 微信支付能力（由 server/wxpay.ts 实现并注入；src 内不直接依赖 node:crypto）
+export type PayProvider = {
+  configured: boolean
+  missing: string[]
+  // JSAPI 下单，返回小程序 wx.requestPayment 所需参数
+  createJsapiOrder(o: { outTradeNo: string; description: string; totalFen: number; openid: string; attach?: string }): Promise<{
+    prepayId: string
+    payParams: { timeStamp: string; nonceStr: string; package: string; signType: 'RSA'; paySign: string }
+  }>
+  // 回调验签 + 解密：返回明文交易对象；验签失败抛错
+  parseNotify(headers: Record<string, string>, body: string): Promise<Record<string, any>>
+  // 按商户订单号查单
+  queryOrder(outTradeNo: string): Promise<Record<string, any>>
+  // 申请退款（可选）
+  refund?(o: { outTradeNo: string; outRefundNo: string; totalFen: number; refundFen: number; reason?: string }): Promise<Record<string, any>>
 }
 
 // Hono 环境：Bindings + 请求级变量（c.set）

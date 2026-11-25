@@ -1,5 +1,5 @@
 <!-- pages/schedule/schedule.wxml -->
-<view class="container">
+<view class="container theme-{{theme || config.theme || 'red'}}">
   <view class="section-title">
     <text class="title-cn">盛典日程安排</text>
     <text class="title-en">SCHEDULE & ITINERARY</text>
@@ -7,8 +7,8 @@
   </view>
 
   <!-- 盛典时间轴 -->
-  <view class="card timeline-card">
-    <view class="timeline-item" wx:for="{{scheduleList}}" wx:key="time">
+  <view class="card timeline-card" wx:if="{{scheduleList.length > 0}}">
+    <view class="timeline-item" wx:for="{{scheduleList}}" wx:key="index">
       <view class="time-badge">
         <text class="tb-time">{{item.time}}</text>
       </view>
@@ -18,9 +18,12 @@
           <text class="tc-dot">✦</text>
           <text class="tc-title">{{item.title}}</text>
         </view>
-        <text class="tc-desc">{{item.desc}}</text>
+        <text class="tc-desc" wx:if="{{item.desc}}">{{item.desc}}</text>
       </view>
     </view>
+  </view>
+  <view class="card schedule-empty" wx:elif="{{scheduleLoaded}}">
+    <text class="schedule-empty-text">当日行程正在精心筹备中，敬请期待</text>
   </view>
 
   <!-- 宴会地点与导航 -->

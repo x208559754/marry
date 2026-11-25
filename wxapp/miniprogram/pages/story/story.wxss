@@ -57,3 +57,13 @@
   color: #4A3E3D;
   line-height: 1.7;
 }
+
+.story-empty {
+  text-align: center;
+  padding: 60rpx 30rpx;
+}
+
+.story-empty-text {
+  font-size: 24rpx;
+  color: #8C7B75;
+}

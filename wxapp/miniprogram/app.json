@@ -6,12 +6,13 @@
     "pages/schedule/schedule",
     "pages/rsvp/rsvp",
     "pages/blessings/blessings",
-    "pages/admin/admin"
+    "pages/admin/admin",
+    "pages/upgrade/upgrade"
   ],
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#8B1E1E",
-    "navigationBarTitleText": "婚礼请柬",
+    "navigationBarTitleText": "有囍請柬",
     "navigationBarTextStyle": "white",
     "backgroundColor": "#FDFBF7",
     "enablePullDownRefresh": true
@@ -61,9 +62,8 @@
     }
   },
   "requiredPrivateInfos": [
-    "chooseAddress",
-    "chooseLocation"
   ],
   "sitemapLocation": "sitemap.json",
-  "style": "v2"
+  "style": "v2",
+  "__usePrivacyCheck__": false
 }

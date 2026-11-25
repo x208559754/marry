@@ -4,6 +4,7 @@ const api = require('../../utils/api.js');
 
 Page({
   data: {
+    theme: 'red',
     // 默认不展示陌生人占位头像，仅当用户授权或设置过时才展示
     formData: {
       name: '',
@@ -59,10 +60,14 @@ Page({
   },
 
   onShow: function () {
+    const t = (app.getTheme && app.getTheme()) || 'red';
+    this.setData({ theme: t });
+    if (app.syncPageTheme) app.syncPageTheme(this);
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({
         selected: 3,
-        visible: true
+        visible: true,
+        theme: t
       });
     }
   },

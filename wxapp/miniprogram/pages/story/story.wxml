@@ -1,15 +1,15 @@
 <!-- pages/story/story.wxml -->
-<view class="container">
+<view class="container theme-{{theme || 'red'}}">
   <view class="section-title">
     <text class="title-cn">我们相遇的故事</text>
     <text class="title-en">OUR LOVE STORY & TIMELINE</text>
     <view class="divider"></view>
   </view>
 
-  <view class="story-list">
-    <view wx:for="{{storyList}}" wx:key="title" class="card story-card">
-      <view class="story-tag">
-        <text class="tag-year">{{item.year || item.date || '2022'}}</text>
+  <view class="story-list" wx:if="{{storyList.length > 0}}">
+    <view wx:for="{{storyList}}" wx:key="index" class="card story-card">
+      <view class="story-tag" wx:if="{{item.year || item.date}}">
+        <text class="tag-year">{{item.year || item.date}}</text>
       </view>
       <view class="story-head">
         <text class="sh-icon">✦</text>
@@ -24,5 +24,9 @@
       ></image>
       <text class="story-desc">{{item.desc || item.content}}</text>
     </view>
+  </view>
+
+  <view class="card story-empty" wx:elif="{{loaded}}">
+    <text class="story-empty-text">我们的故事正在慢慢书写，敬请期待</text>
   </view>
 </view>

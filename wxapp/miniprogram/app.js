@@ -2,6 +2,14 @@
 // 安全说明：AppSecret 已从客户端移除，jscode2session 由 Worker 服务端完成
 const api = require('./utils/api.js');
 
+const THEME_NAV_COLORS = {
+  red: '#8B1E1E',
+  pink: '#C84B73',
+  night: '#2E2770',
+  forest: '#2C5A3E',
+  champagne: '#967035'
+};
+
 App({
   globalData: {
     // 当前登录用户信息（登录结果由 utils/api.js 写入本地缓存与全局）
@@ -17,6 +25,8 @@ App({
     wid: '',
     // 该 wid 对应的婚礼不存在或未开通
     weddingNotFound: false,
+    // 当前婚礼主题（'red' | 'pink' | 'night' | 'forest' | 'champagne'）
+    theme: 'red',
 
     // 婚礼配置内置默认值（云端 /api/config?wid= 会 merge 覆盖；字段结构与后端一致）
     weddingConfig: {
@@ -270,6 +280,56 @@ App({
     });
   },
 
+  // 获取当前婚礼主题（'red' | 'pink' | 'night' | 'forest' | 'champagne'）
+  getTheme: function () {
+    const wid = this.globalData.wid || 'none';
+    const fromCfg = this.globalData.weddingConfig && this.globalData.weddingConfig.theme;
+    let fromStore = '';
+    try { fromStore = wx.getStorageSync('wx_wedding_theme_' + wid) || ''; } catch (e) {}
+    const t = fromCfg || fromStore || this.globalData.theme || 'red';
+    return THEME_NAV_COLORS[t] ? t : 'red';
+  },
+
+  // 应用主题到全局、页面栈、顶部导航栏与自定义底栏
+  applyTheme: function (themeKey, targetPage) {
+    const t = THEME_NAV_COLORS[themeKey] ? themeKey : this.getTheme();
+    this.globalData.theme = t;
+    if (this.globalData.weddingConfig) {
+      this.globalData.weddingConfig.theme = t;
+    }
+    try {
+      wx.setStorageSync('wx_wedding_theme_' + (this.globalData.wid || 'none'), t);
+    } catch (e) {}
+
+    try {
+      wx.setNavigationBarColor({
+        frontColor: '#ffffff',
+        backgroundColor: THEME_NAV_COLORS[t] || '#8B1E1E',
+        animation: { duration: 180, timingFunc: 'easeIn' }
+      });
+    } catch (e) {}
+
+    try {
+      const pages = (typeof getCurrentPages === 'function' ? getCurrentPages() : []) || [];
+      if (targetPage && pages.indexOf(targetPage) === -1) pages.push(targetPage);
+      pages.forEach(function (p) {
+        if (!p || typeof p.setData !== 'function') return;
+        if (p.data && p.data.theme !== t) {
+          p.setData({ theme: t });
+        }
+        if (typeof p.getTabBar === 'function' && p.getTabBar()) {
+          p.getTabBar().setData({ theme: t });
+        }
+      });
+    } catch (e) {}
+    return t;
+  },
+
+  // 页面 onLoad/onShow 时调用，确保导航栏、页面容器与底栏主题同步
+  syncPageTheme: function (page) {
+    return this.applyTheme(this.getTheme(), page);
+  },
+
   // 从云端同步当前婚礼的配置与相册资源（无 wid 跳过；婚礼不存在时标记 weddingNotFound）
   syncWeddingConfig: function (callback) {
     const that = this;
@@ -280,6 +340,9 @@ App({
     api.getWeddingConfig().then(function (cfg) {
       that.globalData.weddingConfig = cfg;
       that.globalData.weddingNotFound = false;
+      if (cfg && cfg.theme) {
+        that.applyTheme(cfg.theme);
+      }
       console.log('[配置] 已同步云端婚礼配置');
       if (typeof callback === 'function') callback(cfg);
     }).catch(function (err) {

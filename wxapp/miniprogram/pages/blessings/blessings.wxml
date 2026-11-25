@@ -1,5 +1,5 @@
 <!-- pages/blessings/blessings.wxml - 亲友真挚祝福与留言墙 -->
-<view class="container">
+<view class="container theme-{{theme || 'red'}}">
   <view class="section-header">
     <text class="section-en">BLESSINGS & WISHES</text>
     <text class="section-cn">亲友祝福 · 美好寄语</text>

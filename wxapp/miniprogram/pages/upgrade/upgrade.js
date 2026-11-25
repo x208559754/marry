@@ -1,0 +1,215 @@
+// pages/upgrade/upgrade.js — 多档套餐对比 + 购买 / 升级（微信支付 JSAPI；服务端 PAY_MOCK=1 时为模拟支付）
+// 套餐列表来自 GET /api/plan 的 plans（平台总后台「套餐管理」配置）；只能买比当前档位高的套餐，按新套餐全价计费
+const api = require('../../utils/api.js');
+
+function yuan(fen) {
+  const v = (Number(fen) || 0) / 100;
+  return v % 1 ? v.toFixed(2) : String(v);
+}
+function isTop(plans, p) {
+  let max = 0;
+  plans.forEach(function (x) { if (x.level > max) max = x.level; });
+  return p.level > 0 && p.level >= max && plans.length > 2;
+}
+
+Page({
+  data: {
+    loading: true,
+    error: '',
+    premium: false,
+    currentCode: 'free',
+    currentName: '免费版',
+    currentLevel: 0,
+    expiresText: '',
+    expired: false,
+    activatedAt: '',
+    payMode: 'unavailable',
+    plans: [],
+    selected: '',
+    selectedPlan: null,
+    priceText: '',
+    canBuy: false,
+    isUpgrade: false,
+    paying: false,
+    wid: ''
+  },
+
+  onLoad: function (q) {
+    this._want = (q && q.plan) || '';
+    this.load();
+  },
+
+  load: function () {
+    const that = this;
+    this.setData({ loading: true, error: '', wid: api.getWid() || '' });
+    api.getPlan().then(function (d) {
+      const w = (d && d.wedding) || {};
+      const raw = (d && d.plans) || [];
+      const level = Number(w.level) || 0;
+      const plans = raw.map(function (p) {
+        return Object.assign({}, p, {
+          priceText: yuan(p.priceFen),
+          originalText: p.originalFen && p.originalFen > p.priceFen ? yuan(p.originalFen) : '',
+          periodText: p.code === 'free' ? '基础功能 · 永久免费' : (p.days ? '按场次 · ' + p.days + ' 天有效' : '按场次 · 一次付费 · 永久有效'),
+          current: p.code === w.plan,
+          included: p.level < level,
+          buyable: p.code !== 'free' && p.level > level,
+          top: isTop(raw, p)
+        });
+      });
+      // 默认选中：指定的套餐 > 比当前高一档的套餐
+      let sel = '';
+      const want = that._want;
+      plans.forEach(function (p) { if (p.buyable && p.code === want) sel = p.code; });
+      if (!sel) for (let i = 0; i < plans.length; i++) if (plans[i].buyable) { sel = plans[i].code; break; }
+      that.setData({
+        loading: false,
+        premium: !!w.premium,
+        currentCode: w.plan || 'free',
+        currentName: w.planName || '免费版',
+        currentLevel: level,
+        expired: !!w.expired,
+        expiresText: w.expiresAt && !w.expired ? String(w.expiresAt).slice(0, 10) : '',
+        activatedAt: w.activatedAt ? String(w.activatedAt).slice(0, 10) : '',
+        payMode: d.payMode || 'unavailable',
+        plans: plans
+      });
+      that._select(sel);
+    }).catch(function (err) {
+      that.setData({ loading: false, error: (err && err.message) || '加载失败，请重试' });
+    });
+  },
+
+  _select: function (code) {
+    let p = null;
+    this.data.plans.forEach(function (x) { if (x.code === code) p = x; });
+    this.setData({
+      selected: p ? p.code : '',
+      selectedPlan: p,
+      priceText: p ? p.priceText : '',
+      canBuy: !!(p && p.buyable),
+      isUpgrade: !!(p && this.data.currentLevel > 0)
+    });
+  },
+
+  choose: function (e) {
+    const code = e.currentTarget.dataset.code;
+    let p = null;
+    this.data.plans.forEach(function (x) { if (x.code === code) p = x; });
+    if (!p || !p.buyable || this.data.paying) return;
+    this._select(code);
+  },
+
+  pay: function () {
+    if (this.data.paying || !this.data.canBuy) return;
+    const p = this.data.selectedPlan;
+    if (this.data.payMode === 'unavailable') {
+      wx.showModal({ title: '暂未开通在线支付', content: '请联系客服为本场婚礼开通「' + p.name + '」。', showCancel: false });
+      return;
+    }
+    const that = this;
+    const go = function () {
+      that.setData({ paying: true });
+      api.createPayOrder(p.code).then(function (o) {
+        if (o.mock) return that._mockPay(o, p);
+        return that._wxPay(o);
+      }).catch(function (err) {
+        that.setData({ paying: false });
+        wx.showModal({ title: '无法下单', content: (err && err.message) || '网络异常，请重试', showCancel: false });
+      });
+    };
+    if (this.data.currentLevel > 0) {
+      wx.showModal({
+        title: '升级到' + p.name,
+        content: '当前已是「' + this.data.currentName + '」。升级按「' + p.name + '」全价 ¥' + p.priceText + ' 计费，不折算已付金额，确认升级？',
+        confirmText: '确认升级',
+        confirmColor: '#8B1E1E',
+        success: function (r) { if (r.confirm) go(); }
+      });
+      return;
+    }
+    go();
+  },
+
+  _mockPay: function (o, p) {
+    const that = this;
+    return new Promise(function (resolve) {
+      wx.showModal({
+        title: '测试模式',
+        content: '当前为模拟支付（不会真实扣款），确认支付 ¥' + yuan(o.amountFen) + ' 开通「' + ((p && p.name) || '套餐') + '」？',
+        confirmText: '模拟支付',
+        confirmColor: '#8B1E1E',
+        success: function (r) {
+          if (!r.confirm) { that.setData({ paying: false }); return resolve(); }
+          api.mockConfirmPay(o.orderNo).then(function (d) {
+            that._done(!!(d && d.order && d.order.status === 'paid'), d && d.planName);
+            resolve();
+          }).catch(function (err) {
+            that.setData({ paying: false });
+            wx.showToast({ title: (err && err.message) || '支付失败', icon: 'none' });
+            resolve();
+          });
+        }
+      });
+    });
+  },
+
+  _wxPay: function (o) {
+    const that = this;
+    const p = o.payParams || {};
+    return new Promise(function (resolve) {
+      wx.requestPayment({
+        timeStamp: p.timeStamp,
+        nonceStr: p.nonceStr,
+        package: p.package,
+        signType: p.signType || 'RSA',
+        paySign: p.paySign,
+        success: function () {
+          wx.showLoading({ title: '确认支付结果', mask: true });
+          that._poll(o.orderNo, 0, resolve);
+        },
+        fail: function (err) {
+          that.setData({ paying: false });
+          const msg = (err && err.errMsg) || '';
+          wx.showToast({ title: msg.indexOf('cancel') !== -1 ? '已取消支付' : '支付未完成', icon: 'none' });
+          resolve();
+        }
+      });
+    });
+  },
+
+  // 支付成功后轮询订单（回调可能稍有延迟；服务端会主动向微信查单）
+  _poll: function (orderNo, n, resolve) {
+    const that = this;
+    api.getPayOrder(orderNo).then(function (d) {
+      if (d && d.order && d.order.status === 'paid') {
+        wx.hideLoading();
+        that._done(true);
+        return resolve();
+      }
+      if (n >= 7) throw new Error('timeout');
+      setTimeout(function () { that._poll(orderNo, n + 1, resolve); }, 1500);
+    }).catch(function () {
+      if (n < 7) { setTimeout(function () { that._poll(orderNo, n + 1, resolve); }, 1500); return; }
+      wx.hideLoading();
+      that.setData({ paying: false });
+      wx.showModal({ title: '支付结果确认中', content: '如已扣款，套餐会在几分钟内自动生效；也可稍后重新进入本页查看。', showCancel: false });
+      resolve();
+    });
+  },
+
+  _done: function (ok, name) {
+    this.setData({ paying: false });
+    if (!ok) { this.load(); return; }
+    wx.showToast({ title: '已开通' + (name || (this.data.selectedPlan && this.data.selectedPlan.name) || '套餐'), icon: 'success' });
+    this.load();
+    setTimeout(function () {
+      const pages = getCurrentPages();
+      if (pages.length > 1) wx.navigateBack();
+    }, 1600);
+  },
+
+  contact: function () {
+    wx.showModal({ title: '联系客服', content: '如需发票、退款或其它帮助，请通过小程序右上角「···」→「意见反馈」联系我们。', showCancel: false });
+  }
+});

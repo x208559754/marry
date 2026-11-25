@@ -1,0 +1,77 @@
+<!-- pages/upgrade/upgrade.wxml — 多档套餐对比与购买（套餐来自平台总后台「套餐管理」） -->
+<view class="up-page">
+  <view class="up-hero">
+    <view class="up-seal">囍</view>
+    <text class="up-title">{{currentLevel > 0 ? '套餐与权益' : '升级套餐'}}</text>
+    <text class="up-sub">按场次购买 · 仅对当前婚礼生效</text>
+    <view class="up-status {{premium ? 'up-status-on' : ''}}" wx:if="{{!loading && !error}}">
+      当前：{{currentName}}{{expiresText ? ' · ' + expiresText + ' 到期' : (premium ? ' · 永久有效' : '')}}{{expired ? ' · 付费套餐已过期' : ''}}
+    </view>
+  </view>
+
+  <view class="up-loading" wx:if="{{loading}}">加载中…</view>
+  <view class="up-error" wx:elif="{{error}}">
+    <text>{{error}}</text>
+    <button class="up-retry" bindtap="load">重试</button>
+  </view>
+
+  <block wx:else>
+    <view class="up-list">
+      <view wx:for="{{plans}}" wx:key="code"
+        class="up-card {{item.code === 'free' ? 'up-card-free' : 'up-card-paid'}} {{item.top ? 'up-card-top' : ''}} {{selected === item.code ? 'up-card-on' : ''}} {{item.buyable ? '' : 'up-card-dim'}}"
+        bindtap="choose" data-code="{{item.code}}">
+        <view class="up-ribbon" wx:if="{{item.current}}">当前套餐</view>
+        <view class="up-ribbon up-ribbon-inc" wx:elif="{{item.included}}">已包含</view>
+        <view class="up-ribbon up-ribbon-top" wx:elif="{{item.top}}">尊享推荐</view>
+        <view class="up-card-head">
+          <view class="up-name-wrap">
+            <text class="up-plan-name">{{item.name}}</text>
+            <text class="up-badge" wx:if="{{item.ent.badge}}">{{item.ent.badge}}</text>
+          </view>
+          <view class="up-price" wx:if="{{item.priceFen > 0}}">
+            <text class="up-yen">¥</text><text class="up-num">{{item.priceText}}</text>
+            <text class="up-orig" wx:if="{{item.originalText}}">¥{{item.originalText}}</text>
+          </view>
+          <text class="up-free-price" wx:else>¥0</text>
+        </view>
+        <text class="up-per">{{item.periodText}}</text>
+        <text class="up-desc" wx:if="{{item.desc}}">{{item.desc}}</text>
+        <view class="up-feat" wx:for="{{item.features}}" wx:for-item="f" wx:key="*this">
+          <text class="{{item.code === 'free' ? 'up-dot' : 'up-check'}}">{{item.code === 'free' ? '·' : '✓'}}</text><text>{{f}}</text>
+        </view>
+        <view class="up-tags">
+          <text class="up-tag">相册 {{item.ent.photos}} 张</text>
+          <text class="up-tag">抽奖 {{item.ent.lotteryPrizes > 0 ? item.ent.lotteryPrizes + ' 个奖项' : '奖项不限'}}</text>
+          <text class="up-tag">{{item.ent.lotteryParticipants > 0 ? item.ent.lotteryParticipants + ' 人' : '人数不限'}}</text>
+          <text class="up-tag">{{item.ent.lotteryThemes.length}} 套主题</text>
+          <text class="up-tag {{item.ent.watermark ? '' : 'up-tag-gold'}}">{{item.ent.watermark ? '含平台标识' : '无平台标识'}}</text>
+          <text class="up-tag up-tag-gold" wx:if="{{item.ent.effect === 'petals'}}">花瓣纷飞特效</text>
+          <text class="up-tag up-tag-gold" wx:if="{{item.ent.effect === 'gold'}}">金箔流光特效</text>
+          <text class="up-tag up-tag-gold" wx:if="{{item.ent.opening}}">专属开场动画</text>
+        </view>
+        <view class="up-radio" wx:if="{{item.buyable}}"><view class="up-radio-dot" wx:if="{{selected === item.code}}"></view></view>
+      </view>
+    </view>
+
+    <view class="up-notes">
+      <text>· 开通后立即生效，仅对当前婚礼（{{wid}}）有效</text>
+      <text>· 已开通付费套餐再升级时，按新套餐全价计费，不折算已付金额</text>
+      <text>· 支付由微信支付提供，平台不保存任何支付信息</text>
+      <text class="up-link" bindtap="contact">· 发票 / 退款 / 其它问题，联系客服 ›</text>
+    </view>
+    <view style="height: 180rpx;"></view>
+  </block>
+
+  <view class="up-bar" wx:if="{{!loading && !error}}">
+    <block wx:if="{{!canBuy}}">
+      <button class="up-btn up-btn-done" disabled>{{currentLevel > 0 ? '已是最高套餐 · ' + currentName : '暂无可购买的套餐'}}</button>
+    </block>
+    <block wx:else>
+      <view class="up-bar-price">
+        <text class="up-bar-yen">¥</text><text class="up-bar-num">{{priceText}}</text>
+        <text class="up-bar-tip">{{payMode === 'mock' ? '测试模式·模拟支付' : payMode === 'unavailable' ? '在线支付暂未开通' : selectedPlan.name}}</text>
+      </view>
+      <button class="up-btn" bindtap="pay" loading="{{paying}}" disabled="{{paying}}">{{payMode === 'unavailable' ? '联系客服开通' : (isUpgrade ? '升级到' + selectedPlan.name : '开通' + selectedPlan.name)}}</button>
+    </block>
+  </view>
+</view>

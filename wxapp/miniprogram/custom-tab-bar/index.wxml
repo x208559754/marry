@@ -1,5 +1,5 @@
 <!-- custom-tab-bar/index.wxml - 高定唯美悬浮毛玻璃底栏 (香槟微金 · 喜结良缘) -->
-<view class="custom-tab-bar-wrap {{visible ? 'visible' : 'hidden'}}">
+<view class="custom-tab-bar-wrap theme-{{theme || 'red'}} {{visible ? 'visible' : 'hidden'}}">
   <view class="custom-tab-bar-dock">
     <!-- 顶部微光金线 -->
     <view class="dock-gold-line"></view>

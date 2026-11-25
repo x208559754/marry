@@ -1,18 +1,136 @@
-/** app.wxss 全局高定唯美婚礼主题样式 (100% 同步原版高级定制请柬美学) **/
-page {
+/** app.wxss 全局高定唯美婚礼主题样式 (支持 5 套主题全局切换：中式红金 / 浪漫樱粉 / 星河夜空 / 森系花园 / 香槟白金) **/
+page,
+.theme-red {
   --primary-color: #8B1E1E;
   --primary-light: #A32929;
   --primary-dark: #6D1414;
+  --primary-soft: rgba(139, 30, 30, 0.08);
+  --primary-border: rgba(139, 30, 30, 0.25);
+  --primary-shadow: rgba(139, 30, 30, 0.25);
   --gold-color: #C5A059;
   --gold-accent: #D4AF37;
   --gold-light: #FBF7EE;
+  --on-primary: #FFF4DE;
   --bg-color: #FAF7F2;
   --text-main: #2D2522;
   --text-sub: #5C4F4A;
   --text-muted: #8C7B75;
   --border-color: #EBDDCF;
   --card-bg: #FFFFFF;
-  
+  --splash-bg: radial-gradient(ellipse at 50% 25%, #FDF7F2 0%, #F5E3D8 35%, #E9D0C5 70%, #D8B7AC 100%);
+  --envelope-bg: linear-gradient(145deg, #DEABA4 0%, #D49990 40%, #BF7E75 100%);
+  --envelope-flap: linear-gradient(180deg, rgba(201, 133, 125, 0.95) 0%, rgba(191, 126, 117, 0.95) 100%);
+  --danmaku-bg: linear-gradient(180deg, #FCF8F1 0%, #F4E9D8 100%);
+  --petal-a: rgba(220, 80, 80, 0.25);
+  --petal-b: rgba(212, 175, 55, 0.20);
+  --theme-img-filter: none;
+}
+
+.theme-pink {
+  --primary-color: #C84B73;
+  --primary-light: #E26D92;
+  --primary-dark: #9B2E52;
+  --primary-soft: rgba(200, 75, 115, 0.10);
+  --primary-border: rgba(200, 75, 115, 0.28);
+  --primary-shadow: rgba(200, 75, 115, 0.25);
+  --gold-color: #D47A98;
+  --gold-accent: #E598B2;
+  --gold-light: #FFF3F7;
+  --on-primary: #FFFFFF;
+  --bg-color: #FFF6F9;
+  --text-main: #4A2030;
+  --text-sub: #784558;
+  --text-muted: #A67B8B;
+  --border-color: #F5D5E0;
+  --card-bg: #FFFFFF;
+  --splash-bg: radial-gradient(ellipse at 50% 25%, #FFFBFD 0%, #FCE6EE 38%, #F8CDDC 72%, #EFB3C8 100%);
+  --envelope-bg: linear-gradient(145deg, #F2B5CA 0%, #E695B1 45%, #D47597 100%);
+  --envelope-flap: linear-gradient(180deg, rgba(224, 140, 169, 0.95) 0%, rgba(207, 118, 149, 0.95) 100%);
+  --danmaku-bg: linear-gradient(180deg, #FFF7FA 0%, #FCE5EE 100%);
+  --petal-a: rgba(235, 115, 155, 0.32);
+  --petal-b: rgba(245, 170, 195, 0.28);
+  --theme-img-filter: hue-rotate(-22deg) saturate(1.12) brightness(1.08);
+}
+
+.theme-night {
+  --primary-color: #2E2770;
+  --primary-light: #4A409E;
+  --primary-dark: #1A1545;
+  --primary-soft: rgba(46, 39, 112, 0.09);
+  --primary-border: rgba(46, 39, 112, 0.26);
+  --primary-shadow: rgba(46, 39, 112, 0.26);
+  --gold-color: #C7A656;
+  --gold-accent: #E2C478;
+  --gold-light: #F3F1FC;
+  --on-primary: #F8EAC2;
+  --bg-color: #F2F1FA;
+  --text-main: #1E1A3B;
+  --text-sub: #4D4775;
+  --text-muted: #7F79A6;
+  --border-color: #DDD9F0;
+  --card-bg: #FFFFFF;
+  --splash-bg: radial-gradient(ellipse at 50% 25%, #F6F5FD 0%, #E4E1F5 38%, #CCC6EB 72%, #B2AAD9 100%);
+  --envelope-bg: linear-gradient(145deg, #544B9E 0%, #3B3380 45%, #241E5C 100%);
+  --envelope-flap: linear-gradient(180deg, rgba(70, 61, 138, 0.96) 0%, rgba(50, 42, 110, 0.96) 100%);
+  --danmaku-bg: linear-gradient(180deg, #F7F6FD 0%, #E8E4F7 100%);
+  --petal-a: rgba(130, 115, 220, 0.26);
+  --petal-b: rgba(226, 196, 120, 0.28);
+  --theme-img-filter: hue-rotate(235deg) saturate(0.92);
+}
+
+.theme-forest {
+  --primary-color: #2C5A3E;
+  --primary-light: #3F7A56;
+  --primary-dark: #1A3B27;
+  --primary-soft: rgba(44, 90, 62, 0.09);
+  --primary-border: rgba(44, 90, 62, 0.26);
+  --primary-shadow: rgba(44, 90, 62, 0.24);
+  --gold-color: #B39E58;
+  --gold-accent: #C9B46C;
+  --gold-light: #F2F7F3;
+  --on-primary: #F6F3DC;
+  --bg-color: #F2F7F3;
+  --text-main: #1D3325;
+  --text-sub: #466350;
+  --text-muted: #769180;
+  --border-color: #D4E3D8;
+  --card-bg: #FFFFFF;
+  --splash-bg: radial-gradient(ellipse at 50% 25%, #F8FBF8 0%, #E2EFE5 38%, #C9DFCE 72%, #B0CCB7 100%);
+  --envelope-bg: linear-gradient(145deg, #6B9C7C 0%, #508262 45%, #39684A 100%);
+  --envelope-flap: linear-gradient(180deg, rgba(90, 136, 106, 0.95) 0%, rgba(69, 113, 85, 0.95) 100%);
+  --danmaku-bg: linear-gradient(180deg, #F6FAF7 0%, #E3EFE6 100%);
+  --petal-a: rgba(80, 145, 105, 0.26);
+  --petal-b: rgba(201, 180, 108, 0.24);
+  --theme-img-filter: hue-rotate(135deg) saturate(0.85);
+}
+
+.theme-champagne {
+  --primary-color: #967035;
+  --primary-light: #B38A4A;
+  --primary-dark: #6E5020;
+  --primary-soft: rgba(150, 112, 53, 0.10);
+  --primary-border: rgba(150, 112, 53, 0.28);
+  --primary-shadow: rgba(150, 112, 53, 0.24);
+  --gold-color: #C5A059;
+  --gold-accent: #D4AF37;
+  --gold-light: #FCF8F0;
+  --on-primary: #FFFDF8;
+  --bg-color: #FBF7EE;
+  --text-main: #382A16;
+  --text-sub: #695436;
+  --text-muted: #998362;
+  --border-color: #EADCC3;
+  --card-bg: #FFFFFF;
+  --splash-bg: radial-gradient(ellipse at 50% 25%, #FFFDF9 0%, #F7EFE0 38%, #EDE0C7 72%, #DFCCA9 100%);
+  --envelope-bg: linear-gradient(145deg, #D9C096 0%, #C7AA7B 45%, #B0905E 100%);
+  --envelope-flap: linear-gradient(180deg, rgba(204, 175, 128, 0.95) 0%, rgba(186, 155, 106, 0.95) 100%);
+  --danmaku-bg: linear-gradient(180deg, #FFFDF8 0%, #F5EAD6 100%);
+  --petal-a: rgba(197, 160, 89, 0.28);
+  --petal-b: rgba(212, 175, 55, 0.22);
+  --theme-img-filter: hue-rotate(34deg) saturate(0.85) brightness(1.08);
+}
+
+page {
   background-color: var(--bg-color);
   font-family: -apple-system, BlinkMacSystemFont, "Songti SC", "Noto Serif SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif;
   color: var(--text-main);
@@ -69,7 +187,7 @@ view, text, image, input, textarea, button {
 .title-en {
   font-size: 20rpx;
   letter-spacing: 6rpx;
-  color: #A8958E;
+  color: var(--text-muted);
   text-transform: uppercase;
   font-style: italic;
   font-family: serif;
@@ -79,7 +197,7 @@ view, text, image, input, textarea, button {
 .title-cn {
   font-size: 38rpx;
   font-weight: 700;
-  color: #1A1311;
+  color: var(--text-main);
   letter-spacing: 3rpx;
   margin-top: 8rpx;
   font-family: "Songti SC", "Noto Serif SC", serif;
@@ -94,10 +212,10 @@ view, text, image, input, textarea, button {
   border-radius: 4rpx;
 }
 
-/* 高定朱红渐变按钮 */
+/* 高定主题渐变按钮 */
 .btn-primary {
-  background: linear-gradient(135deg, #9C2424 0%, #8B1E1E 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
+  color: var(--on-primary);
   font-size: 28rpx;
   font-weight: 600;
   border-radius: 50rpx;
@@ -105,7 +223,7 @@ view, text, image, input, textarea, button {
   height: 88rpx;
   line-height: 88rpx;
   text-align: center;
-  box-shadow: 0 8rpx 24rpx rgba(139, 30, 30, 0.22);
+  box-shadow: 0 8rpx 24rpx var(--primary-shadow);
   border: none;
   letter-spacing: 2rpx;
   display: flex;
@@ -159,13 +277,13 @@ button.btn-primary::after {
   position: absolute;
   width: 24rpx;
   height: 24rpx;
-  background: rgba(220, 80, 80, 0.25);
+  background: var(--petal-a);
   border-radius: 50% 0 50% 50%;
   animation: fallDown 10s linear infinite;
 }
 
 .petal:nth-child(1) { left: 10%; animation-duration: 8s; animation-delay: 0s; }
-.petal:nth-child(2) { left: 35%; animation-duration: 12s; animation-delay: 2s; background: rgba(212, 175, 55, 0.2); }
+.petal:nth-child(2) { left: 35%; animation-duration: 12s; animation-delay: 2s; background: var(--petal-b); }
 .petal:nth-child(3) { left: 65%; animation-duration: 9s; animation-delay: 4s; }
 .petal:nth-child(4) { left: 85%; animation-duration: 11s; animation-delay: 1s; }
 
@@ -198,8 +316,8 @@ button.btn-primary::after {
   height: 72rpx;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.95);
-  border: 2rpx solid #C5A059;
-  box-shadow: 0 6rpx 20rpx rgba(139, 30, 30, 0.15);
+  border: 2rpx solid var(--gold-color);
+  box-shadow: 0 6rpx 20rpx var(--primary-shadow);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -214,7 +332,7 @@ button.btn-primary::after {
   width: 52rpx;
   height: 52rpx;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #9C2424 0%, #8B1E1E 60%, #590F0F 100%);
+  background: radial-gradient(circle at 35% 35%, var(--primary-light) 0%, var(--primary-color) 60%, var(--primary-dark) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -224,7 +342,7 @@ button.btn-primary::after {
 
 .music-symbol {
   font-size: 26rpx;
-  color: #F8E2A6;
+  color: var(--on-primary);
   font-family: serif;
   transform: translateY(-1rpx);
 }
@@ -236,6 +354,9 @@ button.btn-primary::after {
 
 /* 适配高定悬浮毛玻璃底栏的安全滚动距离 */
 .container {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  min-height: 100vh;
   padding-bottom: calc(env(safe-area-inset-bottom) + 160rpx) !important;
   box-sizing: border-box;
 }

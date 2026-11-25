@@ -16,6 +16,8 @@ export const page = `<!DOCTYPE html>
   header { text-align: center; margin-bottom: 28px; }
   header h1 { font-size: 28px; }
   header p { color: #6b7280; margin-top: 8px; font-size: 14px; }
+  .crumb { margin-bottom: 8px; }
+  .crumb a { color: #8B1E1E; font-size: 13px; text-decoration: none; }
   .gallery {
     display: grid; gap: 16px;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -36,6 +38,7 @@ export const page = `<!DOCTYPE html>
 <body>
 <div class="container">
   <header>
+    <p class="crumb"><a href="/">有囍請柬官网</a></p>
     <h1>📷 照片墙</h1>
     <p>图片存于 ImgBB，记录存于 Cloudflare D1 · 上传/删除请在小程序「管理后台」操作</p>
   </header>

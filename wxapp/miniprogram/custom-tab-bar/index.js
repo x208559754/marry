@@ -3,6 +3,7 @@ Component({
   data: {
     selected: 0,
     visible: true,
+    theme: 'red',
     list: [
       {
         pagePath: "/pages/index/index",

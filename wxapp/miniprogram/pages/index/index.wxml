@@ -1,11 +1,28 @@
 <!-- pages/index/index.wxml - 原生微信小程序高定婚礼请柬 (开屏火漆印开帖 + 典雅信笺) -->
-<view class="container" style="padding-top: {{topSafeHeight}}px;">
-  <!-- 飘落花瓣粒子层 -->
-  <view class="petals-layer">
+<view class="container theme-{{theme || config.theme || 'red'}}" style="padding-top: {{topSafeHeight}}px;">
+  <!-- 飘落花瓣粒子层（付费套餐：花瓣纷飞 = 更多花瓣；金箔流光 = 再加金色粒子） -->
+  <view class="petals-layer petals-{{planEffect}}">
     <view class="petal"></view>
     <view class="petal"></view>
     <view class="petal"></view>
     <view class="petal"></view>
+    <block wx:if="{{planEffect === 'petals' || planEffect === 'gold'}}">
+      <view class="petal" wx:for="{{[1,2,3,4,5,6,7,8]}}" wx:key="*this"></view>
+    </block>
+  </view>
+  <view class="glints-layer" wx:if="{{planEffect === 'gold'}}">
+    <view class="glint" wx:for="{{[1,2,3,4,5,6,7,8,9,10,11,12]}}" wx:key="*this"></view>
+  </view>
+
+  <!-- 专属开场动画（套餐权益 opening）：红金双门启幕，每次进入小程序播放一次 -->
+  <view class="vip-opening {{openingOpen ? 'vo-open' : ''}}" wx:if="{{showOpening}}" catchtouchmove="noop">
+    <view class="vo-door vo-l"></view>
+    <view class="vo-door vo-r"></view>
+    <view class="vo-seal">
+      <text class="vo-xi">囍</text>
+      <text class="vo-names">{{config.groom.name || ''}} · {{config.bride.name || ''}}</text>
+      <text class="vo-badge" wx:if="{{planBadge}}">{{planBadge}}</text>
+    </view>
   </view>
 
   <!-- 头部古典唯美梅花枝头艺术装饰 (喜上枝头 · 枝头暗香) -->
@@ -37,6 +54,7 @@
 
     <!-- 顶部新人抬头 -->
     <view class="splash-top-header">
+      <view class="vip-pill" wx:if="{{planBadge}}">✦ {{planBadge}} ✦</view>
       <view class="splash-en-title">WEDDING INVITATION</view>
       <view class="splash-couple-title">
         <text>{{config.groom.name || '陈长生'}}</text>
@@ -280,7 +298,8 @@
     </view>
 
     <!-- 2.2 迎宾封面大卡片 (Wedding Invitation 经典高定构图) -->
-    <view class="card wedding-hero-card">
+    <view class="card wedding-hero-card {{planBadge ? 'hero-vip' : ''}}">
+      <view class="hero-vip-seal" wx:if="{{planBadge}}"><text>{{planBadge}}</text></view>
       <view class="hero-en-tag">WEDDING INVITATION</view>
 
       <view class="hero-couple-names" bindlongpress="onSecretAdminTrigger">
@@ -394,6 +413,12 @@
       </view>
     </view>
 
+    <!-- 套餐含平台标识时显示；新人（管理员）可见升级入口 -->
+    <view class="brand-footer" wx:if="{{showBrand}}">
+      <text class="bf-line">— 有囍請柬 · 提供技术支持 —</text>
+      <text class="bf-upgrade" wx:if="{{canUpgrade}}" bindtap="goUpgrade">升级套餐，去除标识 ›</text>
+    </view>
+
     <!-- 底部留白 -->
     <view style="height: 60rpx;"></view>
   </block>
@@ -460,7 +485,7 @@
        ========================================================================= -->
   <view class="promo-overlay" wx:if="{{isPromo}}">
     <image class="promo-icon" src="/images/app-icon-512.png" mode="aspectFit"></image>
-    <view class="promo-title">{{promoTitle || '婚礼请柬小程序'}}</view>
+    <view class="promo-title">{{promoTitle || '有囍請柬'}}</view>
     <view class="promo-subtitle">{{promoSubtitle || '每对新人的专属电子请柬'}}</view>
     <image class="promo-image" wx:if="{{promoImage}}" src="{{promoImage}}" mode="widthFix"></image>
     <view class="promo-tips">
@@ -472,7 +497,7 @@
   <!-- 婚礼不存在/未开通提示层 -->
   <view class="promo-overlay" wx:if="{{isWeddingNotFound}}">
     <image class="promo-icon" src="/images/app-icon-512.png" mode="aspectFit"></image>
-    <view class="promo-title">该请柬不存在或未开通</view>
-    <view class="promo-subtitle">请确认扫码链接是否正确，或联系新人重新获取专属二维码</view>
+    <view class="promo-title">{{weddingDisabledText ? '该请柬已暂停服务' : '该请柬不存在或未开通'}}</view>
+    <view class="promo-subtitle">{{weddingDisabledText || '请确认扫码链接是否正确，或联系新人重新获取专属二维码'}}</view>
   </view>
 </view>

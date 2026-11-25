@@ -4,6 +4,7 @@ const api = require('../../utils/api.js');
 
 Page({
   data: {
+    theme: 'red',
     config: {},
     coverImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1000&q=80',
     isPlayingBgm: false,
@@ -50,6 +51,14 @@ Page({
     // 推广页 / 婚礼不存在（无扫码参数进入时展示）
     isPromo: false,
     isWeddingNotFound: false,
+    weddingDisabledText: '',
+    showBrand: false,
+    canUpgrade: false,
+    // 套餐展示效果（来自 /api/config 的 _plan）
+    planBadge: '',
+    planEffect: 'none',
+    showOpening: false,
+    openingOpen: false,
     promoTitle: '',
     promoSubtitle: '',
     promoImage: ''
@@ -149,7 +158,7 @@ Page({
     api.getPromo().then(function (p) {
       p = p || {};
       that.setData({
-        promoTitle: p.title || '婚礼请柬小程序',
+        promoTitle: p.title || '有囍請柬',
         promoSubtitle: p.subtitle || '每对新人的专属电子请柬 · 相册 · 回执 · 祝福墙',
         promoImage: p.imageUrl || ''
       });
@@ -158,13 +167,16 @@ Page({
 
   onShow: function () {
     this.setData({
-      isPlayingBgm: app.globalData.isPlayingBgm
+      isPlayingBgm: app.globalData.isPlayingBgm,
+      theme: (app.getTheme && app.getTheme()) || 'red'
     });
+    if (app.syncPageTheme) app.syncPageTheme(this);
     this.updateCustomTabBar();
   },
 
   onReady: function () {
     // 自定义底栏组件有时在 onShow 时尚未挂上，onReady 再同步一次
+    if (app.syncPageTheme) app.syncPageTheme(this);
     this.updateCustomTabBar();
   },
 
@@ -180,7 +192,8 @@ Page({
       if (bar) {
         bar.setData({
           selected: 0,
-          visible: !!that.data.isAppOpened
+          visible: !!that.data.isAppOpened,
+          theme: (app.getTheme && app.getTheme()) || that.data.theme || 'red'
         });
         return;
       }
@@ -195,6 +208,25 @@ Page({
     if (this.timerId) clearInterval(this.timerId);
     if (this.bgmListener) app.removeBgmListener(this.bgmListener);
     if (this.guestListener) app.removeGuestMatchedListener(this.guestListener);
+  },
+
+  // 专属开场动画：每次进入小程序、每场婚礼只播放一次
+  playOpening: function (enabled) {
+    if (!enabled) return;
+    const wid = api.getWid() || '';
+    const shown = app.globalData._openingShown || (app.globalData._openingShown = {});
+    if (shown[wid]) return;
+    shown[wid] = true;
+    this.setData({ showOpening: true, openingOpen: false });
+    const that = this;
+    setTimeout(function () { that.setData({ openingOpen: true }); }, 1100);
+    setTimeout(function () { that.setData({ showOpening: false }); }, 2900);
+  },
+
+  noop: function () {},
+
+  goUpgrade: function () {
+    wx.navigateTo({ url: '/pages/upgrade/upgrade' });
   },
 
   onPullDownRefresh: function () {
@@ -212,14 +244,24 @@ Page({
       } else if (cfg && cfg.coverImage) {
         cover = cfg.coverImage;
       }
+      const plan = (cfg && cfg._plan) || {};
+      const resolvedTheme = (cfg && cfg.theme) || (app.getTheme && app.getTheme()) || 'red';
       this.setData({
         config: cfg,
-        coverImage: cover
+        theme: resolvedTheme,
+        coverImage: cover,
+        showBrand: plan.watermark !== undefined ? !!plan.watermark : !!plan.brand,
+        canUpgrade: (plan.canUpgrade !== undefined ? !!plan.canUpgrade : !plan.premium) && api.isAdmin(),
+        planBadge: plan.badge || '',
+        planEffect: plan.effect || 'none'
       });
+      this.playOpening(!!plan.opening);
+      if (app.applyTheme) app.applyTheme(resolvedTheme, this);
+      this.updateCustomTabBar();
       if (typeof callback === 'function') callback();
     }).catch((err) => {
-      if (err && err.notFound) {
-        this.setData({ isWeddingNotFound: true });
+      if (err && (err.notFound || err.disabled)) {
+        this.setData({ isWeddingNotFound: true, weddingDisabledText: err.disabled ? (err.message || '该请柬已暂停服务') : '' });
         if (typeof callback === 'function') callback();
         return;
       }

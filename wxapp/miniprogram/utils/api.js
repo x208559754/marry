@@ -1,5 +1,5 @@
 // utils/api.js — 小程序后端 API 封装（多租户：婚礼数据按 wid 隔离）
-// 所有请求都打到 Cloudflare Worker（地址见 utils/config.js 的 BASE_URL）
+// 所有请求都打到自建后端 https://youxitie.site（地址见 utils/config.js 的 BASE_URL）
 // 函数命名与旧版保持兼容，页面侧基本只需替换 require 路径
 const { BASE_URL } = require('./config.js');
 
@@ -96,6 +96,10 @@ function request(method, path, data) {
       }
       var err = new Error((body && body.error) || ('请求失败（HTTP ' + res.statusCode + '）'));
       if (res.statusCode === 404) err.notFound = true;
+      if (body && body.code) err.code = body.code;
+      if (body && body.code === 'WEDDING_DISABLED') err.disabled = true; // 婚礼被平台停用
+      if (res.statusCode === 402 || (body && body.needUpgrade)) err.needUpgrade = true; // 超出免费版限制
+      if (res.statusCode === 422) err.blocked = true; // 内容安全拦截
       throw err;
     });
   };
@@ -127,7 +131,9 @@ function uploadFile(path, filePath, formData) {
           if (res.statusCode >= 200 && res.statusCode < 300 && body && body.ok !== false && !body.error) {
             return resolve(body.data !== undefined ? body.data : body);
           }
-          reject(new Error((body && body.error) || ('上传失败（HTTP ' + res.statusCode + '）')));
+          var upErr = new Error((body && body.error) || ('上传失败（HTTP ' + res.statusCode + '）'));
+          if (res.statusCode === 402 || (body && body.needUpgrade)) upErr.needUpgrade = true;
+          reject(upErr);
         },
         fail: function (err) { reject(new Error((err && err.errMsg) || '上传失败')); }
       });
@@ -204,10 +210,25 @@ function login() {
 
 // ---------------- 婚礼配置 ----------------
 
+const VALID_THEMES = ['red', 'pink', 'night', 'forest', 'champagne'];
+function normalizeThemeKey(t) {
+  return VALID_THEMES.indexOf(t) !== -1 ? t : '';
+}
+
 function cacheConfig(cfg) {
   var app = typeof getApp === 'function' ? getApp() : null;
-  if (app && app.globalData) app.globalData.weddingConfig = cfg;
-  try { wx.setStorageSync('cached_wedding_config_' + (getWid() || 'none'), cfg); } catch (e) {}
+  if (app && app.globalData) {
+    app.globalData.weddingConfig = cfg;
+    if (cfg && cfg.theme && typeof app.applyTheme === 'function') {
+      app.applyTheme(cfg.theme);
+    }
+  }
+  try {
+    wx.setStorageSync('cached_wedding_config_' + (getWid() || 'none'), cfg);
+    if (cfg && cfg.theme) {
+      wx.setStorageSync('wx_wedding_theme_' + (getWid() || 'none'), cfg.theme);
+    }
+  } catch (e) {}
 }
 
 // 合并服务端配置 + 内置默认值；服务端未配相册时自动带上相册最新图（供封面）
@@ -216,26 +237,42 @@ function getWeddingConfig() {
   var app = typeof getApp === 'function' ? getApp() : null;
   var defaults = (app && app.globalData && app.globalData.weddingConfig) || {};
   var cached = null;
-  try { cached = wx.getStorageSync('cached_wedding_config_' + (getWid() || 'none')); } catch (e) {}
+  var savedTheme = '';
+  try {
+    cached = wx.getStorageSync('cached_wedding_config_' + (getWid() || 'none'));
+    savedTheme = normalizeThemeKey(wx.getStorageSync('wx_wedding_theme_' + (getWid() || 'none')));
+  } catch (e) {}
   var fallback = Object.assign({}, defaults, cached || {});
+  if (savedTheme && !fallback.theme) fallback.theme = savedTheme;
   if (!getWid()) return Promise.resolve(fallback);
 
   return request('GET', widPath('/api/config')).then(function (cfg) {
     var merged = Object.assign({}, defaults, cfg || {});
-    if (!merged.photos || !merged.photos.length) {
-      return getPhotosList().then(function (photos) {
-        merged.photos = photos || [];
-        cacheConfig(merged);
-        return merged;
-      }, function () {
-        cacheConfig(merged);
-        return merged;
-      });
-    }
-    cacheConfig(merged);
-    return merged;
+    var ensureTheme = normalizeThemeKey(merged.theme)
+      ? Promise.resolve(normalizeThemeKey(merged.theme))
+      : request('GET', widPath('/api/lottery')).then(function (lt) {
+          return normalizeThemeKey(lt && lt.theme) || savedTheme || 'red';
+        }).catch(function () {
+          return savedTheme || 'red';
+        });
+
+    return ensureTheme.then(function (resolvedTheme) {
+      merged.theme = resolvedTheme || 'red';
+      if (!merged.photos || !merged.photos.length) {
+        return getPhotosList().then(function (photos) {
+          merged.photos = photos || [];
+          cacheConfig(merged);
+          return merged;
+        }, function () {
+          cacheConfig(merged);
+          return merged;
+        });
+      }
+      cacheConfig(merged);
+      return merged;
+    });
   }).catch(function (e) {
-    if (e && e.notFound) throw e; // 婚礼不存在 → 页面展示提示
+    if (e && (e.notFound || e.disabled)) throw e; // 婚礼不存在 / 被平台停用 → 页面展示提示
     return fallback; // 网络失败 → 本地缓存 → 内置默认值（离线可用）
   });
 }
@@ -258,6 +295,17 @@ function getPhotosList() {
 function uploadPhoto(filePath, title) {
   return ensureLogin().then(function () {
     return uploadFile(widPath('/api/images'), filePath, { title: title || '' });
+  });
+}
+
+// 只上传图片拿地址、不登记进婚纱相册（岁月印记等配图用；服务端 gallery=0）
+function uploadMedia(filePath, title) {
+  return ensureLogin().then(function () {
+    return uploadFile(widPath('/api/images'), filePath, { title: title || '', gallery: '0' });
+  }).then(function (d) {
+    var url = (d && (d.url || d.thumb_url)) || '';
+    if (!url) throw new Error('上传成功但未返回图片地址');
+    return { url: url };
   });
 }
 
@@ -430,6 +478,66 @@ function saveConfig(cfg) {
   return request('PUT', widPath('/api/config'), out);
 }
 
+// ---------------- 现场抽奖（数据存 lotteries 表，不影响婚礼配置） ----------------
+
+// 大屏网址（电脑 / 投影浏览器打开并全屏）
+function getLotteryScreenUrl() {
+  return BASE_URL + '/lottery?wid=' + encodeURIComponent(getWid() || DEFAULT_WID);
+}
+
+// 管理端完整数据：{ config:{prizes,participants}, state:{status,prizeId,revealAt,results}, remainingCount, serverNow, rollMs, message }
+function getLotteryAdmin() {
+  return request('GET', widPath('/api/lottery/admin'));
+}
+
+// 保存奖项 / 参与名单 / 婚礼与大屏主题（传哪个改哪个）：{ prizes?:[{id,name,reward,count}], participants?:[{id,name,source}], theme?:'red'|'pink'|'night'|'forest'|'champagne' }
+function saveLotteryConfig(data) {
+  var payload = data || {};
+  return request('PUT', widPath('/api/lottery/config'), payload).then(function (res) {
+    if (payload.theme && normalizeThemeKey(payload.theme)) {
+      var t = normalizeThemeKey(payload.theme);
+      try {
+        wx.setStorageSync('wx_wedding_theme_' + (getWid() || 'none'), t);
+        var cached = wx.getStorageSync('cached_wedding_config_' + (getWid() || 'none')) || {};
+        cached.theme = t;
+        wx.setStorageSync('cached_wedding_config_' + (getWid() || 'none'), cached);
+      } catch (e) {}
+      var app = typeof getApp === 'function' ? getApp() : null;
+      if (app && typeof app.applyTheme === 'function') {
+        app.applyTheme(t);
+      }
+      // 同步写入婚礼主配置 weddings.config.theme，让请柬首页、相册、日程、回执、祝福页全局生效
+      request('PUT', widPath('/api/config'), { theme: t }).catch(function () {});
+    }
+    return res;
+  });
+}
+
+function importLotteryRsvp() {
+  return request('POST', widPath('/api/lottery/import-rsvp'), {});
+}
+
+function startLottery(prizeId) {
+  return request('POST', widPath('/api/lottery/start'), { prizeId: prizeId });
+}
+
+function redrawLottery(prizeId) {
+  return request('POST', widPath('/api/lottery/redraw'), { prizeId: prizeId });
+}
+
+function revealLottery() {
+  return request('POST', widPath('/api/lottery/reveal'), {});
+}
+
+// mode: 'idle' 大屏回到等待页 / 'board' 大屏展示全部中奖名单
+function setLotteryScreen(mode) {
+  return request('POST', widPath('/api/lottery/screen'), { mode: mode });
+}
+
+function resetLottery() {
+  return request('POST', widPath('/api/lottery/reset'), {});
+}
+
 function superAdminLogin(passcode) {
   return rawRequest('POST', '/api/superadmin/login', { passcode: passcode }).then(function (res) {
     if (res.statusCode >= 200 && res.statusCode < 300 && res.data && res.data.ok) {
@@ -453,6 +561,40 @@ function saveSuperAdminWedding(data) {
 
 function updateSuperAdminPasscode(newPasscode) {
   return request('PUT', '/api/superadmin/passcode', { newPasscode: newPasscode });
+}
+
+// ---------------- 套餐 / 支付 ----------------
+
+// { plans:[{code,name,level,priceFen,originalFen,days,desc,features,ent}], themes, wedding:{plan,planName,level,premium,expired,expiresAt,ent,usage,canUpgrade}, payMode:'wxpay'|'mock'|'unavailable', pricing(旧结构) }
+function getPlan() {
+  return request('GET', widPath('/api/plan'));
+}
+
+// 创建套餐订单（product = 套餐 code，默认高级版）：{ orderNo, product, amountFen, description, mock, payParams? }
+function createPayOrder(product) {
+  return request('POST', widPath('/api/pay/order'), { product: product || 'premium' });
+}
+
+function getPayOrder(orderNo) {
+  return request('GET', widPath('/api/pay/order/' + encodeURIComponent(orderNo)));
+}
+
+// 仅服务端开启 PAY_MOCK 时可用（测试）
+function mockConfirmPay(orderNo) {
+  return request('POST', widPath('/api/pay/mock-confirm'), { orderNo: orderNo });
+}
+
+// 超出免费版限制时统一引导升级；返回 true 表示已处理
+function handleUpgradeError(err) {
+  if (!err || !err.needUpgrade) return false;
+  wx.showModal({
+    title: '升级套餐',
+    content: (err.message || '该功能需要升级套餐') + '',
+    confirmText: '去升级',
+    confirmColor: '#8B1E1E',
+    success: function (r) { if (r.confirm) wx.navigateTo({ url: '/pages/upgrade/upgrade' }); }
+  });
+  return true;
 }
 
 // 退出登录：清除本地 token（下次请求会自动重新静默登录）
@@ -493,6 +635,7 @@ module.exports = {
   saveConfig: saveConfig,
   getPhotosList: getPhotosList,
   uploadPhoto: uploadPhoto,
+  uploadMedia: uploadMedia,
   deletePhoto: deletePhoto,
   getUserProfileByOpenid: getUserProfileByOpenid,
   checkGuestByOpenid: checkGuestByOpenid,
@@ -506,5 +649,21 @@ module.exports = {
   syncUserToNotion: syncUserToNotion,
   bindGuestOpenid: bindGuestOpenid,
   getPhoneNumber: getPhoneNumber,
+  // 现场抽奖
+  getLotteryScreenUrl: getLotteryScreenUrl,
+  getLotteryAdmin: getLotteryAdmin,
+  saveLotteryConfig: saveLotteryConfig,
+  importLotteryRsvp: importLotteryRsvp,
+  startLottery: startLottery,
+  redrawLottery: redrawLottery,
+  revealLottery: revealLottery,
+  setLotteryScreen: setLotteryScreen,
+  resetLottery: resetLottery,
+  // 套餐 / 支付
+  getPlan: getPlan,
+  createPayOrder: createPayOrder,
+  getPayOrder: getPayOrder,
+  mockConfirmPay: mockConfirmPay,
+  handleUpgradeError: handleUpgradeError,
   logout: logout
 };

@@ -2,43 +2,49 @@
 const app = getApp();
 const api = require('../../utils/api.js');
 
+// 云端字段兼容：date/year、content/desc
+function normalizeStories(list) {
+  return (list || []).filter(function (it) { return it && typeof it === 'object'; }).map(function (it, i) {
+    return {
+      id: String(it.id || ('s' + i)),
+      date: it.date || it.year || '',
+      title: it.title || '',
+      content: it.content || it.desc || '',
+      image: it.image || ''
+    };
+  });
+}
+
+// 只读云端 story/stories；未配置则空列表，不再用内置示例
+function pickCloudStories(cfg) {
+  if (!cfg) return [];
+  if (Array.isArray(cfg.story)) return cfg.story;
+  if (Array.isArray(cfg.stories)) return cfg.stories;
+  return [];
+}
+
 Page({
   data: {
+    theme: 'red',
     photosList: [],
-    storiesList: [
-      {
-        id: '1',
-        date: '2022.05.20',
-        title: '初遇 · 心动的序章',
-        content: '在那个满溢着初夏微风的午后，一次偶遇，开启了我们故事的序章。彼此对视的那一刻，眼中便有了星河。',
-        image: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800'
-      },
-      {
-        id: '2',
-        date: '2023.10.01',
-        title: '相知 · 执手同行',
-        content: '从春日漫步到秋日看海，四季轮转里，我们成为了彼此最坚定而温暖的依靠。走过千山万水，风景不及身旁的你。',
-        image: 'https://images.unsplash.com/photo-1529636798458-92182e662485?w=800'
-      },
-      {
-        id: '3',
-        date: '2025.02.14',
-        title: '求婚 · 许诺余生',
-        content: '星光为证，玫瑰为信。“愿与你携手，共赴余生朝暮”，这是最庄重的誓言，也是最笃定的浪漫。',
-        image: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=800'
-      }
-    ]
+    storiesLoaded: false,
+    storiesList: []
   },
 
   onLoad: function () {
+    if (app.syncPageTheme) app.syncPageTheme(this);
     this.loadGallery();
   },
 
   onShow: function () {
+    const t = (app.getTheme && app.getTheme()) || 'red';
+    this.setData({ theme: t });
+    if (app.syncPageTheme) app.syncPageTheme(this);
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({
         selected: 1,
-        visible: true
+        visible: true,
+        theme: t
       });
     }
   },
@@ -50,7 +56,10 @@ Page({
   },
 
   loadGallery: function (callback) {
-    api.getPhotosList().then((list) => {
+    const done = function () {
+      if (typeof callback === 'function') callback();
+    };
+    const photosTask = api.getPhotosList().then((list) => {
       if (list && list.length > 0) {
         this.setData({ photosList: list });
       } else {
@@ -63,10 +72,26 @@ Page({
         ];
         this.setData({ photosList: defaultList });
       }
-      if (typeof callback === 'function') callback();
+    }).catch(() => {});
+
+    const storiesTask = api.getWeddingConfig().then((cfg) => {
+      this.setData({
+        storiesLoaded: true,
+        storiesList: normalizeStories(pickCloudStories(cfg))
+      });
     }).catch(() => {
-      if (typeof callback === 'function') callback();
+      if (!this.data.storiesLoaded) {
+        this.setData({ storiesLoaded: true, storiesList: [] });
+      }
     });
+
+    Promise.all([photosTask, storiesTask]).then(done, done);
+  },
+
+  previewStoryImage: function (e) {
+    const url = e.currentTarget.dataset.url;
+    if (!url) return;
+    wx.previewImage({ current: url, urls: [url] });
   },
 
   previewImage: function (e) {

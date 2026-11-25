@@ -4,6 +4,7 @@ const api = require('../../utils/api.js');
 
 Page({
   data: {
+    theme: 'red',
     danmakuLanes: [],
     defaultAvatar: '',
     guestName: '',
@@ -28,11 +29,15 @@ Page({
   },
 
   onShow: function () {
+    const t = (app.getTheme && app.getTheme()) || 'red';
+    this.setData({ theme: t });
+    if (app.syncPageTheme) app.syncPageTheme(this);
     this.initUserProfile();
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({
         selected: 4,
-        visible: true
+        visible: true,
+        theme: t
       });
     }
   },

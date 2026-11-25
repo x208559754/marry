@@ -16,6 +16,9 @@ import {
   isWeddingAdmin,
 } from './auth'
 import type { AppEnv } from './auth'
+import { getWxAccessToken } from './wx'
+import { checkTexts, collectTexts, attachTarget } from './moderation'
+import { getWeddingPlan, displayPlan, allowedTheme } from './billing'
 
 export const wedding = new Hono<AppEnv>()
 
@@ -112,21 +115,30 @@ async function insertBlessingIfNew(
   author: string,
   content: string,
   avatar: string,
-): Promise<boolean> {
+): Promise<number> {
   if (openid) {
     const dup = await db
       .prepare('SELECT 1 AS x FROM blessings WHERE wedding_id = ? AND openid = ? AND content = ? LIMIT 1')
       .bind(wid, openid, content)
       .first()
-    if (dup) return false
+    if (dup) return 0
   }
-  await db
+  const res = await db
     .prepare(
       'INSERT INTO blessings (wedding_id, openid, author, content, avatar_url, likes, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)',
     )
     .bind(wid, openid || null, author || '亲朋好友', content, avatar || '', nowIso())
     .run()
-  return true
+  return res.meta.last_row_id || 1
+}
+
+// 婚礼被平台停用时，宾客端写入一律拒绝
+async function inactiveReason(db: D1Database, wid: string): Promise<string> {
+  try {
+    const row = await db.prepare('SELECT status FROM weddings WHERE id = ?').bind(wid).first<{ status: string | null }>()
+    if (row && row.status === 'disabled') return '该婚礼请柬已暂停服务'
+  } catch {}
+  return ''
 }
 
 // ---------------- 登录 ----------------
@@ -287,6 +299,8 @@ wedding.get('/config', requireWid, async (c) => {
     .bind(wid)
     .first<{ config: string | null }>()
   if (!row) return fail(c, '婚礼不存在或未开通（请确认扫码链接是否有效）', 404)
+  const wp = await getWeddingPlan(c.env.DB, wid)
+  if (wp.status === 'disabled') return c.json({ ok: false as const, error: '该请柬已暂停服务' + (wp.disabledReason ? '：' + wp.disabledReason : ''), code: 'WEDDING_DISABLED' }, 403)
   let cfg: unknown = {}
   if (row.config) {
     try {
@@ -298,6 +312,22 @@ wedding.get('/config', requireWid, async (c) => {
   if (cfg && typeof cfg === 'object' && !Array.isArray(cfg)) {
     const obj = cfg as Record<string, unknown>
     if (obj.venue) obj.venue = normalizeVenue(obj.venue)
+    if (!obj.theme) {
+      try {
+        const ltRow = await c.env.DB.prepare('SELECT config FROM lotteries WHERE wedding_id = ?')
+          .bind(wid)
+          .first<{ config: string | null }>()
+        if (ltRow?.config) {
+          const ltCfg = JSON.parse(ltRow.config) as { theme?: string }
+          if (ltCfg && typeof ltCfg.theme === 'string' && ltCfg.theme) {
+            obj.theme = ltCfg.theme
+          }
+        }
+      } catch {}
+    }
+    // 套餐信息（只读，客户端据此决定是否显示「有囍請柬」标识等）
+    if (obj.theme) obj.theme = allowedTheme(wp, obj.theme)
+    obj._plan = displayPlan(wp)
     cfg = obj
   }
   return ok(c, cfg)
@@ -317,6 +347,13 @@ wedding.put('/config', requireAdmin, async (c) => {
   if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) return fail(c, '配置必须是 JSON 对象', 400)
 
   const incoming = pickAllowedConfig(cfg as Record<string, unknown>)
+
+  // 内容安全：只检测本次提交的文字字段（姓名、文案、故事、日程等）
+  const texts = collectTexts(incoming)
+  if (texts.length) {
+    const mod = await checkTexts(c.env, texts, { wid, openid: getOpenid(c), scene: 1, targetType: 'config' })
+    if (!mod.ok) return fail(c, mod.message || '内容未通过安全检测', 422)
+  }
 
   let existing: Record<string, unknown> = {}
   const row = await c.env.DB.prepare('SELECT config FROM weddings WHERE id = ?')
@@ -388,6 +425,17 @@ wedding.post('/users/sync', requireWid, requireAuth, async (c) => {
   const phone = str(body.phone, 32)
   const blessing = str(body.blessing, 500)
   const avatar = httpUrl(body.avatarUrl ?? body.avatar)
+  const off = await inactiveReason(c.env.DB, wid)
+  if (off) return fail(c, off, 403)
+  // 只检测有变化的字段（首页每次打开都会同步，避免重复调用微信接口）
+  const prev = name || blessing
+    ? await c.env.DB.prepare('SELECT name, blessing FROM users WHERE openid = ? AND wedding_id = ?').bind(openid, wid).first<{ name: string | null; blessing: string | null }>()
+    : null
+  const changed = [name && name !== (prev?.name || '') ? name : '', blessing && blessing !== (prev?.blessing || '') ? blessing : '']
+  if (changed[0] || changed[1]) {
+    const mod = await checkTexts(c.env, changed, { wid, openid, scene: 1, targetType: 'profile', nickname: name })
+    if (!mod.ok) return fail(c, mod.message || '内容未通过安全检测', 422)
+  }
 
   await upsertUser(c.env.DB, openid, wid, { name, phone, blessing, avatar })
 
@@ -495,6 +543,10 @@ wedding.post('/rsvp', requireWid, optionalAuth, async (c) => {
   const blessing = str(body.blessing, 500)
   const avatar = httpUrl(body.avatarUrl ?? body.avatar)
   const now = nowIso()
+  const off = await inactiveReason(c.env.DB, wid)
+  if (off) return fail(c, off, 403)
+  const mod = await checkTexts(c.env, [name, dietary, blessing], { wid, openid, scene: 1, targetType: 'rsvp', nickname: name })
+  if (!mod.ok) return fail(c, mod.message || '内容未通过安全检测', 422)
 
   if (openid) {
     await c.env.DB.prepare(
@@ -556,7 +608,7 @@ wedding.get('/rsvps', requireWid, requireAdmin, async (c) => {
 wedding.get('/blessings', requireWid, async (c) => {
   const wid = getWid(c)
   const { results } = await c.env.DB.prepare(
-    'SELECT id, author, content, avatar_url, likes, created_at FROM blessings WHERE wedding_id = ? ORDER BY id DESC LIMIT 200',
+    "SELECT id, author, content, avatar_url, likes, created_at FROM blessings WHERE wedding_id = ? AND status <> 'hidden' ORDER BY id DESC LIMIT 200",
   )
     .bind(wid)
     .all<Record<string, unknown>>()
@@ -580,7 +632,13 @@ wedding.post('/blessings', requireWid, optionalAuth, async (c) => {
   if (!content) return fail(c, '祝福内容不能为空', 400)
   const author = str(body.author ?? body.name, 64) || '亲朋好友'
   const avatar = httpUrl(body.avatar)
-  const created = await insertBlessingIfNew(c.env.DB, wid, openid, author, content, avatar)
+  const off = await inactiveReason(c.env.DB, wid)
+  if (off) return fail(c, off, 403)
+  const mod = await checkTexts(c.env, [author === '亲朋好友' ? '' : author, content], { wid, openid, scene: 2, targetType: 'blessing', nickname: author })
+  if (!mod.ok) return fail(c, mod.message || '内容未通过安全检测', 422)
+  const createdId = await insertBlessingIfNew(c.env.DB, wid, openid, author, content, avatar)
+  if (createdId) await attachTarget(c.env.DB, mod.logId, createdId)
+  const created = Boolean(createdId)
   return ok(c, { created, message: created ? '祝福已送达' : '已收到重复祝福，未重复记录' })
 })
 
@@ -588,9 +646,11 @@ wedding.post('/blessings', requireWid, optionalAuth, async (c) => {
 wedding.post('/blessings/:id/like', async (c) => {
   const id = Number(c.req.param('id'))
   if (!Number.isInteger(id) || id <= 0) return fail(c, '无效的 id', 400)
-  const row = await c.env.DB.prepare('UPDATE blessings SET likes = likes + 1 WHERE id = ? RETURNING likes')
-    .bind(id)
-    .first<{ likes: number }>()
+  // 先 UPDATE 再 SELECT（MySQL 不支持 UPDATE ... RETURNING）
+  const upd = await c.env.DB.prepare('UPDATE blessings SET likes = likes + 1 WHERE id = ?').bind(id).run()
+  const row = upd.meta.changes
+    ? await c.env.DB.prepare('SELECT likes FROM blessings WHERE id = ?').bind(id).first<{ likes: number }>()
+    : null
   if (!row) return fail(c, '祝福不存在', 404)
   return ok(c, { likes: row.likes })
 })
@@ -789,42 +849,6 @@ wedding.post('/weddings', requireAuth, async (c) => {
 })
 
 // ---------------- 微信手机号 ----------------
-
-// 取微信 access_token（stable_token + 缓存到 config 表，避免频繁请求微信接口）
-async function getWxAccessToken(db: D1Database, appid: string, secret: string): Promise<string> {
-  const row = await db.prepare("SELECT value FROM config WHERE key = 'wx_access_token'").first<{ value: string }>()
-  if (row?.value) {
-    try {
-      const cached = JSON.parse(row.value) as { token: string; expiresAt: number }
-      if (cached.token && cached.expiresAt > Date.now() + 60_000) return cached.token
-    } catch {
-      // 缓存损坏则忽略，重新获取
-    }
-  }
-  const res = await fetch('https://api.weixin.qq.com/cgi-bin/stable_token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ grant_type: 'client_credential', appid, secret, force_refresh: false }),
-  })
-  const data = (await res.json().catch(() => null)) as {
-    access_token?: string
-    expires_in?: number
-    errmsg?: string
-  } | null
-  if (!data?.access_token) throw new Error('获取微信 access_token 失败：' + (data?.errmsg || '未知错误'))
-  const value = JSON.stringify({
-    token: data.access_token,
-    expiresAt: Date.now() + (data.expires_in || 7200) * 1000,
-  })
-  await db
-    .prepare(
-      "INSERT INTO config (key, value, updated_at) VALUES ('wx_access_token', ?, ?) " +
-        'ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at',
-    )
-    .bind(value, nowIso())
-    .run()
-  return data.access_token
-}
 
 // POST /api/wechat/phone {code} → {phoneNumber}（微信官方 getPhoneNumber 的 code 换取）
 // 未配置微信凭据（本地开发）→ 返回演示号码；小程序端有“可直接输入手机号”兜底

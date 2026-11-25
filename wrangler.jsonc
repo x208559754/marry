@@ -27,5 +27,9 @@
       "binding": "PHOTOS",
       "id": "b9d3551154a347ef924a1b11eea881d2"
     }
+  ],
+
+  "rules": [
+    { "type": "Data", "globs": ["**/*.png"], "fallthrough": true }
   ]
 }

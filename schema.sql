@@ -90,3 +90,13 @@ CREATE TABLE IF NOT EXISTS heart_clicks (
 );
 CREATE INDEX IF NOT EXISTS idx_heart_clicks_wedding ON heart_clicks(wedding_id);
 CREATE INDEX IF NOT EXISTS idx_heart_clicks_wid_openid ON heart_clicks(wedding_id, openid);
+
+-- 婚宴现场抽奖（每场婚礼一行；与 weddings.config 分开存，互不覆盖）
+-- config: {prizes:[{id,name,reward,count}], participants:[{id,name,source:rsvp|manual}]}
+-- state:  {status:idle|rolling|revealed|board, prizeId, startedAt, revealAt, results:{[prizeId]:[{id,name}]}}
+CREATE TABLE IF NOT EXISTS lotteries (
+  wedding_id TEXT PRIMARY KEY,
+  config TEXT,
+  state TEXT,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
