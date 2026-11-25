@@ -26,7 +26,7 @@ export const site = `<!DOCTYPE html>
     --guest: #7a4e32;
   }
   * { box-sizing: border-box; }
-  :root { --nav-offset: 104px; }
+  :root { --nav-offset: 72px; }
   html { scroll-behavior: smooth; color-scheme: light; scroll-padding-top: var(--nav-offset); }
   body {
     margin: 0;
@@ -90,6 +90,7 @@ export const site = `<!DOCTYPE html>
   .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
   main { padding-bottom: 24px; }
   section { padding: 48px 0 8px; }
+  #kefu { min-height: calc(100vh - var(--nav-offset)); min-height: calc(100svh - var(--nav-offset)); }
   section.hero { padding: 42px 0 8px; }
   .section-head { max-width: 40em; margin-bottom: 8px; }
   .section-head h2 { font-size: clamp(28px, 4vw, 40px); margin: 0 0 8px; letter-spacing: 0.04em; }
@@ -309,10 +310,10 @@ export const site = `<!DOCTYPE html>
     .steps { grid-template-columns: repeat(3, 1fr); }
   }
   @media (max-width: 960px) {
-    :root { --nav-offset: 148px; }
+    :root { --nav-offset: 72px; }
   }
   @media (max-width: 720px) {
-    :root { --nav-offset: 104px; }
+    :root { --nav-offset: 72px; }
     .nav-links a { display: none; }
     .brand span { font-size: 18px; }
     .lookbook { grid-template-columns: 1fr; }
@@ -573,17 +574,35 @@ export const site = `<!DOCTYPE html>
   function syncNavOffset() {
     var nav = document.querySelector("header.nav");
     if (!nav) return;
-    var gap = 24;
-    var h = Math.ceil(nav.getBoundingClientRect().height) + gap;
+    var h = nav.getBoundingClientRect().height;
     document.documentElement.style.setProperty("--nav-offset", h + "px");
   }
-  syncNavOffset();
-  window.addEventListener("resize", syncNavOffset);
-  if (location.hash) {
+  function scrollToCurrentHash() {
+    if (!location.hash) return;
     var target = null;
     try { target = document.querySelector(location.hash); } catch (e) {}
-    if (target && target.scrollIntoView) target.scrollIntoView();
+    if (!target) return;
+    var nav = document.querySelector("header.nav");
+    var offset = nav ? nav.getBoundingClientRect().height : 0;
+    var y = window.pageYOffset + target.getBoundingClientRect().top - offset;
+    if (y < 0) y = 0;
+    window.scrollTo({ left: 0, top: y, behavior: "auto" });
   }
+  document.documentElement.style.scrollBehavior = "auto";
+  syncNavOffset();
+  scrollToCurrentHash();
+  window.addEventListener("resize", function () {
+    syncNavOffset();
+    scrollToCurrentHash();
+  });
+  window.addEventListener("hashchange", function () {
+    scrollToCurrentHash();
+  });
+  window.addEventListener("load", function () {
+    syncNavOffset();
+    scrollToCurrentHash();
+    document.documentElement.style.scrollBehavior = "";
+  });
 
   var couple = [
     { t: "开通这场婚礼", d: "平台为你们单独建一场婚礼。之后的照片、回执、祝福和宾客留下的称呼，都只属于这一场。" },
