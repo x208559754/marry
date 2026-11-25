@@ -31,7 +31,9 @@ Page({
     canBuy: false,
     isUpgrade: false,
     paying: false,
-    wid: ''
+    wid: '',
+    showKefu: false,
+    wechatId: 'lzx91697'
   },
 
   onLoad: function (q) {
@@ -104,7 +106,7 @@ Page({
     if (this.data.paying || !this.data.canBuy) return;
     const p = this.data.selectedPlan;
     if (this.data.payMode === 'unavailable') {
-      wx.showModal({ title: '暂未开通在线支付', content: '请联系客服为本场婚礼开通「' + p.name + '」。', showCancel: false });
+      this.setData({ showKefu: true });
       return;
     }
     const that = this;
@@ -210,6 +212,21 @@ Page({
   },
 
   contact: function () {
-    wx.showModal({ title: '联系客服', content: '如需发票、退款或其它帮助，请通过小程序右上角「···」→「意见反馈」联系我们。', showCancel: false });
+    this.setData({ showKefu: true });
+  },
+
+  closeKefu: function () {
+    this.setData({ showKefu: false });
+  },
+
+  noop: function () {},
+
+  copyWechat: function () {
+    wx.setClipboardData({
+      data: 'lzx91697',
+      success: function () {
+        wx.showToast({ title: '已复制微信号', icon: 'success' });
+      }
+    });
   }
 });

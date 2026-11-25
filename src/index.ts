@@ -4,6 +4,7 @@ import { page } from './frontend'
 import { site } from './site'
 import lockup from './brand-lockup.png'
 import mark from './brand-mark.png'
+import wechatQr from './wechat-qr.png'
 import type { AppEnv } from './auth'
 import { requireAdmin, getWid, getOpenid } from './auth'
 import { billing, getWeddingPlan, limitReached } from './billing'
@@ -91,6 +92,16 @@ app.get('/brand/lockup.png', () => {
 
 app.get('/brand/mark.png', () => {
   return new Response(mark, {
+    headers: {
+      'content-type': 'image/png',
+      'cache-control': 'public, max-age=86400',
+    },
+  })
+})
+
+
+app.get('/kefu/wechat-qr.png', () => {
+  return new Response(wechatQr, {
     headers: {
       'content-type': 'image/png',
       'cache-control': 'public, max-age=86400',

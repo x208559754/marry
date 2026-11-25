@@ -50,3 +50,22 @@
 .up-radio { position: absolute; right: 28rpx; bottom: 28rpx; width: 36rpx; height: 36rpx; border-radius: 50%; border: 3rpx solid #C9A063; display: flex; align-items: center; justify-content: center; }
 .up-card-on .up-radio { border-color: #8B1E1E; }
 .up-radio-dot { width: 20rpx; height: 20rpx; border-radius: 50%; background: #8B1E1E; }
+
+.kefu-card { margin: 8rpx 28rpx 24rpx; padding: 28rpx 32rpx; background: #fff; border: 1rpx solid #EBDDCF; border-radius: 32rpx; display: flex; align-items: center; box-shadow: 0 8rpx 30rpx rgba(45, 37, 34, 0.05); }
+.kefu-card-qr { width: 200rpx; height: 200rpx; flex: none; margin-right: 28rpx; background: #fff; }
+.kefu-card-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.kefu-card-label { font-size: 22rpx; color: #9A8982; letter-spacing: 4rpx; }
+.kefu-card-id { margin-top: 8rpx; font-size: 36rpx; font-weight: 700; color: #8B1E1E; letter-spacing: 2rpx; }
+.kefu-card-hint { margin-top: 8rpx; font-size: 22rpx; color: #9A8982; }
+.kefu-card-copy, button.kefu-card-copy:not([size='mini']) { margin: 18rpx 0 0; padding: 0 28rpx; width: auto; height: 64rpx; line-height: 1; display: inline-flex; align-items: center; justify-content: center; font-size: 24rpx; color: #8B1E1E; background: #FFF8EE; border-radius: 32rpx; }
+.kefu-card-copy::after { border: none; }
+.kefu-mask { position: fixed; left: 0; right: 0; top: 0; bottom: 0; z-index: 200; background: rgba(45, 37, 34, 0.45); display: flex; align-items: center; justify-content: center; padding: 40rpx; }
+.kefu-sheet { width: 100%; max-width: 620rpx; background: #FFFDF9; border-radius: 32rpx; padding: 48rpx 40rpx 40rpx; display: flex; flex-direction: column; align-items: center; box-shadow: 0 16rpx 60rpx rgba(45, 37, 34, 0.18); }
+.kefu-sheet-title { font-size: 34rpx; font-weight: 700; color: #8B1E1E; letter-spacing: 4rpx; }
+.kefu-sheet-sub { margin-top: 10rpx; font-size: 24rpx; color: #9A8982; }
+.kefu-qr { width: 360rpx; height: 360rpx; margin-top: 28rpx; background: #fff; }
+.kefu-hint { margin-top: 12rpx; font-size: 22rpx; color: #9A8982; }
+.kefu-id { margin-top: 16rpx; font-size: 30rpx; font-weight: 700; color: #8B1E1E; letter-spacing: 2rpx; }
+.kefu-copy, button.kefu-copy:not([size='mini']) { margin: 28rpx 0 0; padding: 0; width: 100%; height: 80rpx; line-height: 1; display: flex; align-items: center; justify-content: center; border-radius: 40rpx; background: linear-gradient(135deg, #A32929, #8B1E1E); color: #F6DFA8; font-size: 28rpx; font-weight: 700; }
+.kefu-copy::after { border: none; }
+.kefu-close { margin-top: 22rpx; font-size: 24rpx; color: #9A8982; }

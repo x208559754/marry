@@ -324,6 +324,43 @@ export const site = `<!DOCTYPE html>
     html { scroll-behavior: auto; }
     .petal { animation: none; opacity: 0.35; }
   }
+  .kefu-card {
+    display: flex; align-items: center; gap: 28px;
+    max-width: 540px; margin-top: 20px;
+    padding: 24px 28px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: 0 10px 28px rgba(44, 36, 34, 0.06);
+  }
+  .kefu-card img {
+    width: 168px; height: 168px; flex: none;
+    border-radius: 12px; background: #fff;
+    box-shadow: 0 0 0 1px rgba(60, 36, 34, 0.06);
+  }
+  .kefu-meta { min-width: 0; }
+  .kefu-label {
+    margin: 0; color: var(--muted); font-size: 12px; letter-spacing: 0.2em;
+  }
+  .kefu-id {
+    margin: 6px 0 16px; color: var(--red);
+    font-size: 28px; font-weight: 600; letter-spacing: 0.08em; line-height: 1.2;
+  }
+  .kefu-hint { margin: 12px 0 0; color: var(--muted); font-size: 13px; }
+  .chat-kefu {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; background: #fff7ee;
+    border-bottom: 1px solid var(--line);
+  }
+  .chat-kefu img {
+    width: 64px; height: 64px; flex: none; border-radius: 8px; background: #fff;
+  }
+  .chat-kefu strong { display: block; font-size: 13px; font-weight: 600; }
+  .chat-kefu .kefu-id { margin: 0 0 6px; font-size: 16px; }
+  .chat-kefu .btn { padding: 4px 10px; font-size: 12px; }
+  @media (max-width: 640px) {
+    .kefu-card { flex-direction: column; align-items: center; text-align: center; padding: 28px 22px; }
+  }
 </style>
 </head>
 <body>
@@ -339,6 +376,7 @@ export const site = `<!DOCTYPE html>
       <a href="#flow">使用流程</a>
       <a href="#inside">请柬里有什么</a>
       <a href="#start">怎么开始</a>
+      <a href="#kefu">联系客服</a>
       <button class="nav-ask" type="button" id="open-chat">问小囍</button>
     </nav>
   </div>
@@ -352,7 +390,7 @@ export const site = `<!DOCTYPE html>
       <p class="lede">一对新人一张喜帖。亲友扫码启封，看日子、故事和照片，确认来不来，再留下一句祝福。这个网页是官网，喜帖在小程序里打开。</p>
       <div class="hero-actions">
         <a class="btn" href="#flow">看使用流程</a>
-        <button class="btn ghost" type="button" id="open-chat-2">问客服</button>
+        <a class="btn ghost" href="#kefu">联系客服</a>
       </div>
     </div>
   </section>
@@ -471,6 +509,22 @@ export const site = `<!DOCTYPE html>
       <article class="step"><b>03</b><div><h3>把码发给亲友</h3><p>生成这场婚礼的小程序码，发到亲友群。他们扫码就能看请柬、回执、祝福。</p></div></article>
     </div>
   </section>
+
+  <section id="kefu">
+    <div class="section-head">
+      <h2>联系客服</h2>
+      <p>加微信即可咨询开通、发票或使用上的问题。用微信扫描二维码，或复制微信号添加。</p>
+    </div>
+    <div class="kefu-card">
+      <img src="/kefu/wechat-qr.png" width="168" height="168" alt="客服微信二维码">
+      <div class="kefu-meta">
+        <p class="kefu-label">微信号</p>
+        <p class="kefu-id">lzx91697</p>
+        <button class="btn ghost copy-wechat" type="button">复制微信号</button>
+        <p class="kefu-hint">微信扫一扫即可添加</p>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer>
@@ -490,6 +544,14 @@ export const site = `<!DOCTYPE html>
       <span>有囍請柬的喜帖顾问</span>
     </div>
     <button class="chat-x" type="button" id="chat-close" aria-label="关闭客服">×</button>
+  </div>
+  <div class="chat-kefu">
+    <img src="/kefu/wechat-qr.png" width="64" height="64" alt="客服微信二维码">
+    <div>
+      <strong>微信客服</strong>
+      <p class="kefu-id">lzx91697</p>
+      <button class="btn ghost copy-wechat" type="button">复制微信号</button>
+    </div>
   </div>
   <div class="chat-log" id="chat-log" aria-live="polite">
     <div class="msg msg-bot">你好，我是小囍。可以问我新人怎么发请柬，宾客扫码之后能做什么，或者相册、回执、祝福分别在哪。</div>
@@ -560,7 +622,7 @@ export const site = `<!DOCTYPE html>
     { id: "price", keys: ["价格", "多少钱", "收费", "免费", "怎么卖"], chips: ["我是新人，怎么开始"],
       a: "官网上不标价格。每一场婚礼单独开通，包含请柬、故事、相册、日程、回执和祝福墙。你要是准备用，告诉我两个人的称呼和大概日子就行，我可以先把开通后要准备的内容列给你。具体合作不在这个对话框里报价。" },
     { id: "contact", keys: ["联系", "客服电话", "人工", "微信多少", "怎么找你们"], chips: ["我是新人，怎么开始", "口令是什么"],
-      a: "官网没有留公开电话或微信号，我也转接不了人工。产品相关的问题可以直接问我。想开通一场婚礼，把新人姓名和日子留在你和平台已有的沟通里；这个对话框只负责把产品讲清楚。" },
+      a: "加微信 lzx91697，或扫描本页和对话框里的客服二维码。发票、开通或使用上的问题都可以找我们。产品相关的问题也可以直接在这里问我。" },
     { id: "web", keys: ["网页能", "这个网站", "官网", "和微信"], chips: ["照片墙是什么", "是什么产品"],
       a: "这个网站是官网，用来介绍产品。完整的启封、回执和祝福在微信小程序里。网页上只有一种婚礼内容：别人如果把带婚礼标识的链接发给你，打开后是那场婚礼的照片墙。" },
     { id: "openid", keys: ["openid"], chips: ["管理后台怎么进"],
@@ -614,7 +676,36 @@ export const site = `<!DOCTYPE html>
     fab.focus();
   }
   document.getElementById("open-chat").addEventListener("click", openChat);
-  document.getElementById("open-chat-2").addEventListener("click", openChat);
+
+  var wechatId = "lzx91697";
+  var copyBtns = document.querySelectorAll(".copy-wechat");
+  function copied(btn) {
+    var old = btn.textContent;
+    btn.textContent = "已复制";
+    setTimeout(function () { btn.textContent = old; }, 1600);
+  }
+  function copyWechat(btn) {
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = wechatId;
+      ta.setAttribute("readonly", "readonly");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); copied(btn); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(wechatId).then(function () { copied(btn); }).catch(fallback);
+    } else {
+      fallback();
+    }
+  }
+  for (var c = 0; c < copyBtns.length; c++) {
+    copyBtns[c].addEventListener("click", function (e) { copyWechat(e.currentTarget); });
+  }
+
   fab.addEventListener("click", function () {
     if (panel.className.indexOf("is-open") >= 0) closeChat();
     else openChat();

@@ -527,7 +527,7 @@ billing.post('/pay/order', requireAdmin, async (c) => {
   if (!p || !p.active || p.code === 'free') return fail(c, '该套餐不存在或已下架', 404)
   if (p.level <= wp.level) return fail(c, wp.plan === p.code ? '本场婚礼已经是「' + p.name + '」，无需重复购买' : '当前「' + wp.planName + '」已包含该套餐权益，无需购买', 409)
   const mode = payMode(c.env)
-  if (mode === 'unavailable') return fail(c, '在线支付暂未开通，请联系客服开通套餐', 503)
+  if (mode === 'unavailable') return fail(c, '在线支付暂未开通，请微信联系客服 lzx91697 开通套餐', 503)
   if (mode === 'wxpay' && !openid) return fail(c, '请先在小程序内完成微信登录后再支付', 401)
 
   const orderNo = genOrderNo()

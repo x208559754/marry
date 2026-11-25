@@ -59,6 +59,16 @@
       <text>· 支付由微信支付提供，平台不保存任何支付信息</text>
       <text class="up-link" bindtap="contact">· 发票 / 退款 / 其它问题，联系客服 ›</text>
     </view>
+
+    <view class="kefu-card">
+      <image class="kefu-card-qr" src="/images/wechat-qr.png" mode="aspectFit" show-menu-by-longpress="true"></image>
+      <view class="kefu-card-meta">
+        <text class="kefu-card-label">微信客服</text>
+        <text class="kefu-card-id">lzx91697</text>
+        <text class="kefu-card-hint">长按二维码可识别添加</text>
+        <button class="kefu-card-copy" bindtap="copyWechat">复制微信号</button>
+      </view>
+    </view>
     <view style="height: 180rpx;"></view>
   </block>
 
@@ -73,5 +83,17 @@
       </view>
       <button class="up-btn" bindtap="pay" loading="{{paying}}" disabled="{{paying}}">{{payMode === 'unavailable' ? '联系客服开通' : (isUpgrade ? '升级到' + selectedPlan.name : '开通' + selectedPlan.name)}}</button>
     </block>
+  </view>
+
+  <view class="kefu-mask" wx:if="{{showKefu}}" catchtap="closeKefu">
+    <view class="kefu-sheet" catchtap="noop">
+      <text class="kefu-sheet-title">联系客服</text>
+      <text class="kefu-sheet-sub">微信扫码添加，或复制微信号</text>
+      <image class="kefu-qr" src="/images/wechat-qr.png" mode="aspectFit" show-menu-by-longpress="true"></image>
+      <text class="kefu-hint">长按二维码可识别添加</text>
+      <text class="kefu-id">微信号 lzx91697</text>
+      <button class="kefu-copy" bindtap="copyWechat">复制微信号</button>
+      <text class="kefu-close" bindtap="closeKefu">关闭</text>
+    </view>
   </view>
 </view>
