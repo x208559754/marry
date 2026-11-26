@@ -8,6 +8,9 @@ export const DEFAULT_QINIU_UPLOAD_URL = 'https://up-z2.qiniup.com'
 export const DEFAULT_QINIU_RS_URL = 'https://rs-z2.qbox.me'
 export const QINIU_MARKER = 'qiniu:'
 export const VIDEO_MAX_BYTES = 200 * 1024 * 1024
+export const AUDIO_MAX_BYTES = 20 * 1024 * 1024
+export const AUDIO_MIME_LIMIT = 'audio/mpeg;audio/mp3;audio/mp4;audio/x-m4a;audio/aac;audio/wav;audio/ogg;audio/flac;audio/*'
+export const AUDIO_EXTS = ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'flac', 'mp4']
 export const TOKEN_TTL_SEC = 3600
 
 export type QiniuEnv = {
@@ -185,6 +188,57 @@ export function videoKeyAllowed(wid: string, key: string): boolean {
   return key.startsWith('video/' + safe + '/') && /^video\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(key)
 }
 
+function safeAudioExt(name: string | undefined): string {
+  const raw = String(name || '').trim().toLowerCase().split(/[\\/]/).pop() || ''
+  const ext = (raw.split('.').pop() || raw).replace(/^\./, '')
+  return AUDIO_EXTS.includes(ext) ? ext : 'mp3'
+}
+
+export function newAudioKey(wid: string, filename?: string): string {
+  const safe = (wid || 'unknown').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 64) || 'unknown'
+  const rand = crypto.randomUUID().replace(/-/g, '').slice(0, 16)
+  return 'audio/' + safe + '/' + Date.now() + '-' + rand + '.' + safeAudioExt(filename)
+}
+
+export function newPlatformAudioKey(filename?: string): string {
+  return newAudioKey('platform', filename)
+}
+
+export function audioKeyAllowed(wid: string, key: string): boolean {
+  const safe = (wid || '').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 64)
+  if (!safe || !key) return false
+  if (key.includes('..') || key.includes('\\')) return false
+  return key.startsWith('audio/' + safe + '/') && /^audio\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(key)
+}
+
+export function platformAudioKeyAllowed(key: string): boolean {
+  return audioKeyAllowed('platform', key)
+}
+
+/** 服务端把文件传到七牛（平台后台上传默认背景音乐，避免浏览器跨域）。 */
+export async function uploadBufferToQiniu(
+  creds: QiniuCreds,
+  key: string,
+  body: Uint8Array | ArrayBuffer,
+  token: string,
+  mime?: string,
+): Promise<{ key: string; hash?: string; fsize?: number }> {
+  const bytes = body instanceof ArrayBuffer ? new Uint8Array(body) : body
+  const form = new FormData()
+  form.set('token', token)
+  form.set('key', key)
+  const file = new File([bytes], key.split('/').pop() || 'audio.mp3', { type: mime || 'audio/mpeg' })
+  form.set('file', file)
+  const res = await fetch(creds.uploadUrl, { method: 'POST', body: form })
+  const text = await res.text().catch(() => '')
+  let json: any = {}
+  try { json = text ? JSON.parse(text) : {} } catch {}
+  if (!res.ok) {
+    throw new Error((json && (json.error || json.error_code)) || ('七牛上传失败（HTTP ' + res.status + '）'))
+  }
+  return { key: json.key || key, hash: json.hash, fsize: json.fsize }
+}
+
 export async function deleteQiniuObject(creds: QiniuCreds, key: string): Promise<void> {
   const encoded = b64url(creds.bucket + ':' + key)
   const path = '/delete/' + encoded
@@ -228,6 +282,13 @@ export function expandQiniuUrl(raw: string, domain: string): string {
 
 function walkConfigMedia(cfg: Record<string, unknown>, fn: (url: string) => string) {
   if (typeof cfg.coverImage === 'string' && cfg.coverImage) cfg.coverImage = fn(cfg.coverImage)
+  if (cfg.music && typeof cfg.music === 'object' && !Array.isArray(cfg.music)) {
+    const m = cfg.music as Record<string, unknown>
+    if (typeof m.url === 'string' && m.url) m.url = fn(m.url)
+    if (typeof m.src === 'string' && m.src) m.src = fn(m.src)
+  } else if (typeof cfg.music === 'string' && cfg.music) {
+    cfg.music = fn(cfg.music)
+  }
   const lists = ['story', 'stories']
   for (const name of lists) {
     const arr = cfg[name]

@@ -102,3 +102,13 @@ CREATE TABLE IF NOT EXISTS lotteries (
   state TEXT,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- 试用账号：openid 绑定手机号 + 登录密码（scrypt 哈希，不明文）
+CREATE TABLE IF NOT EXISTS accounts (
+  openid TEXT NOT NULL PRIMARY KEY,
+  phone TEXT,
+  password_hash TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_accounts_phone ON accounts(phone);

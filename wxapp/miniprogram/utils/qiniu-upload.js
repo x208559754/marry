@@ -49,4 +49,40 @@ function uploadChosenFile(file, title, onProgress, opts) {
   return api.uploadPhoto(file.tempFilePath, title);
 }
 
-module.exports = { uploadVideo: uploadVideo, uploadChosenFile: uploadChosenFile };
+function uploadAudio(filePath, title, onProgress, filename) {
+  if (!filePath) return Promise.reject(new Error('请选择要上传的音频'));
+  return api.getMusicUploadToken(filename || '').then(function (t) {
+    if (!t || !t.token || !t.key || !t.uploadUrl) {
+      var err = new Error((t && t.error) || '未获得音频上传凭证');
+      if (t && t.needUpgrade) err.needUpgrade = true;
+      throw err;
+    }
+    return new Promise(function (resolve, reject) {
+      var task = wx.uploadFile({
+        url: t.uploadUrl,
+        filePath: filePath,
+        name: 'file',
+        formData: { token: t.token, key: t.key },
+        success: function (res) {
+          var body = {};
+          try { body = typeof res.data === 'string' ? JSON.parse(res.data || '{}') : (res.data || {}); } catch (e) {}
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            reject(new Error((body && (body.error || body.error_code)) || ('七牛上传失败（HTTP ' + res.statusCode + '）')));
+            return;
+          }
+          var key = (body && body.key) || t.key;
+          api.saveMusic({ key: key, title: title || '' }).then(resolve, reject);
+        },
+        fail: function (err) {
+          reject(new Error((err && err.errMsg) || '七牛上传失败'));
+        }
+      });
+      if (task && typeof task.onProgressUpdate === 'function' && typeof onProgress === 'function') {
+        task.onProgressUpdate(function (p) { onProgress(p.progress || 0); });
+      }
+    });
+  });
+}
+
+module.exports = { uploadVideo: uploadVideo, uploadChosenFile: uploadChosenFile, uploadAudio: uploadAudio };
+

@@ -99,6 +99,27 @@ Page({
       venueAddress: ''
     },
     currentOpenid: '',
+    accountLoading: false,
+    accountReady: false,
+    accountPhoneBound: false,
+    accountHasPassword: false,
+    accountPhoneMasked: '',
+    accountWeddings: [],
+    bindPhone: '',
+    bindPassword: '',
+    bindPassword2: '',
+    trialGroom: '',
+    trialBride: '',
+    bindingAccount: false,
+    startingTrial: false,
+    musicLoaded: false,
+    musicEntitled: false,
+    musicHasCustom: false,
+    musicTitle: '',
+    musicPlayingTitle: '',
+    musicDefaultTitle: '',
+    uploadingMusic: false,
+    musicProgress: 0,
     backend: '',
     curTab: 'guests',
     wid: '',
@@ -327,14 +348,9 @@ Page({
   submitNewWedding: function () {
     const that = this;
     const f = this.data.newWeddingForm;
-    const wid = (f.wid || '').trim();
     const groom = (f.groomName || '').trim();
     const bride = (f.brideName || '').trim();
 
-    if (!wid || !/^[A-Za-z0-9_-]{2,32}$/.test(wid)) {
-      wx.showToast({ title: '标识需为2-32位英文数字', icon: 'none' });
-      return;
-    }
     if (!groom || !bride) {
       wx.showToast({ title: '请填写新郎与新娘姓名', icon: 'none' });
       return;
@@ -353,17 +369,17 @@ Page({
     };
 
     api.saveSuperAdminWedding({
-      wid: wid,
       groomName: groom,
       brideName: bride,
       config: cfg
-    }).then(function () {
+    }).then(function (d) {
+      const newWid = (d && (d.id || d.wid)) || '';
       that.setData({
         submittingNewWedding: false,
         showNewWeddingModal: false
       });
-      wx.showToast({ title: '创建成功！', icon: 'success' });
-      api.setWid(wid);
+      wx.showToast({ title: newWid ? ('创建成功 ' + newWid) : '创建成功！', icon: 'none' });
+      if (newWid) api.setWid(newWid);
       that.loadAllWeddings();
       that.refreshAll(null, true);
       that.loadConfigForm();
@@ -431,19 +447,156 @@ Page({
 
   showPasscodeLock: function (cb) {
     const that = this;
-    this.setData({ isAuthorized: false, isSuperAdmin: false });
-    api.getMe().then(function (me) {
-      that.setData({
-        currentOpenid: api.getOpenid() || '',
-        isWeddingAdmin: !!(me && me.isAdmin)
-      });
+    this.setData({ isAuthorized: false, isSuperAdmin: false, accountLoading: true });
+    api.ensureLogin().then(function () {
+      return api.getAccount();
+    }).then(function (acc) {
+      acc = acc || {};
+      that._applyAccount(acc);
+      if (acc.ready && acc.isCurrentAdmin) {
+        that.enterWeddingAdmin(cb);
+        return;
+      }
       if (typeof cb === 'function') cb();
     }).catch(function (err) {
-      that.setData({ currentOpenid: api.getOpenid() || '', isWeddingAdmin: false });
+      that.setData({
+        currentOpenid: api.getOpenid() || '',
+        isWeddingAdmin: false,
+        accountLoading: false
+      });
       console.warn('[admin] 获取登录态失败:', err && err.message);
       if (typeof cb === 'function') cb();
     });
   },
+
+  _applyAccount: function (acc) {
+    acc = acc || {};
+    this.setData({
+      currentOpenid: acc.openid || api.getOpenid() || '',
+      isWeddingAdmin: !!acc.isCurrentAdmin,
+      accountReady: !!acc.ready,
+      accountPhoneBound: !!acc.phoneBound,
+      accountHasPassword: !!acc.hasPassword,
+      accountPhoneMasked: acc.phoneMasked || '',
+      accountWeddings: acc.weddings || [],
+      accountLoading: false,
+      bindPhone: this.data.bindPhone || ''
+    });
+  },
+
+  enterWeddingAdmin: function (cb) {
+    this.setData({
+      isAuthorized: true,
+      isSuperAdmin: false,
+      currentOpenid: api.getOpenid() || '',
+      wid: api.getWid() || ''
+    });
+    this.refreshAll();
+    this.loadConfigForm();
+    this.loadMusic();
+    this.loadQr();
+    if (typeof cb === 'function') cb();
+  },
+
+  onBindPhoneInput: function (e) { this.setData({ bindPhone: e.detail.value }); },
+  onBindPasswordInput: function (e) { this.setData({ bindPassword: e.detail.value }); },
+  onBindPassword2Input: function (e) { this.setData({ bindPassword2: e.detail.value }); },
+  onTrialGroomInput: function (e) { this.setData({ trialGroom: e.detail.value }); },
+  onTrialBrideInput: function (e) { this.setData({ trialBride: e.detail.value }); },
+
+  onGetPhoneNumber: function (e) {
+    const that = this;
+    const detail = (e && e.detail) || {};
+    if (!detail.code) {
+      var msg = detail.errMsg || '';
+      var denied = msg.indexOf('deny') !== -1 || msg.indexOf('cancel') !== -1;
+      wx.showToast({
+        title: denied ? '已取消，可改为手动输入手机号' : '暂无法一键获取，请手动输入手机号',
+        icon: 'none'
+      });
+      return;
+    }
+    this.submitBind({ phoneCode: detail.code });
+  },
+
+  submitBindManual: function () {
+    this.submitBind({ phone: this.data.bindPhone });
+  },
+
+  submitBind: function (extra) {
+    const that = this;
+    const password = this.data.bindPassword || '';
+    const password2 = this.data.bindPassword2 || '';
+    if (!this.data.accountHasPassword) {
+      if (!password || password.length < 6) {
+        wx.showToast({ title: '请设置至少 6 位登录密码', icon: 'none' });
+        return;
+      }
+      if (password !== password2) {
+        wx.showToast({ title: '两次输入的密码不一致', icon: 'none' });
+        return;
+      }
+    }
+    const payload = Object.assign({
+      password: password,
+      passwordConfirm: password2,
+      phone: this.data.bindPhone
+    }, extra || {});
+    this.setData({ bindingAccount: true });
+    api.bindAccount(payload).then(function (acc) {
+      that.setData({ bindingAccount: false, bindPassword: '', bindPassword2: '' });
+      that._applyAccount(acc);
+      wx.showToast({ title: '绑定成功', icon: 'success' });
+      if (acc && acc.ready && acc.isCurrentAdmin) {
+        that.enterWeddingAdmin();
+        return;
+      }
+    }).catch(function (err) {
+      that.setData({ bindingAccount: false });
+      wx.showModal({
+        title: '绑定失败',
+        content: (err && err.message) || '请检查手机号或网络',
+        showCancel: false
+      });
+    });
+  },
+
+  startTrialWedding: function () {
+    const that = this;
+    this.setData({ startingTrial: true });
+    api.startTrialWedding({
+      groomName: this.data.trialGroom,
+      brideName: this.data.trialBride
+    }).then(function (d) {
+      that.setData({ startingTrial: false });
+      const wid = (d && (d.wid || d.id)) || '';
+      if (!wid) throw new Error('未返回婚礼标识');
+      api.setWid(wid);
+      wx.showToast({ title: '已开通基础版', icon: 'success' });
+      that.enterWeddingAdmin();
+    }).catch(function (err) {
+      that.setData({ startingTrial: false });
+      if (err && err.code === 'ALREADY_HAS_WEDDING' && err.data && (err.data.existingWid || err.data.id)) {
+        const wid = err.data.existingWid || err.data.id;
+        api.setWid(wid);
+        that.enterWeddingAdmin();
+        return;
+      }
+      wx.showModal({
+        title: '开通失败',
+        content: (err && err.message) || '请稍后重试',
+        showCancel: false
+      });
+    });
+  },
+
+  enterOwnedWedding: function (e) {
+    const wid = (e.currentTarget.dataset.wid) || '';
+    if (!wid) return;
+    api.setWid(wid);
+    this.enterWeddingAdmin();
+  },
+
 
   copyOpenid: function () {
     if (!this.data.currentOpenid) return;
@@ -488,6 +641,7 @@ Page({
     this.loadRecords(!!forceRecords);
     this.loadLottery();
     this.loadPlan();
+    this.loadMusic();
     if (typeof callback === 'function') callback();
   },
 
@@ -1246,8 +1400,99 @@ Page({
         }
       });
     }).catch(function () {});
+    this.loadMusic();
   },
 
+  loadMusic: function () {
+    const that = this;
+    api.getMusic().then(function (d) {
+      d = d || {};
+      const playing = d.playing || {};
+      const custom = d.custom || {};
+      const def = d.default || {};
+      that.setData({
+        musicLoaded: true,
+        musicEntitled: !!d.entitled,
+        musicHasCustom: !!d.hasCustom && !!d.entitled,
+        musicTitle: custom.title || '',
+        musicPlayingTitle: playing.title || def.title || '红笺良辰',
+        musicDefaultTitle: def.title || '红笺良辰'
+      });
+    }).catch(function () {
+      that.setData({ musicLoaded: true, musicEntitled: false });
+    });
+  },
+
+  onMusicTitleInput: function (e) {
+    this.setData({ musicTitle: e.detail.value });
+  },
+
+  chooseAndUploadMusic: function () {
+    const that = this;
+    if (!this.data.musicEntitled) {
+      api.handleUpgradeError({ needUpgrade: true, message: '自定义背景音乐是高级功能，升级后即可上传自己的音乐，打开小程序就会播放。' });
+      return;
+    }
+    const pick = wx.chooseMessageFile
+      ? function () {
+          return new Promise(function (resolve, reject) {
+            wx.chooseMessageFile({
+              count: 1,
+              type: 'file',
+              extension: ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'flac'],
+              success: function (res) { resolve((res.tempFiles && res.tempFiles[0]) || null); },
+              fail: reject
+            });
+          });
+        }
+      : function () { return Promise.reject(new Error('当前微信版本不支持从聊天选择文件')); };
+    pick().then(function (file) {
+      if (!file || !file.path) throw new Error('请选择音频文件');
+      if (file.size && file.size > 20 * 1024 * 1024) throw new Error('音频不能超过 20MB');
+      that.setData({ uploadingMusic: true, musicProgress: 0 });
+      const title = (that.data.musicTitle || file.name || '').replace(/\.[^.]+$/, '');
+      return qiniuUpload.uploadAudio(file.path, title, function (p) {
+        that.setData({ musicProgress: p || 0 });
+      }, file.name || '');
+    }).then(function () {
+      that.setData({ uploadingMusic: false, musicProgress: 100 });
+      wx.showToast({ title: '已设为背景音乐', icon: 'success' });
+      that.loadMusic();
+      if (app && typeof app.syncWeddingConfig === 'function') {
+        app.syncWeddingConfig(function () {
+          if (app.playBackgroundMusic) app.playBackgroundMusic();
+        });
+      }
+    }).catch(function (err) {
+      that.setData({ uploadingMusic: false });
+      if (api.handleUpgradeError(err)) return;
+      var msg = (err && err.errMsg) || (err && err.message) || '上传失败';
+      if (String(msg).indexOf('cancel') !== -1) return;
+      wx.showModal({ title: '上传失败', content: msg, showCancel: false });
+    });
+  },
+
+  restoreDefaultMusic: function () {
+    const that = this;
+    wx.showModal({
+      title: '恢复默认音乐',
+      content: '去掉本场自定义音乐，改为播放平台默认曲（未设置时为《红笺良辰》）。',
+      success: function (r) {
+        if (!r.confirm) return;
+        api.deleteMusic().then(function () {
+          wx.showToast({ title: '已恢复默认', icon: 'success' });
+          that.loadMusic();
+          if (app && typeof app.syncWeddingConfig === 'function') {
+            app.syncWeddingConfig(function () {
+              if (app.playBackgroundMusic) app.playBackgroundMusic();
+            });
+          }
+        }).catch(function (err) {
+          wx.showModal({ title: '操作失败', content: (err && err.message) || '', showCancel: false });
+        });
+      }
+    });
+  },
 
   onFormDateChange: function (e) {
     const iso = e.detail.value || '';

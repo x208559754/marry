@@ -20,6 +20,9 @@ import { getWxAccessToken } from './wx'
 import { checkTexts, collectTexts, attachTarget } from './moderation'
 import { getWeddingPlan, displayPlan, allowedTheme } from './billing'
 import { getQiniuDomain, foldConfigMedia, expandConfigMedia } from './qiniu'
+import { canCustomizeBgm, getPlatformDefaultBgm, resolvePlayback, storedFromConfig } from './bgm'
+import { genUniqueWid, isValidWid } from './wid'
+import { registerTrialRoutes } from './trial-routes'
 
 export const wedding = new Hono<AppEnv>()
 
@@ -331,6 +334,9 @@ wedding.get('/config', requireWid, async (c) => {
     obj._plan = displayPlan(wp)
     const qiniuDomain = await getQiniuDomain(c.env.DB, c.env)
     expandConfigMedia(obj, qiniuDomain)
+    const platformBgm = await getPlatformDefaultBgm(c.env.DB, c.env)
+    const playing = resolvePlayback(storedFromConfig(obj), canCustomizeBgm(wp), platformBgm, qiniuDomain)
+    obj.music = { url: playing.url, title: playing.title, custom: playing.custom }
     cfg = obj
   }
   return ok(c, cfg)
@@ -350,6 +356,9 @@ wedding.put('/config', requireAdmin, async (c) => {
   if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) return fail(c, '配置必须是 JSON 对象', 400)
 
   const incoming = pickAllowedConfig(cfg as Record<string, unknown>)
+  const wpPut = await getWeddingPlan(c.env.DB, wid)
+  // 自定义背景音乐走 /api/music，未开通高级版时不允许通过配置接口改音乐
+  if (!canCustomizeBgm(wpPut)) delete incoming.music
 
   // 内容安全：只检测本次提交的文字字段（姓名、文案、故事、日程等）
   const texts = collectTexts(incoming)
@@ -772,8 +781,9 @@ wedding.get('/superadmin/weddings', optionalAuth, async (c) => {
 wedding.post('/superadmin/wedding', optionalAuth, async (c) => {
   if (!(await checkSuperAdminAuth(c))) return fail(c, '口令无效或未授权', 403)
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
-  const id = str(body.wid || body.id, 32)
-  if (!/^[A-Za-z0-9_-]{2,32}$/.test(id)) return fail(c, '婚礼标识(wid)需为 2-32 位字母/数字/下划线/中划线', 400)
+  let id = str(body.wid || body.id, 32)
+  if (!id) id = await genUniqueWid(c.env.DB)
+  else if (!isValidWid(id)) return fail(c, '婚礼标识(wid)需为 2-32 位字母/数字/下划线/中划线', 400)
   const groom = str(body.groomName, 64)
   const bride = str(body.brideName, 64)
   const adminOpenid = str(body.adminOpenid, 128)
@@ -826,8 +836,9 @@ wedding.get('/weddings', optionalAuth, async (c) => {
 wedding.post('/weddings', requireAuth, async (c) => {
   if (!isAdminOpenid(c.env, getOpenid(c))) return fail(c, '仅平台超级管理员可创建婚礼', 403)
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
-  const id = str(body.id, 32)
-  if (!/^[A-Za-z0-9_-]{2,32}$/.test(id)) return fail(c, 'wid 需为 2-32 位字母/数字/下划线/中划线', 400)
+  let id = str(body.id || body.wid, 32)
+  if (!id) id = await genUniqueWid(c.env.DB)
+  else if (!isValidWid(id)) return fail(c, 'wid 需为 2-32 位字母/数字/下划线/中划线', 400)
   const groom = str(body.groomName, 64)
   const bride = str(body.brideName, 64)
   const adminOpenid = str(body.adminOpenid, 128)
@@ -938,3 +949,5 @@ wedding.get('/admin/qrcode', requireAdmin, async (c) => {
     return fail(c, '生成小程序码失败：' + (e instanceof Error ? e.message : String(e)), 502)
   }
 })
+
+registerTrialRoutes(wedding)

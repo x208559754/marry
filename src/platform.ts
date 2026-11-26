@@ -10,7 +10,32 @@ import {
   getWeddingPlan, getUsage, logPlan, isExpired, CODE_RE, ALL_THEMES, THEME_NAMES, EFFECTS, EFFECT_NAMES,
 } from './billing'
 import { LABEL_NAMES, resetKeywordCache } from './moderation'
-import { getQiniuDomain, setQiniuDomain, DEFAULT_QINIU_DOMAIN } from './qiniu'
+import {
+  getQiniuDomain,
+  setQiniuDomain,
+  DEFAULT_QINIU_DOMAIN,
+  getQiniuCreds,
+  makeUploadToken,
+  newPlatformAudioKey,
+  platformAudioKeyAllowed,
+  fromQiniuMarker,
+  deleteQiniuObject,
+  uploadBufferToQiniu,
+  AUDIO_MAX_BYTES,
+  AUDIO_MIME_LIMIT,
+} from './qiniu'
+import { clearPlatformDefaultBgm, getPlatformDefaultBgm, setPlatformDefaultBgm, BUNDLED_BGM_TITLE, BUNDLED_BGM_URL } from './bgm'
+
+async function storedDefaultBgmKey(db: { prepare: (sql: string) => any }): Promise<string | null> {
+  const row = await db.prepare("SELECT value FROM config WHERE key = 'default_bgm'").first<{ value: string }>()
+  if (!row?.value) return null
+  try {
+    const parsed = JSON.parse(row.value)
+    return fromQiniuMarker((parsed && parsed.url) || row.value)
+  } catch {
+    return fromQiniuMarker(row.value)
+  }
+}
 
 export const platform = new Hono<AppEnv>()
 
@@ -670,6 +695,58 @@ platform.put('/qiniu-domain', async (c) => {
   const res = await setQiniuDomain(c.env.DB, raw)
   if (!res.ok) return fail(c, res.error, 400)
   return ok(c, { domain: res.domain, key: 'qiniu_domain' })
+})
+
+// 平台默认背景音乐：存在 config.default_bgm。未设置时小程序播放内置《红笺良辰》
+platform.get('/default-bgm', async (c) => {
+  const bgm = await getPlatformDefaultBgm(c.env.DB, c.env)
+  return ok(c, { ...bgm, maxBytes: AUDIO_MAX_BYTES, bundled: { url: BUNDLED_BGM_URL, title: BUNDLED_BGM_TITLE } })
+})
+platform.post('/default-bgm', async (c) => {
+  const creds = getQiniuCreds(c.env)
+  if ('error' in creds) return fail(c, creds.error, 503)
+  const ct = c.req.header('content-type') || ''
+  const prevKey = await storedDefaultBgmKey(c.env.DB)
+  if (ct.includes('multipart/form-data')) {
+    const body = await c.req.parseBody()
+    const file = body.file
+    if (!file || typeof file === 'string') return fail(c, '请选择要上传的音频文件', 400)
+    const fname = (file as File).name || 'bgm.mp3'
+    const buf = new Uint8Array(await (file as File).arrayBuffer())
+    if (!buf.byteLength) return fail(c, '音频文件是空的', 400)
+    if (buf.byteLength > AUDIO_MAX_BYTES) return fail(c, '音频不能超过 20MB', 400)
+    const titleRaw = typeof body.title === 'string' ? body.title.trim().slice(0, 80) : ''
+    const key = newPlatformAudioKey(fname)
+    const minted = await makeUploadToken(creds, key, { fsizeLimit: AUDIO_MAX_BYTES, mimeLimit: AUDIO_MIME_LIMIT })
+    await uploadBufferToQiniu(creds, key, buf, minted.token, (file as File).type || 'audio/mpeg')
+    const title = titleRaw || fname.replace(/\.[^.]+$/, '')
+    const bgm = await setPlatformDefaultBgm(c.env.DB, c.env, { key, title })
+    if (prevKey && prevKey !== key) {
+      try { await deleteQiniuObject(creds, prevKey) } catch {}
+    }
+    return ok(c, bgm)
+  }
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const key = typeof body.key === 'string' ? body.key.trim() : ''
+  const title = typeof body.title === 'string' ? body.title.trim().slice(0, 80) : ''
+  if (key && !platformAudioKeyAllowed(key)) return fail(c, '无效的音频文件路径', 400)
+  if (!key && typeof body.url !== 'string') return fail(c, '缺少音频文件', 400)
+  const bgm = await setPlatformDefaultBgm(c.env.DB, c.env, { key, url: typeof body.url === 'string' ? body.url : '', title })
+  const nextKey = await storedDefaultBgmKey(c.env.DB)
+  if (prevKey && nextKey && prevKey !== nextKey) {
+    try { await deleteQiniuObject(creds, prevKey) } catch {}
+  }
+  return ok(c, bgm)
+})
+platform.delete('/default-bgm', async (c) => {
+  const creds = getQiniuCreds(c.env)
+  const prevKey = await storedDefaultBgmKey(c.env.DB)
+  await clearPlatformDefaultBgm(c.env.DB)
+  if (prevKey && !('error' in creds)) {
+    try { await deleteQiniuObject(creds, prevKey) } catch {}
+  }
+  const bgm = await getPlatformDefaultBgm(c.env.DB, c.env)
+  return ok(c, bgm)
 })
 
 // ---------------- 修改总后台密码 ----------------

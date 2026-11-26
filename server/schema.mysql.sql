@@ -89,6 +89,17 @@ CREATE TABLE IF NOT EXISTS config (
 INSERT IGNORE INTO config (`key`, value) VALUES ('super_admin_passcode', 'root@123');
 INSERT IGNORE INTO config (`key`, value) VALUES ('qiniu_domain', 'https://qn.youxitie.site');
 
+-- 试用账号：openid 绑定手机号 + 登录密码（scrypt 哈希，不明文）
+CREATE TABLE IF NOT EXISTS accounts (
+  openid VARCHAR(128) NOT NULL PRIMARY KEY,
+  phone VARCHAR(32) NULL,
+  password_hash VARCHAR(255) NULL,
+  created_at VARCHAR(40) NOT NULL DEFAULT (DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-%d %H:%i:%s')),
+  updated_at VARCHAR(40) NOT NULL DEFAULT (DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-%d %H:%i:%s')),
+  UNIQUE KEY uq_accounts_phone (phone)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+
 CREATE TABLE IF NOT EXISTS heart_clicks (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   wedding_id VARCHAR(64) NOT NULL,

@@ -1450,3 +1450,22 @@ button.lt-reset-btn {
 .plan-tier-paid .pp-off, .plan-tier-top .pp-off { color: rgba(255, 240, 220, 0.7); background: rgba(255, 240, 220, 0.12); }
 .lt-theme-locked { opacity: 0.72; }
 .lt-swatch-lock { position: absolute; left: 0; right: 0; bottom: 0; padding: 4rpx 0; background: rgba(0, 0, 0, 0.55); color: #f6dfa8; font-size: 18rpx; text-align: center; }
+
+
+/* 试用开通 / 背景音乐 */
+.onboard-block { margin-top: 24rpx; }
+.lock-sub { display: block; font-size: 24rpx; color: #8A7A6C; line-height: 1.6; margin: 8rpx 0 16rpx; }
+.owned-wid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 24rpx;
+  margin: 12rpx 0;
+  background: #FDF8F0;
+  border-radius: 12rpx;
+  border: 1rpx solid #E8D9C4;
+}
+.owned-name { font-size: 28rpx; color: #5C3A32; }
+.owned-id { font-size: 24rpx; color: #8B1E1E; }
+.music-card { margin-top: 48rpx; padding-top: 24rpx; border-top: 1rpx dashed #E5D5BA; }
+.mf-tip { display: block; font-size: 24rpx; color: #8A7A6C; margin: 0 0 20rpx; line-height: 1.5; }

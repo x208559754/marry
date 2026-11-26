@@ -98,6 +98,7 @@ function request(method, path, data) {
       var err = new Error((body && body.error) || ('请求失败（HTTP ' + res.statusCode + '）'));
       if (res.statusCode === 404) err.notFound = true;
       if (body && body.code) err.code = body.code;
+      if (body && body.data) err.data = body.data;
       if (body && body.code === 'WEDDING_DISABLED') err.disabled = true; // 婚礼被平台停用
       if (res.statusCode === 402 || (body && body.needUpgrade)) err.needUpgrade = true; // 超出免费版限制
       if (res.statusCode === 422) err.blocked = true; // 内容安全拦截
@@ -630,6 +631,55 @@ function logout() {
   if (app && app.globalData) app.globalData.isAdmin = false;
 }
 
+// ---------------- 试用账号 / 自定义背景音乐 ----------------
+
+function getAccount() {
+  return ensureLogin().then(function () {
+    return request('GET', widPath('/api/account'));
+  });
+}
+
+function bindAccount(data) {
+  return ensureLogin().then(function () {
+    return request('POST', '/api/account/bind', data || {});
+  });
+}
+
+function verifyAccountPassword(password) {
+  return ensureLogin().then(function () {
+    return request('POST', '/api/account/verify', { password: password });
+  });
+}
+
+function startTrialWedding(data) {
+  return ensureLogin().then(function () {
+    return request('POST', '/api/account/start', data || {});
+  });
+}
+
+function getMusic() {
+  return request('GET', widPath('/api/music'));
+}
+
+function getMusicUploadToken(filename) {
+  return ensureLogin().then(function () {
+    return request('POST', widPath('/api/music/token'), { filename: filename || '' });
+  });
+}
+
+function saveMusic(data) {
+  return ensureLogin().then(function () {
+    return request('POST', widPath('/api/music'), data || {});
+  });
+}
+
+function deleteMusic() {
+  return ensureLogin().then(function () {
+    return request('DELETE', widPath('/api/music'));
+  });
+}
+
+
 module.exports = {
   BASE_URL: BASE_URL,
   // 登录态 / 婚礼标识
@@ -672,6 +722,14 @@ module.exports = {
   syncUserToNotion: syncUserToNotion,
   bindGuestOpenid: bindGuestOpenid,
   getPhoneNumber: getPhoneNumber,
+  getAccount: getAccount,
+  bindAccount: bindAccount,
+  verifyAccountPassword: verifyAccountPassword,
+  startTrialWedding: startTrialWedding,
+  getMusic: getMusic,
+  getMusicUploadToken: getMusicUploadToken,
+  saveMusic: saveMusic,
+  deleteMusic: deleteMusic,
   // 现场抽奖
   getLotteryScreenUrl: getLotteryScreenUrl,
   getLotteryAdmin: getLotteryAdmin,

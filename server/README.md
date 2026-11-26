@@ -15,7 +15,7 @@
 
 .env 变量：DATABASE_URL、IMGBB_API_KEY、WX_APPID、WX_APPSECRET、WX_MOCK_LOGIN、SESSION_SECRET、ADMIN_OPENIDS、HOST、PORT
   七牛视频直传（密钥只放环境变量，切勿写入仓库）：QINIU_AK、QINIU_SK、QINIU_BUCKET（youxisite）、QINIU_UPLOAD_URL（默认 https://up-z2.qiniup.com，华南 z2）、可选 QINIU_RS_URL；
-  访问域名存在数据库 `config` 表、键名 `qiniu_domain`（默认 https://qn.youxitie.site），运行时读取并短缓存，改库即生效、不必重启。环境变量 QINIU_DOMAIN 仅作兜底。可在 `/platform`「设置」里修改。
+  访问域名存在数据库 `config` 表、键名 `qiniu_domain`（默认 https://qn.youxitie.site），运行时读取并短缓存，改库即生效、不必重启。环境变量 QINIU_DOMAIN 仅作兜底。可在 `/platform`「设置」里修改。默认背景音乐也在同一页上传，记在 `config.default_bgm`；高级版婚礼可再上传自己的曲目（`audio/<wid>/...`）。试用账号（手机号+登录密码哈希）存在 `accounts` 表，新婚礼的 `wid` 为去横线的 UUID。
 
 ### 平台总后台
 - 网址：`https://youxitie.site/platform`（接口 `/api/platform/*`），用 `PLATFORM_ADMIN_PASSWORD` 登录（≥12 位，改密码后旧登录立即失效）

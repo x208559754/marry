@@ -629,9 +629,11 @@ function planEditor(p){
 
 // ---------------- 设置（敏感词） ----------------
 VIEWS.pricing = function(){
-  Promise.all([api('GET', '/keywords'), api('GET', '/qiniu-domain')]).then(function(arr){
+  Promise.all([api('GET', '/keywords'), api('GET', '/qiniu-domain'), api('GET', '/default-bgm')]).then(function(arr){
     var kw = arr[0].keywords;
     var domain = (arr[1] && arr[1].domain) || 'https://qn.youxitie.site';
+    var bgm = arr[2] || {};
+    var bgmLabel = (bgm.title || '红笺良辰') + (bgm.source === 'platform' ? '（已上传自定义默认曲）' : '（内置《红笺良辰》）');
     var html = head('设置', '账号安全与内容安全；价格和套餐权益在「套餐管理」');
     html += '<div class="card" id="pwCard"><h3>修改密码</h3><div class="muted" style="margin-bottom:10px;font-size:13px">密码保存在服务器数据库中，修改后其它已登录的会话会立即失效。</div>';
     html += '<div class="form" style="max-width:420px">';
@@ -642,10 +644,42 @@ VIEWS.pricing = function(){
     html += '<div class="card"><h3>七牛云访问域名</h3><div class="muted" style="margin-bottom:8px;font-size:13px">存于数据库 <code>config</code> 表，键名 <code>qiniu_domain</code>。库里只保存视频文件路径，展示时用这里的域名拼接。改完大约 30 秒内生效，不必重启服务。AccessKey / SecretKey 仍放在服务器环境变量，不会写入数据库。更换域名后，还需要在小程序后台同步更新 downloadFile 合法域名。</div>';
     html += '<div class="form" style="max-width:520px"><label>访问域名（https）</label><input id="qnDomain" type="url" value="' + esc(domain) + '" placeholder="https://qn.youxitie.site"></div>';
     html += '<div class="bar" style="margin:10px 0 0"><button class="pri" id="qnSave">保存域名</button></div></div>';
+    html += '<div class="card"><h3>默认背景音乐</h3><div class="muted" style="margin-bottom:8px;font-size:13px">未开通高级版的婚礼、以及高级版但还没自己上传音乐的婚礼，打开小程序后都会播放这首。未上传时使用内置主题曲《红笺良辰》。文件存到七牛，路径记在数据库 <code>config.default_bgm</code>。建议 mp3 / m4a，不超过 20MB。</div>';
+    html += '<div class="muted" style="margin-bottom:8px">当前：' + esc(bgmLabel) + (bgm.url ? ' · <a href="' + esc(bgm.url) + '" target="_blank" rel="noopener">试听</a>' : '') + '</div>';
+    html += '<div class="form" style="max-width:520px"><label>歌曲名称</label><input id="bgmTitle" type="text" maxlength="80" value="' + esc(bgm.source === 'platform' ? (bgm.title || '') : '') + '" placeholder="如：红笺良辰">';
+    html += '<label>音频文件</label><input id="bgmFile" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg"></div>';
+    html += '<div class="bar" style="margin:10px 0 0"><button class="pri" id="bgmSave">上传并设为默认</button> <button id="bgmClear">恢复内置《红笺良辰》</button></div></div>';
     html += '<div class="card"><h3>平台补充敏感词</h3><div class="muted" style="margin-bottom:8px;font-size:13px">在微信内容安全接口之外额外拦截的词，一行一个或用逗号分隔。</div><textarea id="kw" rows="8" style="width:100%">' + esc(kw) + '</textarea><div class="bar" style="margin:10px 0 0"><button class="pri" id="kwSave">保存敏感词</button> <a data-go="plans">去套餐管理改价格 →</a></div></div>';
     main.innerHTML = html;
     $('pwBtn').onclick = doChangePw;
     $('qnSave').onclick = function(){ api('PUT', '/qiniu-domain', { domain: $('qnDomain').value }).then(function(r){ toast('已保存：' + (r.domain || '')); }).catch(fail); };
+    $('bgmSave').onclick = function(){
+      var f = $('bgmFile').files && $('bgmFile').files[0];
+      if (!f) { toast('请先选择音频文件'); return; }
+      if (f.size > 20 * 1024 * 1024) { toast('音频不能超过 20MB'); return; }
+      var fd = new FormData();
+      fd.append('file', f);
+      fd.append('title', $('bgmTitle').value || f.name);
+      $('bgmSave').disabled = true;
+      fetch('/api/platform/default-bgm', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + TOKEN },
+        body: fd
+      }).then(function(r){
+        return r.json().catch(function(){ return { ok: false, error: '服务器错误 ' + r.status }; }).then(function(j){
+          if (r.status === 401) { logout(); throw new Error(j.error || '请重新登录'); }
+          if (!j.ok) throw new Error(j.error || '上传失败');
+          return j.data;
+        });
+      }).then(function(d){
+        toast('已设为默认：' + ((d && d.title) || ''));
+        go('pricing');
+      }).catch(fail).then(function(){ $('bgmSave').disabled = false; });
+    };
+    $('bgmClear').onclick = function(){
+      if (!confirm('恢复为内置主题曲《红笺良辰》？已上传的默认音频会被删除。')) return;
+      api('DELETE', '/default-bgm').then(function(){ toast('已恢复内置主题曲'); go('pricing'); }).catch(fail);
+    };
     $('kwSave').onclick = function(){ api('PUT', '/keywords', { keywords: $('kw').value }).then(function(){ toast('敏感词已保存'); }).catch(fail); };
     main.querySelector('[data-go]').onclick = function(){ go('plans'); };
   }).catch(fail);

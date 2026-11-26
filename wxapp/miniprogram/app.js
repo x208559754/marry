@@ -389,10 +389,11 @@ App({
     const rawUrl = (config && config.music && config.music.url) ? String(config.music.url).trim() : '';
     const useDefault = !rawUrl || rawUrl.indexOf('actions.google.com') !== -1;
     const musicUrl = useDefault ? 'https://youxitie.site/brand/bgm.mp3' : rawUrl;
-    const musicTitle = (!useDefault && config && config.music && config.music.title) ? config.music.title : '红笺良辰';
+    const musicTitle = (config && config.music && config.music.title) ? config.music.title : '红笺良辰';
+    const isCustom = !!(config && config.music && config.music.custom);
 
     bgm.title = musicTitle;
-    bgm.singer = '有囍請柬 · 原创浪漫主题曲';
+    bgm.singer = isCustom ? '婚礼背景音乐' : '有囍請柬 · 原创浪漫主题曲';
     bgm.coverImgUrl = 'https://youxitie.site/brand/mark.png';
     bgm.src = musicUrl;
   },

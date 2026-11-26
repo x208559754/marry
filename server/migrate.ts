@@ -76,6 +76,15 @@ const TABLES = [
     created_at VARCHAR(40) NOT NULL DEFAULT (DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-%d %H:%i:%s')),
     KEY idx_planlog_wedding (wedding_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+  // 试用账号（按微信 openid 绑定手机号、保存登录密码哈希）
+  `CREATE TABLE IF NOT EXISTS accounts (
+    openid VARCHAR(128) NOT NULL PRIMARY KEY,
+    phone VARCHAR(32) NULL,
+    password_hash VARCHAR(255) NULL,
+    created_at VARCHAR(40) NOT NULL DEFAULT (DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-%d %H:%i:%s')),
+    updated_at VARCHAR(40) NOT NULL DEFAULT (DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-%d %H:%i:%s')),
+    UNIQUE KEY uq_accounts_phone (phone)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
   // 平台总后台账号（密码为 scrypt 加盐哈希；首次启动由 PLATFORM_ADMIN_PASSWORD 写入）
   `CREATE TABLE IF NOT EXISTS platform_admins (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
