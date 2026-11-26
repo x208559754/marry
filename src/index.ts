@@ -5,6 +5,7 @@ import { site } from './site'
 import lockup from './brand-lockup.png'
 import mark from './brand-mark.png'
 import waxSeal from './wax-seal.png'
+import miniprogramQr from './miniprogram-qr.png'
 import bgmAudio from './bgm.mp3'
 import wechatQr from './wechat-qr.png'
 import type { AppEnv } from './auth'
@@ -125,6 +126,15 @@ app.get('/brand/mark.png', () => {
 
 app.get('/brand/wax-seal.png', () => {
   return new Response(waxSeal, {
+    headers: {
+      'content-type': 'image/png',
+      'cache-control': 'public, max-age=86400',
+    },
+  })
+})
+
+app.get('/brand/miniprogram-qr.png', () => {
+  return new Response(miniprogramQr, {
     headers: {
       'content-type': 'image/png',
       'cache-control': 'public, max-age=86400',

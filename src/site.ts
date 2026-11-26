@@ -1082,7 +1082,581 @@ export const site = `<!DOCTYPE html>
     letter-spacing: 0.12em;
   }
 
+  /* ===== 开屏与官网丰富动效增强 ===== */
+  /* 1) 开屏：暗金花枝与双拱线如画笔徐徐勾勒 */
+  .wing-ornament path {
+    stroke-dasharray: 1200;
+    stroke-dashoffset: 1200;
+    animation: goldDraw 1.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+  }
+  .wing-floral path {
+    stroke-dasharray: 460;
+    stroke-dashoffset: 460;
+    animation: goldDraw 2.1s cubic-bezier(0.22, 1, 0.36, 1) 0.35s forwards;
+  }
+  .wing-floral circle {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: blossomPop 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1.25s forwards;
+  }
+  @keyframes goldDraw {
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes blossomPop {
+    from { opacity: 0; transform: scale(0.2); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* 2) 开屏：丝绒斜向暖金流光掠过 + 鼠标烛光跟随 */
+  .splash-sheen {
+    position: absolute;
+    inset: -20%;
+    z-index: 6;
+    pointer-events: none;
+    background: linear-gradient(112deg, transparent 36%, rgba(255, 232, 186, 0.08) 48%, rgba(255, 240, 204, 0.14) 50%, rgba(255, 232, 186, 0.07) 52%, transparent 64%);
+    transform: translate3d(-70%, 0, 0);
+    animation: velvetSweep 7.6s ease-in-out 1s infinite;
+  }
+  @keyframes velvetSweep {
+    0%, 24% { transform: translate3d(-75%, 0, 0); opacity: 0; }
+    38% { opacity: 1; }
+    64% { transform: translate3d(75%, 0, 0); opacity: 0.85; }
+    72%, 100% { transform: translate3d(75%, 0, 0); opacity: 0; }
+  }
+  .splash.is-wings-open .splash-sheen {
+    opacity: 0;
+    animation: none;
+  }
+  .splash-pointer {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 360px;
+    height: 360px;
+    margin: -180px 0 0 -180px;
+    border-radius: 50%;
+    z-index: 6;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(255, 224, 168, 0.18) 0%, rgba(244, 176, 152, 0.07) 42%, transparent 72%);
+    opacity: 0;
+    transition: opacity 0.55s ease;
+    will-change: transform;
+  }
+  .splash.has-pointer .splash-pointer { opacity: 1; }
+  .splash.is-wings-open .splash-pointer { opacity: 0; }
+
+  /* 3) 开屏：更多 3D 旋落花瓣 & 上升流金微尘 */
+  .sp-petal.p6 { left: 6%; animation-duration: 15.2s; animation-delay: 1.8s; width: 10px; height: 14px; }
+  .sp-petal.p7 { left: 23%; animation-duration: 13.8s; animation-delay: 6.4s; width: 13px; height: 18px; }
+  .sp-petal.p8 { left: 63%; animation-duration: 16.2s; animation-delay: 3.1s; width: 9px; height: 13px; }
+  .sp-petal.p9 { left: 80%; animation-duration: 12.6s; animation-delay: 7.2s; width: 11px; height: 15px; }
+  .sp-petal.p10 { left: 93%; animation-duration: 15.8s; animation-delay: 0.9s; width: 8px; height: 12px; }
+  @keyframes spDrift {
+    0% { transform: translate3d(0, -14px, 0) rotateX(0deg) rotateY(0deg) rotateZ(0deg); opacity: 0; }
+    12% { opacity: 0.72; }
+    35% { transform: translate3d(34px, 34vh, 0) rotateX(110deg) rotateY(65deg) rotateZ(95deg); opacity: 0.56; }
+    70% { transform: translate3d(-24px, 72vh, 0) rotateX(230deg) rotateY(150deg) rotateZ(205deg); opacity: 0.42; }
+    100% { transform: translate3d(20px, 108vh, 0) rotateX(340deg) rotateY(220deg) rotateZ(310deg); opacity: 0; }
+  }
+  .sp-rise {
+    position: absolute;
+    bottom: -12px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff0c2 0%, rgba(242, 198, 120, 0.5) 55%, transparent 100%);
+    opacity: 0;
+    animation: spFloatUp 10s linear infinite;
+  }
+  .sp-rise.r1 { left: 16%; animation-duration: 9.5s; animation-delay: 0s; width: 5px; height: 5px; }
+  .sp-rise.r2 { left: 29%; animation-duration: 11.4s; animation-delay: 2.2s; }
+  .sp-rise.r3 { left: 42%; animation-duration: 8.8s; animation-delay: 4.1s; width: 6px; height: 6px; }
+  .sp-rise.r4 { left: 58%; animation-duration: 10.6s; animation-delay: 1.3s; }
+  .sp-rise.r5 { left: 72%; animation-duration: 12s; animation-delay: 3.4s; width: 5px; height: 5px; }
+  .sp-rise.r6 { left: 85%; animation-duration: 9.2s; animation-delay: 5.2s; }
+  @keyframes spFloatUp {
+    0% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
+    18% { opacity: 0.85; }
+    50% { transform: translate3d(18px, -48vh, 0) scale(1.15); opacity: 0.65; }
+    85% { opacity: 0.28; }
+    100% { transform: translate3d(-14px, -96vh, 0) scale(0.4); opacity: 0; }
+  }
+
+  /* 4) 破印双环涟漪 + 18 颗金粉星芒粒子 + 3D 门扉透视对开 + 素绢红印落章 */
+  .seal-burst-2 {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 236, 196, 0.72);
+    transform: scale(0.65);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .splash.is-unsealing .seal-burst-2 {
+    animation: sealRipple 1.08s cubic-bezier(0.16, 1, 0.3, 1) 0.16s forwards;
+  }
+  .seal-sparks {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .seal-spark {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--sz, 6px);
+    height: var(--sz, 6px);
+    margin-left: calc(var(--sz, 6px) * -0.5);
+    margin-top: calc(var(--sz, 6px) * -0.5);
+    border-radius: var(--rad, 50%);
+    background: var(--col, #ffe8b0);
+    box-shadow: 0 0 10px rgba(255, 224, 152, 0.85);
+    animation: sparkFly var(--dur, 0.9s) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes sparkFly {
+    0% { transform: translate3d(0, 0, 0) scale(0.4) rotate(0deg); opacity: 1; }
+    65% { opacity: 0.92; }
+    100% { transform: translate3d(var(--tx), var(--ty), 0) scale(0.15) rotate(var(--rot, 160deg)); opacity: 0; }
+  }
+  .splash { perspective: 1500px; }
+  .splash-wing.is-left { transform-origin: left center; }
+  .splash-wing.is-right { transform-origin: right center; }
+  .splash.is-wings-open .splash-wing.is-left {
+    transform: translate3d(-104%, 0, 0) rotateY(14deg);
+  }
+  .splash.is-wings-open .splash-wing.is-right {
+    transform: translate3d(104%, 0, 0) rotateY(-14deg);
+  }
+  .vellum-mark {
+    transform: scale(1.28);
+    opacity: 0;
+    transition: transform 0.68s cubic-bezier(0.22, 1, 0.36, 1) 0.28s, opacity 0.52s ease 0.28s;
+  }
+  .splash.is-wings-open .vellum-mark {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  /* 5) 官网阅读流金进度条 & 全局轻盈氛围光斑/花瓣 */
+  .nav-progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--red), #d4a65a, #e8b4be);
+    transform-origin: left center;
+    transform: scaleX(0);
+    pointer-events: none;
+    transition: transform 0.08s linear;
+  }
+  .page-ambient {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  main, footer { position: relative; z-index: 1; }
+  header.nav { z-index: 20; }
+  .pa-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(64px);
+    opacity: 0.42;
+    animation: paFloat 16s ease-in-out infinite;
+  }
+  .pa-orb.o1 { width: 420px; height: 420px; left: -100px; top: 8%; background: radial-gradient(circle, rgba(226, 164, 174, 0.42), transparent 70%); }
+  .pa-orb.o2 { width: 380px; height: 380px; right: -80px; top: 44%; background: radial-gradient(circle, rgba(214, 180, 126, 0.36), transparent 70%); animation-delay: 5s; animation-duration: 19s; }
+  @keyframes paFloat {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(24px, -28px, 0) scale(1.08); }
+  }
+  .pa-petal {
+    position: absolute;
+    top: -24px;
+    width: 9px;
+    height: 13px;
+    border-radius: 85% 0 85% 0;
+    background: linear-gradient(145deg, rgba(236, 178, 190, 0.55), rgba(214, 166, 120, 0.25));
+    opacity: 0;
+    animation: paDrift 20s linear infinite;
+  }
+  .pa-petal.pp1 { left: 9%; animation-duration: 19s; }
+  .pa-petal.pp2 { left: 34%; animation-duration: 23s; animation-delay: 4s; width: 8px; height: 11px; }
+  .pa-petal.pp3 { left: 68%; animation-duration: 21s; animation-delay: 8s; }
+  .pa-petal.pp4 { left: 89%; animation-duration: 24s; animation-delay: 12s; width: 10px; height: 14px; }
+  @keyframes paDrift {
+    0% { transform: translate3d(0, -10px, 0) rotate(0deg); opacity: 0; }
+    10% { opacity: 0.45; }
+    50% { transform: translate3d(38px, 50vh, 0) rotate(145deg); opacity: 0.32; }
+    90% { opacity: 0.2; }
+    100% { transform: translate3d(-20px, 106vh, 0) rotate(280deg); opacity: 0; }
+  }
+
+  /* 6) 导航链接、按钮流光、卡片与步骤微交互 */
+  .brand img { transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1); }
+  .brand:hover img { transform: rotate(-10deg) scale(1.06); }
+  .nav-links a { position: relative; padding: 4px 0; transition: color 0.25s ease; }
+  .nav-links a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1.5px;
+    background: linear-gradient(90deg, var(--red), var(--gold));
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .nav-links a:hover::after { transform: scaleX(1); }
+  .nav-ask, .btn {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease, background 0.25s ease, color 0.25s ease;
+  }
+  .nav-ask::after, .btn:not(.ghost)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 30%, rgba(255, 245, 224, 0.34) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .nav-ask:hover::after, .btn:not(.ghost):hover::after { transform: translateX(120%); }
+  .nav-ask:hover, .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(139, 30, 30, 0.2); }
+  .btn.ghost:hover { background: rgba(139, 30, 30, 0.05); box-shadow: inset 0 0 0 1px var(--red), 0 8px 18px rgba(139, 30, 30, 0.1); }
+  .nav-ask:active, .btn:active { transform: translateY(0) scale(0.97); }
+
+  .hero .kicker { display: inline-flex; align-items: center; gap: 10px; }
+  .hero .kicker::before {
+    content: "";
+    display: inline-block;
+    width: 28px;
+    height: 1px;
+    background: linear-gradient(90deg, var(--red), var(--gold));
+    transform-origin: left center;
+    transform: scaleX(0);
+    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.28s;
+  }
+  html.is-revealed .hero .kicker::before,
+  html:not(.is-sealed) .hero .kicker::before { transform: scaleX(1); }
+
+  .node {
+    transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+  }
+  .node:hover { transform: translateX(5px); }
+  .node.is-on { transform: translateX(6px); }
+  .detail { transition: border-color 0.35s ease, box-shadow 0.35s ease; }
+  .detail.is-swap h3,
+  .detail.is-swap p {
+    animation: detailSwap 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes detailSwap {
+    from { opacity: 0; transform: translate3d(0, 8px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+
+  .card {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease, box-shadow 0.34s ease;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    top: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), var(--red), transparent);
+    opacity: 0;
+    transform: scaleX(0.3);
+    transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(166, 132, 86, 0.55);
+    box-shadow: 0 18px 36px -14px rgba(108, 42, 36, 0.14);
+  }
+  .card:hover::before { opacity: 1; transform: scaleX(1); }
+  .card .ix { display: inline-block; transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), color 0.3s ease; }
+  .card:hover .ix { transform: translateX(4px); color: var(--red); }
+
+  .step {
+    transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease, box-shadow 0.34s ease;
+  }
+  .step:hover {
+    transform: translateY(-5px);
+    border-color: rgba(166, 132, 86, 0.55);
+    box-shadow: 0 16px 32px -14px rgba(108, 42, 36, 0.14);
+  }
+  .step b { transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease; }
+  .step:hover b { transform: scale(1.1); background: var(--red); color: #fffaf4; box-shadow: 0 6px 18px rgba(139, 30, 30, 0.26); }
+
+  .kefu-card { transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.34s ease; }
+  .kefu-card:hover { transform: translateY(-4px); box-shadow: 0 18px 40px -12px rgba(108, 42, 36, 0.14); }
+
+  /* 7) 悬浮问小囍脉冲光环 & 丝滑聊天弹窗展开 */
+  .fab { transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease; }
+  .fab::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(139, 30, 30, 0.36);
+    opacity: 0;
+    pointer-events: none;
+    animation: fabPing 3.8s ease-out infinite;
+  }
+  @keyframes fabPing {
+    0% { transform: scale(0.95); opacity: 0.7; }
+    60% { transform: scale(1.14, 1.32); opacity: 0; }
+    100% { opacity: 0; }
+  }
+  .fab:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 14px 28px rgba(139, 30, 30, 0.3); }
+  .chat {
+    display: flex;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translate3d(0, 16px, 0) scale(0.96);
+    transform-origin: bottom right;
+    transition: opacity 0.28s ease, transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.28s ease;
+  }
+  .chat.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  .msg { animation: msgIn 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.98); }
+    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  }
+  .chip { transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease; }
+  .chip:hover { transform: translateY(-1px); background: #fff6f4; border-color: rgba(139, 30, 30, 0.36); }
+
+  /* 8) 五套颜色主题全系动态特效 + 切卡纸张轻翻动效 */
+  .look-item { transition: opacity 0.25s ease, background 0.3s ease; }
+  .look-mark { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease, color 0.35s ease; }
+  .theme-paper { transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.36s ease, box-shadow 0.4s ease; }
+  .look-sheet.is-flipping .theme-paper {
+    animation: cardMorph 0.56s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .look-sheet.is-flipping .look-mark {
+    animation: markGlide 0.64s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes cardMorph {
+    0% { opacity: 0.45; transform: translate3d(0, 14px, 0) scale(0.96); }
+    100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  }
+  @keyframes markGlide {
+    0% { opacity: 0; transform: translate3d(24px, 14px, 0) scale(0.9); }
+    100% { opacity: 0.09; transform: translate3d(0, 0, 0) scale(1); }
+  }
+  .splash-center { transition: transform 0.28s ease-out; will-change: transform; }
+  .is-chinese .petal {
+    display: block; position: absolute; bottom: -16px; width: 8px; height: 8px; border-radius: 50%;
+    background: radial-gradient(circle, #d49632 0%, rgba(196, 138, 48, 0.72) 55%, transparent 100%);
+    box-shadow: 0 0 8px rgba(212, 150, 50, 0.45);
+    opacity: 0; pointer-events: none;
+    animation-name: goldRise; animation-duration: 7.5s; animation-timing-function: ease-in-out; animation-iteration-count: infinite;
+  }
+  .is-french .petal {
+    display: block; position: absolute; bottom: -20px; width: 18px; height: 18px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(224, 174, 96, 0.65), rgba(231, 201, 138, 0.22) 65%, transparent 100%);
+    filter: blur(0.6px); opacity: 0; pointer-events: none;
+    animation-name: goldRise; animation-duration: 9s; animation-timing-function: ease-in-out; animation-iteration-count: infinite;
+  }
+  .is-forest .petal {
+    display: block; position: absolute; top: -24px; width: 13px; height: 18px; border-radius: 90% 0 90% 0;
+    background: linear-gradient(135deg, rgba(134, 239, 172, 0.78), rgba(22, 101, 52, 0.32));
+    opacity: 0.78; pointer-events: none;
+    animation-name: fall; animation-duration: 11s; animation-timing-function: linear; animation-iteration-count: infinite;
+  }
+  .look-sheet .petal:nth-child(1) { left: 8%; animation-delay: 0s; animation-duration: 8.2s; }
+  .look-sheet .petal:nth-child(2) { left: 28%; animation-delay: 1.5s; animation-duration: 9.4s; }
+  .look-sheet .petal:nth-child(3) { left: 52%; animation-delay: 3s; animation-duration: 10.8s; }
+  .look-sheet .petal:nth-child(4) { left: 70%; animation-delay: 0.6s; animation-duration: 8.8s; }
+  .look-sheet .petal:nth-child(5) { left: 86%; animation-delay: 2.4s; animation-duration: 10s; }
+  .look-sheet .petal:nth-child(6) { left: 18%; animation-delay: 4.1s; animation-duration: 9.6s; }
+  .look-sheet .petal:nth-child(7) { left: 42%; animation-delay: 1.9s; animation-duration: 8.6s; }
+  .look-sheet .petal:nth-child(8) { left: 61%; animation-delay: 5.2s; animation-duration: 10.4s; }
+  .look-sheet .petal:nth-child(9) { left: 92%; animation-delay: 3.4s; animation-duration: 9.2s; }
+  .is-minimal::after {
+    content: "";
+    position: absolute;
+    inset: -30%;
+    pointer-events: none;
+    background: linear-gradient(118deg, transparent 40%, rgba(255, 255, 255, 0.72) 50%, transparent 60%);
+    animation: galleryBeam 6.5s ease-in-out infinite;
+  }
+  @keyframes goldRise {
+    0% { transform: translate3d(0, 0, 0) scale(0.5); opacity: 0; }
+    20% { opacity: 0.85; }
+    75% { opacity: 0.55; }
+    100% { transform: translate3d(20px, -460px, 0) scale(1.25); opacity: 0; }
+  }
+  @keyframes galleryBeam {
+    0%, 20% { transform: translateX(-70%); opacity: 0; }
+    45% { opacity: 1; }
+    75%, 100% { transform: translateX(70%); opacity: 0; }
+  }
+
+  /* 9) 顶部导航栏「小程序码」入口（悬浮预览 + 点击放大扫码弹窗） */
+  .nav-qr-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+  .nav-qr {
+    border: 1px solid rgba(166, 132, 86, 0.52);
+    background: linear-gradient(135deg, #fffdf9, #fff5e9);
+    color: var(--red);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font: inherit;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(139, 30, 30, 0.06);
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  }
+  .nav-qr:hover {
+    transform: translateY(-1.5px);
+    border-color: var(--red);
+    background: #fff8f2;
+    box-shadow: 0 8px 18px rgba(139, 30, 30, 0.14);
+  }
+  .nav-qr:focus-visible {
+    outline: 2px solid var(--red);
+    outline-offset: 2px;
+  }
+  .nav-qr-ic { flex: none; opacity: 0.88; }
+  .nav-qr-pop {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: 192px;
+    padding: 16px 14px 13px;
+    border-radius: 20px;
+    background: linear-gradient(165deg, #fffdf9, #fff5eb);
+    border: 1px solid rgba(196, 161, 90, 0.45);
+    box-shadow: 0 18px 42px rgba(44, 24, 22, 0.18);
+    text-align: center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translate3d(0, 8px, 0) scale(0.96);
+    transform-origin: top right;
+    transition: opacity 0.24s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.24s ease;
+    z-index: 35;
+  }
+  .nav-qr-pop img {
+    width: 148px;
+    height: 148px;
+    display: block;
+    margin: 0 auto 8px;
+    padding: 7px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(139, 30, 30, 0.1), 0 0 0 1px rgba(196, 161, 90, 0.36);
+  }
+  .nav-qr-pop span {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .nav-qr-wrap:hover .nav-qr-pop {
+      opacity: 1;
+      visibility: visible;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+  .qr-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(36, 10, 14, 0.56);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.28s ease, visibility 0.28s ease;
+  }
+  .qr-modal.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .qr-modal-box {
+    position: relative;
+    width: min(350px, 100%);
+    padding: 32px 28px 26px;
+    text-align: center;
+    border-radius: 28px;
+    background: linear-gradient(165deg, #fffdf9, #fff5eb);
+    border: 1px solid rgba(196, 161, 90, 0.45);
+    box-shadow: 0 28px 70px rgba(24, 6, 8, 0.34);
+    transform: translate3d(0, 16px, 0) scale(0.95);
+    transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .qr-modal.is-open .qr-modal-box {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  .qr-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(139, 30, 30, 0.08);
+    color: var(--red);
+    font: inherit;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+  .qr-modal-close:hover { background: rgba(139, 30, 30, 0.16); transform: scale(1.06); }
+  .qr-modal-img {
+    width: 244px;
+    height: 244px;
+    margin: 4px auto 16px;
+    padding: 12px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 12px 30px rgba(139, 30, 30, 0.12), 0 0 0 1px rgba(196, 161, 90, 0.4);
+    display: block;
+  }
+  .qr-modal-box h3 { margin: 0 0 6px; font-size: 22px; letter-spacing: 0.1em; color: var(--ink); }
+  .qr-modal-box p { margin: 0; font-size: 13px; color: var(--muted); }
+
   @media (max-width: 720px) {
+    .nav-inner { flex-wrap: nowrap; gap: 8px; padding: 10px 0; }
+    .brand { gap: 7px; }
+    .brand img { width: 32px; height: 32px; }
+    .brand span { font-size: 17px; white-space: nowrap; }
+    .nav-links { gap: 8px; flex-wrap: nowrap; }
+    .nav-qr, .nav-ask { padding: 6px 11px; font-size: 12px; }
     .splash-frame { inset: 12px; }
     .splash-skip { top: 20px; right: 20px; padding: 5px 12px; }
     .wing-verse { display: none; }
@@ -1098,12 +1672,15 @@ export const site = `<!DOCTYPE html>
     .vellum-card { padding: 42px 22px 36px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .sp-petal, .sp-mote, .sp-bokeh, .seal-halo, .seal-orbit, .splash-cue-dot { animation: none !important; }
+    .sp-petal, .sp-mote, .sp-rise, .sp-bokeh, .splash-sheen, .seal-halo, .seal-orbit, .splash-cue-dot,
+    .pa-orb, .pa-petal, .fab::before, .bgm-fab.is-playing .bgm-disc, .is-minimal::after { animation: none !important; }
+    .wing-ornament path, .wing-floral path { stroke-dashoffset: 0 !important; animation: none !important; }
+    .wing-floral circle { opacity: 1 !important; animation: none !important; }
     .splash-crown, .seal-stage, .splash-cue, .wing-verse { animation: none !important; opacity: 1 !important; }
     .splash-crown { transform: translate3d(-50%, 0, 0) !important; }
     .seal-stage { transform: translate(-50%, -50%) !important; }
     .splash-cue { transform: translate3d(-50%, 0, 0) !important; }
-    .splash-wing, .splash-vellum, .vellum-card, .vellum-rule, .splash-ribbon, .env-seal,
+    .splash-wing, .splash-vellum, .vellum-card, .vellum-rule, .vellum-mark, .splash-ribbon, .env-seal,
     html.is-revealed .rv-hero, html.is-revealed .rv-scroll {
       transition-duration: 0.01ms !important;
       transition-delay: 0ms !important;
@@ -1112,6 +1689,15 @@ export const site = `<!DOCTYPE html>
 </style>
 </head>
 <body>
+<div class="page-ambient" aria-hidden="true">
+  <span class="pa-orb o1"></span>
+  <span class="pa-orb o2"></span>
+  <span class="pa-petal pp1"></span>
+  <span class="pa-petal pp2"></span>
+  <span class="pa-petal pp3"></span>
+  <span class="pa-petal pp4"></span>
+</div>
+
 <div class="splash" id="splash" role="dialog" aria-modal="true" aria-label="有囍請柬开屏">
   <!-- 第二层：透光晨曦素绢衬页 -->
   <div class="splash-vellum" aria-hidden="true">
@@ -1183,7 +1769,11 @@ export const site = `<!DOCTYPE html>
     <div class="wing-verse"><i></i><span>佳期如梦 · 共赴良辰</span><i></i></div>
   </div>
 
-  <!-- 氛围柔光与花瓣 -->
+  <!-- 丝绒暖金流光 & 指针烛光 -->
+  <div class="splash-sheen" aria-hidden="true"></div>
+  <div class="splash-pointer" id="splash-pointer" aria-hidden="true"></div>
+
+  <!-- 氛围柔光、旋落花瓣与上升流金微尘 -->
   <div class="splash-ambient" aria-hidden="true">
     <span class="sp-bokeh b1"></span>
     <span class="sp-bokeh b2"></span>
@@ -1193,12 +1783,23 @@ export const site = `<!DOCTYPE html>
     <span class="sp-petal p3"></span>
     <span class="sp-petal p4"></span>
     <span class="sp-petal p5"></span>
+    <span class="sp-petal p6"></span>
+    <span class="sp-petal p7"></span>
+    <span class="sp-petal p8"></span>
+    <span class="sp-petal p9"></span>
+    <span class="sp-petal p10"></span>
     <span class="sp-mote m1"></span>
     <span class="sp-mote m2"></span>
     <span class="sp-mote m3"></span>
     <span class="sp-mote m4"></span>
     <span class="sp-mote m5"></span>
     <span class="sp-mote m6"></span>
+    <span class="sp-rise r1"></span>
+    <span class="sp-rise r2"></span>
+    <span class="sp-rise r3"></span>
+    <span class="sp-rise r4"></span>
+    <span class="sp-rise r5"></span>
+    <span class="sp-rise r6"></span>
   </div>
 
   <!-- 鎏金双细框 -->
@@ -1216,7 +1817,7 @@ export const site = `<!DOCTYPE html>
   <button class="splash-skip" type="button" id="splash-skip">跳过启封</button>
 
   <!-- 中央主视觉 -->
-  <div class="splash-center">
+  <div class="splash-center" id="splash-center">
     <div class="splash-crown">
       <p class="splash-en">WEDDING INVITATION</p>
       <p class="splash-brand">有囍請柬</p>
@@ -1227,6 +1828,8 @@ export const site = `<!DOCTYPE html>
       <span class="seal-orbit" aria-hidden="true"></span>
       <span class="seal-halo" aria-hidden="true"></span>
       <span class="seal-burst" aria-hidden="true"></span>
+      <span class="seal-burst-2" aria-hidden="true"></span>
+      <div class="seal-sparks" id="seal-sparks" aria-hidden="true"></div>
       <button class="env-seal" type="button" id="wax-seal-btn" aria-label="轻触火漆印，启封有囍請柬官网">
         <img class="env-seal-img" src="/brand/wax-seal.png" alt="" draggable="false">
       </button>
@@ -1253,9 +1856,25 @@ export const site = `<!DOCTYPE html>
       <a href="#inside">请柬里有什么</a>
       <a href="#start">怎么开始</a>
       <a href="#kefu">联系客服</a>
+      <div class="nav-qr-wrap">
+        <button class="nav-qr open-qr-modal" type="button" aria-label="查看有囍請柬微信小程序码">
+          <svg class="nav-qr-ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1.2"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.2"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.2"/>
+            <path d="M14 14h3v3h-3zM20 14v3M14 20h6"/>
+          </svg>
+          <span>小程序码</span>
+        </button>
+        <div class="nav-qr-pop" aria-hidden="true">
+          <img src="/brand/miniprogram-qr.png" width="148" height="148" alt="">
+          <span>微信扫一扫 · 打开小程序</span>
+        </div>
+      </div>
       <button class="nav-ask" type="button" id="open-chat">问小囍</button>
     </nav>
   </div>
+  <div class="nav-progress" id="scroll-progress" aria-hidden="true"></div>
 </header>
 
 <main class="wrap">
@@ -1274,7 +1893,7 @@ export const site = `<!DOCTYPE html>
   <section id="themes">
     <div class="section-head rv-hero" style="--d:560ms">
       <h2>颜色可以换</h2>
-      <p>五套颜色写在喜帖旁边。点一个名字，这一张就换成那套。樱花会落下花瓣。</p>
+      <p>五套颜色写在喜帖旁边。点一个名字，这一张就换成那套，每套都有专属氛围动效。</p>
     </div>
     <div class="lookbook rv-hero" style="--d:680ms">
       <div class="look-index" id="theme-picks">
@@ -1295,7 +1914,7 @@ export const site = `<!DOCTYPE html>
         </button>
       </div>
       <div class="look-sheet is-sakura" id="theme-stage" aria-live="polite">
-        <span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span>
+        <span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span>
         <div class="look-mark" id="theme-symbol" aria-hidden="true">樱</div>
         <div class="theme-paper">
           <p class="theme-kicker">有囍請柬</p>
@@ -1403,6 +2022,15 @@ export const site = `<!DOCTYPE html>
   </section>
 </main>
 
+<div class="qr-modal" id="qr-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="qr-modal-title">
+  <div class="qr-modal-box">
+    <button class="qr-modal-close" type="button" id="qr-modal-close" aria-label="关闭二维码弹窗">×</button>
+    <img class="qr-modal-img" src="/brand/miniprogram-qr.png" width="244" height="244" alt="有囍請柬微信小程序码">
+    <h3 id="qr-modal-title">有囍請柬小程序</h3>
+    <p>打开微信扫一扫，立即进入小程序体验请柬</p>
+  </div>
+</div>
+
 <footer>
   <div class="wrap">有囍請柬 · 微信婚礼请柬。完整喜帖在小程序里打开。<button class="replay-splash" type="button" id="replay-splash">重温启封</button></div>
 ` + icpFooterHtml + `
@@ -1450,6 +2078,10 @@ export const site = `<!DOCTYPE html>
 (function () {
   var root = document.documentElement;
   var splash = document.getElementById("splash");
+  var splashCenter = document.getElementById("splash-center");
+  var splashPointer = document.getElementById("splash-pointer");
+  var sealSparks = document.getElementById("seal-sparks");
+  var scrollProgress = document.getElementById("scroll-progress");
   var sealBtn = document.getElementById("wax-seal-btn");
   var skipBtn = document.getElementById("splash-skip");
   var replayBtn = document.getElementById("replay-splash");
@@ -1460,7 +2092,9 @@ export const site = `<!DOCTYPE html>
   var splashTimers = [];
   var splashBusy = false;
   var scrollObserver = null;
+  var progressRaf = 0;
   var reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var finePointer = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
 
   function syncBgmUi(playing) {
     if (!bgmFab) return;
@@ -1521,6 +2155,50 @@ export const site = `<!DOCTYPE html>
   function after(ms, fn) {
     splashTimers.push(setTimeout(fn, ms));
   }
+  function resetSplashPointer() {
+    if (splash) splash.classList.remove("has-pointer");
+    if (splashCenter) splashCenter.style.transform = "";
+  }
+  function spawnSealSparks() {
+    if (!sealSparks || reducedMotion) return;
+    sealSparks.innerHTML = "";
+    var colors = ["#fff3d0", "#f4d48e", "#e8b4be", "#ffe4a8", "#f7c7b8"];
+    var count = 18;
+    for (var i = 0; i < count; i++) {
+      var sp = document.createElement("span");
+      sp.className = "seal-spark";
+      var angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.28;
+      var dist = 76 + Math.random() * 96;
+      var tx = Math.cos(angle) * dist;
+      var ty = Math.sin(angle) * dist;
+      var isPetal = i % 3 === 0;
+      var sz = isPetal ? (8 + Math.random() * 5) : (4.5 + Math.random() * 4.5);
+      var dur = 0.78 + Math.random() * 0.44;
+      var rot = (Math.random() > 0.5 ? 1 : -1) * (110 + Math.random() * 140);
+      sp.style.setProperty("--tx", tx.toFixed(1) + "px");
+      sp.style.setProperty("--ty", ty.toFixed(1) + "px");
+      sp.style.setProperty("--sz", sz.toFixed(1) + "px");
+      sp.style.setProperty("--rad", isPetal ? "85% 0 85% 0" : "50%");
+      sp.style.setProperty("--col", colors[i % colors.length]);
+      sp.style.setProperty("--dur", dur.toFixed(2) + "s");
+      sp.style.setProperty("--rot", rot.toFixed(0) + "deg");
+      sealSparks.appendChild(sp);
+    }
+    after(1350, function () {
+      if (sealSparks) sealSparks.innerHTML = "";
+    });
+  }
+  function updateScrollProgress() {
+    progressRaf = 0;
+    if (!scrollProgress) return;
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    var pct = max > 0 ? Math.min(1, Math.max(0, window.pageYOffset / max)) : 0;
+    scrollProgress.style.transform = "scaleX(" + pct.toFixed(4) + ")";
+  }
+  function scheduleScrollProgress() {
+    if (!scrollProgress || progressRaf) return;
+    progressRaf = window.requestAnimationFrame ? window.requestAnimationFrame(updateScrollProgress) : (updateScrollProgress(), 0);
+  }
   function revealAllIn(scope) {
     var list = (scope || document).querySelectorAll(".rv-scroll");
     for (var i = 0; i < list.length; i++) list[i].classList.add("is-in");
@@ -1571,11 +2249,13 @@ export const site = `<!DOCTYPE html>
     root.classList.add("is-revealed");
     syncNavOffset();
     startScrollReveal();
+    updateScrollProgress();
   }
   function unsealSplash() {
     if (!splash || splashBusy) return;
     splashBusy = true;
     clearSplashTimers();
+    resetSplashPointer();
     startBgm(true);
     if (reducedMotion) {
       enterSiteNow();
@@ -1584,6 +2264,7 @@ export const site = `<!DOCTYPE html>
       return;
     }
     splash.classList.add("is-active", "is-unsealing");
+    spawnSealSparks();
     after(260, function () {
       splash.classList.add("is-wings-open");
     });
@@ -1602,6 +2283,7 @@ export const site = `<!DOCTYPE html>
     if (!splash || splashBusy) return;
     splashBusy = true;
     clearSplashTimers();
+    resetSplashPointer();
     if (reducedMotion) {
       enterSiteNow();
       splash.className = "splash is-gone";
@@ -1620,8 +2302,11 @@ export const site = `<!DOCTYPE html>
   function replaySplash() {
     if (!splash) return;
     clearSplashTimers();
+    resetSplashPointer();
+    if (sealSparks) sealSparks.innerHTML = "";
     splashBusy = false;
     window.scrollTo({ left: 0, top: 0, behavior: "auto" });
+    updateScrollProgress();
     var list = document.querySelectorAll(".rv-scroll");
     for (var i = 0; i < list.length; i++) list[i].classList.remove("is-in");
     if (scrollObserver) {
@@ -1632,6 +2317,26 @@ export const site = `<!DOCTYPE html>
     root.classList.add("is-sealed");
     splash.className = "splash is-active";
     if (sealBtn) sealBtn.focus();
+  }
+
+  if (splash && finePointer && !reducedMotion) {
+    splash.addEventListener("mousemove", function (e) {
+      if (splashBusy || !root.classList.contains("is-sealed")) return;
+      var w = window.innerWidth || 1;
+      var h = window.innerHeight || 1;
+      var dx = e.clientX - w * 0.5;
+      var dy = e.clientY - h * 0.5;
+      splash.classList.add("has-pointer");
+      if (splashPointer) {
+        splashPointer.style.transform = "translate3d(" + dx.toFixed(1) + "px, " + dy.toFixed(1) + "px, 0)";
+      }
+      if (splashCenter) {
+        var px = (dx / w) * 12;
+        var py = (dy / h) * 10;
+        splashCenter.style.transform = "translate3d(" + px.toFixed(1) + "px, " + py.toFixed(1) + "px, 0)";
+      }
+    });
+    splash.addEventListener("mouseleave", resetSplashPointer);
   }
 
   if (sealBtn) sealBtn.addEventListener("click", unsealSplash);
@@ -1645,9 +2350,12 @@ export const site = `<!DOCTYPE html>
   document.documentElement.style.scrollBehavior = "auto";
   syncNavOffset();
   scrollToCurrentHash();
+  updateScrollProgress();
+  window.addEventListener("scroll", scheduleScrollProgress, { passive: true });
   window.addEventListener("resize", function () {
     syncNavOffset();
     scrollToCurrentHash();
+    scheduleScrollProgress();
   });
   window.addEventListener("hashchange", function () {
     if (root.classList.contains("is-sealed")) {
@@ -1657,10 +2365,12 @@ export const site = `<!DOCTYPE html>
       if (splash) splash.className = "splash is-gone";
     }
     scrollToCurrentHash();
+    scheduleScrollProgress();
   });
   window.addEventListener("load", function () {
     syncNavOffset();
     scrollToCurrentHash();
+    updateScrollProgress();
     document.documentElement.style.scrollBehavior = "";
   });
 
@@ -1731,6 +2441,7 @@ export const site = `<!DOCTYPE html>
   var tour = "";
   var tourStep = -1;
 
+  var flowDetail = document.getElementById("flow-detail");
   var kicker = document.getElementById("detail-kicker");
   var title = document.getElementById("detail-title");
   var body = document.getElementById("detail-body");
@@ -1746,6 +2457,11 @@ export const site = `<!DOCTYPE html>
     kicker.textContent = (lane === "guest" ? "宾客" : "新人") + " · 第 " + (index + 1) + " 步";
     title.textContent = item.t;
     body.textContent = item.d;
+    if (flowDetail && !reducedMotion) {
+      flowDetail.classList.remove("is-swap");
+      void flowDetail.offsetWidth;
+      flowDetail.classList.add("is-swap");
+    }
   }
 
   for (var n = 0; n < nodes.length; n++) {
@@ -1805,6 +2521,30 @@ export const site = `<!DOCTYPE html>
     copyBtns[c].addEventListener("click", function (e) { copyWechat(e.currentTarget); });
   }
 
+  var qrModal = document.getElementById("qr-modal");
+  var qrCloseBtn = document.getElementById("qr-modal-close");
+  var qrOpenBtns = document.querySelectorAll(".open-qr-modal");
+  function openQrModal() {
+    if (!qrModal) return;
+    qrModal.classList.add("is-open");
+    qrModal.setAttribute("aria-hidden", "false");
+    if (qrCloseBtn) qrCloseBtn.focus();
+  }
+  function closeQrModal() {
+    if (!qrModal) return;
+    qrModal.classList.remove("is-open");
+    qrModal.setAttribute("aria-hidden", "true");
+  }
+  for (var q = 0; q < qrOpenBtns.length; q++) {
+    qrOpenBtns[q].addEventListener("click", openQrModal);
+  }
+  if (qrCloseBtn) qrCloseBtn.addEventListener("click", closeQrModal);
+  if (qrModal) {
+    qrModal.addEventListener("click", function (e) {
+      if (e.target === qrModal) closeQrModal();
+    });
+  }
+
   fab.addEventListener("click", function () {
     if (panel.className.indexOf("is-open") >= 0) closeChat();
     else openChat();
@@ -1813,6 +2553,7 @@ export const site = `<!DOCTYPE html>
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Escape") return;
     if (root.classList.contains("is-sealed")) skipSplash();
+    else if (qrModal && qrModal.classList.contains("is-open")) closeQrModal();
     else if (panel.className.indexOf("is-open") >= 0) closeChat();
   });
 
@@ -1948,15 +2689,20 @@ export const site = `<!DOCTYPE html>
   var picks = document.querySelectorAll(".look-item");
   function paintTheme(btn) {
     if (!stage || !btn) return;
+    var tid = btn.getAttribute("data-id") || "sakura";
     stage.style.setProperty("--p", btn.getAttribute("data-primary"));
     stage.style.setProperty("--a", btn.getAttribute("data-accent"));
     stage.style.setProperty("--bg", btn.getAttribute("data-bg"));
     stage.style.setProperty("--ink", btn.getAttribute("data-ink"));
     stage.style.setProperty("--petal", btn.getAttribute("data-petal"));
-    stage.className = btn.getAttribute("data-id") === "sakura" ? "look-sheet is-sakura" : "look-sheet";
+    stage.className = "look-sheet is-" + tid;
     document.getElementById("theme-symbol").textContent = btn.getAttribute("data-symbol");
     document.getElementById("theme-name").textContent = btn.getAttribute("data-name");
     document.getElementById("theme-line").textContent = btn.getAttribute("data-line");
+    if (!reducedMotion) {
+      void stage.offsetWidth;
+      stage.className = "look-sheet is-" + tid + " is-flipping";
+    }
     for (var i = 0; i < picks.length; i++) picks[i].className = "look-item";
     btn.className = "look-item is-on";
   }
