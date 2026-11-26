@@ -5,6 +5,7 @@ import { site } from './site'
 import lockup from './brand-lockup.png'
 import mark from './brand-mark.png'
 import waxSeal from './wax-seal.png'
+import bgmAudio from './bgm.mp3'
 import wechatQr from './wechat-qr.png'
 import type { AppEnv } from './auth'
 import { requireAdmin, getWid, getOpenid } from './auth'
@@ -105,6 +106,53 @@ app.get('/brand/wax-seal.png', () => {
     headers: {
       'content-type': 'image/png',
       'cache-control': 'public, max-age=86400',
+    },
+  })
+})
+
+// 浪漫婚礼主题曲《红笺良辰》（支持 HTTP Range，兼容 iOS 微信与 Safari 播放/循环）
+const bgmBytes = bgmAudio instanceof Uint8Array ? bgmAudio : new Uint8Array(bgmAudio)
+app.get('/brand/bgm.mp3', (c) => {
+  const total = bgmBytes.byteLength
+  const range = c.req.header('range')
+  const baseHeaders: Record<string, string> = {
+    'content-type': 'audio/mpeg',
+    'accept-ranges': 'bytes',
+    'cache-control': 'public, max-age=86400',
+  }
+  if (range) {
+    const m = /^bytes=(\d*)-(\d*)$/i.exec(range.trim())
+    if (m) {
+      let start = m[1] ? Number(m[1]) : 0
+      let end = m[2] ? Number(m[2]) : total - 1
+      if (!m[1] && m[2]) {
+        const suffix = Number(m[2])
+        start = Math.max(0, total - suffix)
+        end = total - 1
+      }
+      if (Number.isNaN(start) || Number.isNaN(end) || start < 0 || start >= total || end < start) {
+        return new Response(null, {
+          status: 416,
+          headers: { ...baseHeaders, 'content-range': `bytes */${total}` },
+        })
+      }
+      end = Math.min(end, total - 1)
+      const chunk = bgmBytes.subarray(start, end + 1)
+      return new Response(chunk, {
+        status: 206,
+        headers: {
+          ...baseHeaders,
+          'content-range': `bytes ${start}-${end}/${total}`,
+          'content-length': String(chunk.byteLength),
+        },
+      })
+    }
+  }
+  return new Response(bgmBytes, {
+    status: 200,
+    headers: {
+      ...baseHeaders,
+      'content-length': String(total),
     },
   })
 })

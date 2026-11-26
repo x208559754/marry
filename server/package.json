@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "NODE_PATH=$PWD/node_modules esbuild node.ts --bundle --platform=node --target=node22 --format=esm --loader:.png=binary --outfile=dist/server.mjs --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\""
+    "build": "NODE_PATH=$PWD/node_modules esbuild node.ts --bundle --platform=node --target=node22 --format=esm --loader:.png=binary --loader:.mp3=binary --outfile=dist/server.mjs --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\""
   },
   "dependencies": {
     "@hono/node-server": "^1.14.0",

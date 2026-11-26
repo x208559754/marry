@@ -206,6 +206,11 @@ export const THEME_PRESETS: Record<WeddingTheme, {
 
 export const DEFAULT_BGM_LIST = [
   {
+    title: '红笺良辰 (有囍請柬 · 原创浪漫主题曲)',
+    artist: '有囍請柬',
+    url: 'https://youxitie.site/brand/bgm.mp3',
+  },
+  {
     title: 'Canon in D (卡农·唯美钢琴版)',
     artist: 'Johann Pachelbel',
     url: 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Canon_in_D_Major_%28Johann_Pachelbel%29.ogg',
@@ -252,9 +257,9 @@ export const INITIAL_WEDDING_CONFIG: WeddingConfig = {
     transportTips: '地铁8号线中华艺术宫站3号口出，步行约600米；自驾宾客可免费停放于地下B2停车场。',
   },
   bgm: {
-    title: 'Canon in D (卡农·唯美钢琴版)',
-    artist: 'Johann Pachelbel',
-    url: 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Canon_in_D_Major_%28Johann_Pachelbel%29.ogg',
+    title: '红笺良辰 (有囍請柬 · 原创浪漫主题曲)',
+    artist: '有囍請柬',
+    url: 'https://youxitie.site/brand/bgm.mp3',
     autoPlay: true,
     synthFallback: true,
   },

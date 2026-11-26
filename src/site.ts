@@ -1023,6 +1023,65 @@ export const site = `<!DOCTYPE html>
   }
   .replay-splash:hover { color: var(--red); }
 
+  /* 官网浪漫背景音乐悬浮唱片按钮 */
+  .bgm-fab {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(166, 132, 86, 0.38);
+    background: rgba(255, 250, 244, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    border-radius: 999px;
+    padding: 8px 14px 8px 8px;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(60, 36, 34, 0.12);
+    transition: border-color 0.25s ease, color 0.25s ease, transform 0.25s ease, opacity 0.5s ease;
+  }
+  .bgm-fab:hover {
+    border-color: rgba(139, 30, 30, 0.45);
+    color: var(--red);
+  }
+  .bgm-fab:focus-visible {
+    outline: 2px solid var(--red);
+    outline-offset: 2px;
+  }
+  .bgm-disc {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at 35% 30%, #a5242b, #6f1419);
+    color: #f6ddb0;
+    font-size: 13px;
+    line-height: 1;
+    box-shadow: inset 0 0 0 1px rgba(244, 218, 168, 0.45);
+  }
+  .bgm-fab.is-playing .bgm-disc {
+    animation: bgmSpin 7s linear infinite;
+  }
+  @keyframes bgmSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .bgm-fab.is-muted .bgm-disc {
+    background: #d8c8b8;
+    color: #7c685c;
+    box-shadow: none;
+  }
+  .bgm-label {
+    font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+    letter-spacing: 0.12em;
+  }
+
   @media (max-width: 720px) {
     .splash-frame { inset: 12px; }
     .splash-skip { top: 20px; right: 20px; padding: 5px 12px; }
@@ -1349,6 +1408,13 @@ export const site = `<!DOCTYPE html>
 ` + icpFooterHtml + `
 </footer>
 
+<audio id="site-bgm" src="/brand/bgm.mp3" loop preload="metadata"></audio>
+
+<button class="bgm-fab rv-hero is-muted" style="--d:840ms" type="button" id="bgm-fab" aria-pressed="false" aria-label="播放或暂停背景音乐 红笺良辰">
+  <span class="bgm-disc" aria-hidden="true">♫</span>
+  <span class="bgm-label" id="bgm-label">红笺良辰</span>
+</button>
+
 <button class="fab rv-hero" style="--d:800ms" type="button" id="chat-fab" aria-expanded="false" aria-controls="chat-panel">
   <span class="fab-seal">囍</span>
   <span>问小囍</span>
@@ -1387,10 +1453,66 @@ export const site = `<!DOCTYPE html>
   var sealBtn = document.getElementById("wax-seal-btn");
   var skipBtn = document.getElementById("splash-skip");
   var replayBtn = document.getElementById("replay-splash");
+  var bgmEl = document.getElementById("site-bgm");
+  var bgmFab = document.getElementById("bgm-fab");
+  var bgmLabel = document.getElementById("bgm-label");
+  var bgmFadeTimer = null;
   var splashTimers = [];
   var splashBusy = false;
   var scrollObserver = null;
   var reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function syncBgmUi(playing) {
+    if (!bgmFab) return;
+    bgmFab.classList.toggle("is-playing", !!playing);
+    bgmFab.classList.toggle("is-muted", !playing);
+    bgmFab.setAttribute("aria-pressed", playing ? "true" : "false");
+    if (bgmLabel) bgmLabel.textContent = playing ? "红笺良辰" : "开启音乐";
+  }
+  function startBgm(fadeIn) {
+    if (!bgmEl) return;
+    if (bgmFadeTimer) { clearInterval(bgmFadeTimer); bgmFadeTimer = null; }
+    var targetVol = 0.55;
+    try {
+      bgmEl.volume = fadeIn ? 0.04 : targetVol;
+      var p = bgmEl.play();
+      if (p && typeof p.then === "function") {
+        p.then(function () {
+          syncBgmUi(true);
+          if (fadeIn) {
+            bgmFadeTimer = setInterval(function () {
+              if (!bgmEl || bgmEl.paused) { clearInterval(bgmFadeTimer); bgmFadeTimer = null; return; }
+              var next = Math.min(targetVol, bgmEl.volume + 0.04);
+              bgmEl.volume = next;
+              if (next >= targetVol) { clearInterval(bgmFadeTimer); bgmFadeTimer = null; }
+            }, 90);
+          }
+        }).catch(function () {
+          syncBgmUi(false);
+        });
+      } else {
+        syncBgmUi(true);
+      }
+    } catch (e) {
+      syncBgmUi(false);
+    }
+  }
+  function pauseBgm() {
+    if (!bgmEl) return;
+    if (bgmFadeTimer) { clearInterval(bgmFadeTimer); bgmFadeTimer = null; }
+    try { bgmEl.pause(); } catch (e) {}
+    syncBgmUi(false);
+  }
+  if (bgmFab) {
+    bgmFab.addEventListener("click", function () {
+      if (bgmEl && !bgmEl.paused) pauseBgm();
+      else startBgm(false);
+    });
+  }
+  if (bgmEl) {
+    bgmEl.addEventListener("pause", function () { syncBgmUi(false); });
+    bgmEl.addEventListener("play", function () { syncBgmUi(true); });
+  }
 
   function clearSplashTimers() {
     for (var i = 0; i < splashTimers.length; i++) clearTimeout(splashTimers[i]);
@@ -1454,6 +1576,7 @@ export const site = `<!DOCTYPE html>
     if (!splash || splashBusy) return;
     splashBusy = true;
     clearSplashTimers();
+    startBgm(true);
     if (reducedMotion) {
       enterSiteNow();
       splash.className = "splash is-gone";

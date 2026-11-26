@@ -30,6 +30,6 @@
   ],
 
   "rules": [
-    { "type": "Data", "globs": ["**/*.png"], "fallthrough": true }
+    { "type": "Data", "globs": ["**/*.png", "**/*.mp3"], "fallthrough": true }
   ]
 }

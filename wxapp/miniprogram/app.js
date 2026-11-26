@@ -45,8 +45,8 @@ App({
       coverImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1000&q=80',
       photos: [],
       music: {
-        title: '婚礼浪漫进行曲',
-        url: 'https://actions.google.com/sounds/v1/ambiences/warm_breeze.ogg'
+        title: '红笺良辰',
+        url: 'https://youxitie.site/brand/bgm.mp3'
       },
       letterParagraphs: [
         '从相遇、相知到相守，漫漫岁月因为彼此而格外温暖。',
@@ -386,12 +386,14 @@ App({
     const bgm = this.globalData.bgmContext;
     if (!bgm) return;
     const config = this.globalData.weddingConfig;
-    const musicUrl = (config && config.music && config.music.url) ? config.music.url : 'https://actions.google.com/sounds/v1/ambiences/warm_breeze.ogg';
-    const musicTitle = (config && config.music && config.music.title) ? config.music.title : '婚礼浪漫进行曲';
+    const rawUrl = (config && config.music && config.music.url) ? String(config.music.url).trim() : '';
+    const useDefault = !rawUrl || rawUrl.indexOf('actions.google.com') !== -1;
+    const musicUrl = useDefault ? 'https://youxitie.site/brand/bgm.mp3' : rawUrl;
+    const musicTitle = (!useDefault && config && config.music && config.music.title) ? config.music.title : '红笺良辰';
 
     bgm.title = musicTitle;
-    bgm.singer = '浪漫婚礼';
-    bgm.coverImgUrl = 'https://images.unsplash.com/photo-1519741497674-611481863552?w=300';
+    bgm.singer = '有囍請柬 · 原创浪漫主题曲';
+    bgm.coverImgUrl = 'https://youxitie.site/brand/mark.png';
     bgm.src = musicUrl;
   },
 
