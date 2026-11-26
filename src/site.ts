@@ -1441,23 +1441,108 @@ export const site = `<!DOCTYPE html>
   .chip { transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease; }
   .chip:hover { transform: translateY(-1px); background: #fff6f4; border-color: rgba(139, 30, 30, 0.36); }
 
-  /* 8) 五套颜色主题全系动态特效 + 切卡纸张轻翻动效 */
-  .look-item { transition: opacity 0.25s ease, background 0.3s ease; }
+  /* 8) 五套颜色主题全系动态特效 + 滑动切换指示滑块与方向切卡动效 */
+  .look-index {
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: pan-y;
+  }
+  .look-slider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 52px;
+    z-index: 0;
+    pointer-events: none;
+    background: var(--slider-bg, #fff1f5);
+    transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1), width 0.36s cubic-bezier(0.22, 1, 0.36, 1), background 0.32s ease;
+  }
+  .look-slider::after {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: var(--slider-bar, #d4567c);
+    transition: background 0.32s ease;
+  }
+  .look-item {
+    position: relative;
+    z-index: 1;
+    background: transparent !important;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .look-item.is-on { opacity: 1; }
+  .look-sheet {
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+  }
+  .look-sheet.is-dragging { cursor: grabbing; }
+  .look-sheet.is-dragging .theme-paper { transition: none; }
   .look-mark { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease, color 0.35s ease; }
-  .theme-paper { transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.36s ease, box-shadow 0.4s ease; }
-  .look-sheet.is-flipping .theme-paper {
-    animation: cardMorph 0.56s cubic-bezier(0.22, 1, 0.36, 1);
+  .theme-paper { transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.36s ease, box-shadow 0.4s ease; }
+  .look-sheet.is-flipping.is-next .theme-paper {
+    animation: cardSlideNext 0.48s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .look-sheet.is-flipping .look-mark {
-    animation: markGlide 0.64s cubic-bezier(0.22, 1, 0.36, 1);
+  .look-sheet.is-flipping.is-prev .theme-paper {
+    animation: cardSlidePrev 0.48s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  @keyframes cardMorph {
-    0% { opacity: 0.45; transform: translate3d(0, 14px, 0) scale(0.96); }
+  .look-sheet.is-flipping.is-next .look-mark {
+    animation: markGlideNext 0.56s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .look-sheet.is-flipping.is-prev .look-mark {
+    animation: markGlidePrev 0.56s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes cardSlideNext {
+    0% { opacity: 0.35; transform: translate3d(42px, 0, 0) scale(0.96); }
     100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
   }
-  @keyframes markGlide {
-    0% { opacity: 0; transform: translate3d(24px, 14px, 0) scale(0.9); }
+  @keyframes cardSlidePrev {
+    0% { opacity: 0.35; transform: translate3d(-42px, 0, 0) scale(0.96); }
+    100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  }
+  @keyframes markGlideNext {
+    0% { opacity: 0; transform: translate3d(34px, 8px, 0) scale(0.92); }
     100% { opacity: 0.09; transform: translate3d(0, 0, 0) scale(1); }
+  }
+  @keyframes markGlidePrev {
+    0% { opacity: 0; transform: translate3d(-34px, 8px, 0) scale(0.92); }
+    100% { opacity: 0.09; transform: translate3d(0, 0, 0) scale(1); }
+  }
+  .look-dots {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .look-dot {
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--p);
+    opacity: 0.28;
+    cursor: pointer;
+    transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease, background 0.3s ease;
+  }
+  .look-dot.is-on {
+    width: 22px;
+    opacity: 0.85;
+  }
+  @media (max-width: 720px) {
+    .look-index { overflow: hidden; }
+    .look-item { flex: 1; width: auto; padding: 14px 4px; }
   }
   .splash-center { transition: transform 0.28s ease-out; will-change: transform; }
   .is-chinese .petal {
@@ -1893,10 +1978,11 @@ export const site = `<!DOCTYPE html>
   <section id="themes">
     <div class="section-head rv-hero" style="--d:560ms">
       <h2>颜色可以换</h2>
-      <p>五套颜色写在喜帖旁边。点一个名字，这一张就换成那套，每套都有专属氛围动效。</p>
+      <p>五套颜色写在喜帖旁边。划过名字或左右滑动喜帖，即可切换配色与专属氛围动效。</p>
     </div>
     <div class="lookbook rv-hero" style="--d:680ms">
       <div class="look-index" id="theme-picks">
+        <span class="look-slider" id="theme-slider" aria-hidden="true"></span>
         <button class="look-item is-on" type="button" data-id="sakura" data-name="樱花 · 春日粉黛" data-line="粉瓣轻落，春风十里" data-symbol="樱" data-primary="#d4567c" data-accent="#f3b6c8" data-bg="#fff1f5" data-ink="#6b3044" data-petal="#f4a7c1" style="--pick:#d4567c;--pick-bg:#fff1f5">
           <span class="look-name">樱花</span>
         </button>
@@ -1916,13 +2002,20 @@ export const site = `<!DOCTYPE html>
       <div class="look-sheet is-sakura" id="theme-stage" aria-live="polite">
         <span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span><span class="petal"></span>
         <div class="look-mark" id="theme-symbol" aria-hidden="true">樱</div>
-        <div class="theme-paper">
+        <div class="theme-paper" id="theme-paper">
           <p class="theme-kicker">有囍請柬</p>
           <h3 id="theme-name">樱花 · 春日粉黛</h3>
           <p id="theme-line">粉瓣轻落，春风十里</p>
           <div class="theme-rule"></div>
           <div class="theme-couple">新郎 <b>&</b> 新娘</div>
           <p class="theme-date">敬备喜酌 · 恭请光临</p>
+        </div>
+        <div class="look-dots" id="theme-dots" aria-label="主题切换指示点">
+          <button class="look-dot is-on" type="button" data-idx="0" aria-label="樱花"></button>
+          <button class="look-dot" type="button" data-idx="1" aria-label="新中式"></button>
+          <button class="look-dot" type="button" data-idx="2" aria-label="法式"></button>
+          <button class="look-dot" type="button" data-idx="3" aria-label="森系"></button>
+          <button class="look-dot" type="button" data-idx="4" aria-label="轻奢"></button>
         </div>
       </div>
     </div>
@@ -2686,9 +2779,37 @@ export const site = `<!DOCTYPE html>
   setChips(introChips);
 
   var stage = document.getElementById("theme-stage");
+  var themePaper = document.getElementById("theme-paper");
+  var picksWrap = document.getElementById("theme-picks");
+  var themeSlider = document.getElementById("theme-slider");
   var picks = document.querySelectorAll(".look-item");
-  function paintTheme(btn) {
-    if (!stage || !btn) return;
+  var themeDots = document.querySelectorAll(".look-dot");
+  var activeThemeIdx = 0;
+
+  function syncThemeSlider(btn, instant) {
+    if (!themeSlider || !btn) return;
+    if (instant) themeSlider.style.transition = "none";
+    themeSlider.style.width = btn.offsetWidth + "px";
+    themeSlider.style.transform = "translate3d(" + btn.offsetLeft + "px, 0, 0)";
+    themeSlider.style.setProperty("--slider-bg", btn.getAttribute("data-bg") || "#fff1f5");
+    themeSlider.style.setProperty("--slider-bar", btn.getAttribute("data-primary") || "#d4567c");
+    if (instant) {
+      void themeSlider.offsetWidth;
+      themeSlider.style.transition = "";
+    }
+  }
+
+  function paintThemeByIndex(idx, dirOverride) {
+    if (!stage || !picks.length) return;
+    var nextIdx = ((idx % picks.length) + picks.length) % picks.length;
+    var btn = picks[nextIdx];
+    if (!btn) return;
+    if (nextIdx === activeThemeIdx) {
+      syncThemeSlider(btn, false);
+      return;
+    }
+    var dir = dirOverride || (nextIdx > activeThemeIdx ? 1 : -1);
+    activeThemeIdx = nextIdx;
     var tid = btn.getAttribute("data-id") || "sakura";
     stage.style.setProperty("--p", btn.getAttribute("data-primary"));
     stage.style.setProperty("--a", btn.getAttribute("data-accent"));
@@ -2701,13 +2822,138 @@ export const site = `<!DOCTYPE html>
     document.getElementById("theme-line").textContent = btn.getAttribute("data-line");
     if (!reducedMotion) {
       void stage.offsetWidth;
-      stage.className = "look-sheet is-" + tid + " is-flipping";
+      stage.className = "look-sheet is-" + tid + " is-flipping " + (dir > 0 ? "is-next" : "is-prev");
     }
-    for (var i = 0; i < picks.length; i++) picks[i].className = "look-item";
-    btn.className = "look-item is-on";
+    for (var i = 0; i < picks.length; i++) picks[i].className = i === nextIdx ? "look-item is-on" : "look-item";
+    for (var d = 0; d < themeDots.length; d++) themeDots[d].className = d === nextIdx ? "look-dot is-on" : "look-dot";
+    syncThemeSlider(btn, false);
   }
+
+  function pickIndexAtX(clientX) {
+    if (!picksWrap || !picks.length) return -1;
+    var rect = picksWrap.getBoundingClientRect();
+    if (!rect.width) return -1;
+    var rel = (clientX - rect.left) / rect.width;
+    var idx = Math.floor(rel * picks.length);
+    if (idx < 0) idx = 0;
+    if (idx >= picks.length) idx = picks.length - 1;
+    return idx;
+  }
+
   for (var t = 0; t < picks.length; t++) {
-    picks[t].addEventListener("click", function (e) { paintTheme(e.currentTarget); });
+    (function (idx) {
+      picks[idx].addEventListener("click", function () { paintThemeByIndex(idx); });
+      if (finePointer) {
+        picks[idx].addEventListener("mouseenter", function () { paintThemeByIndex(idx); });
+      }
+    })(t);
+  }
+  for (var td = 0; td < themeDots.length; td++) {
+    (function (idx) {
+      themeDots[idx].addEventListener("click", function (e) {
+        e.stopPropagation();
+        paintThemeByIndex(idx);
+      });
+    })(td);
+  }
+
+  // 在色卡条上按住左右滑动连续切换
+  if (picksWrap) {
+    var pickTouch = { active: false, sx: 0, sy: 0, horiz: false };
+    picksWrap.addEventListener("touchstart", function (e) {
+      if (!e.touches || !e.touches.length) return;
+      pickTouch.active = true;
+      pickTouch.sx = e.touches[0].clientX;
+      pickTouch.sy = e.touches[0].clientY;
+      pickTouch.horiz = false;
+      var i0 = pickIndexAtX(pickTouch.sx);
+      if (i0 >= 0) paintThemeByIndex(i0);
+    }, { passive: true });
+    picksWrap.addEventListener("touchmove", function (e) {
+      if (!pickTouch.active || !e.touches || !e.touches.length) return;
+      var cx = e.touches[0].clientX;
+      var cy = e.touches[0].clientY;
+      if (!pickTouch.horiz) {
+        if (Math.abs(cx - pickTouch.sx) > Math.abs(cy - pickTouch.sy) && Math.abs(cx - pickTouch.sx) > 6) {
+          pickTouch.horiz = true;
+        } else if (Math.abs(cy - pickTouch.sy) > 10) {
+          pickTouch.active = false;
+          return;
+        }
+      }
+      if (pickTouch.horiz) {
+        var idx = pickIndexAtX(cx);
+        if (idx >= 0) paintThemeByIndex(idx);
+      }
+    }, { passive: true });
+    picksWrap.addEventListener("touchend", function () { pickTouch.active = false; }, { passive: true });
+  }
+
+  // 在喜帖展示区左右滑动 / 鼠标拖拽切换上下一套主题
+  if (stage) {
+    var swipe = { down: false, sx: 0, sy: 0, dx: 0, horiz: false };
+    function swipeStart(x, y) {
+      swipe.down = true;
+      swipe.sx = x;
+      swipe.sy = y;
+      swipe.dx = 0;
+      swipe.horiz = false;
+    }
+    function swipeMove(x, y) {
+      if (!swipe.down) return;
+      var dx = x - swipe.sx;
+      var dy = y - swipe.sy;
+      if (!swipe.horiz) {
+        if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+          swipe.horiz = true;
+          stage.classList.add("is-dragging");
+        } else if (Math.abs(dy) > 12) {
+          swipe.down = false;
+          return;
+        }
+      }
+      if (swipe.horiz) {
+        swipe.dx = dx;
+        if (themePaper && !reducedMotion) {
+          var drag = Math.max(-56, Math.min(56, dx * 0.28));
+          themePaper.style.transform = "translate3d(" + drag.toFixed(1) + "px, 0, 0)";
+        }
+      }
+    }
+    function swipeEnd() {
+      if (!swipe.down) return;
+      var dx = swipe.dx;
+      var wasHoriz = swipe.horiz;
+      swipe.down = false;
+      swipe.horiz = false;
+      stage.classList.remove("is-dragging");
+      if (themePaper) themePaper.style.transform = "";
+      if (wasHoriz && Math.abs(dx) > 36) {
+        if (dx < 0) paintThemeByIndex(activeThemeIdx + 1, 1);
+        else paintThemeByIndex(activeThemeIdx - 1, -1);
+      }
+    }
+    stage.addEventListener("touchstart", function (e) {
+      if (e.touches && e.touches.length) swipeStart(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    stage.addEventListener("touchmove", function (e) {
+      if (e.touches && e.touches.length) swipeMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    stage.addEventListener("touchend", swipeEnd, { passive: true });
+    stage.addEventListener("touchcancel", swipeEnd, { passive: true });
+    stage.addEventListener("mousedown", function (e) {
+      if (e.button === 0) swipeStart(e.clientX, e.clientY);
+    });
+    window.addEventListener("mousemove", function (e) {
+      if (swipe.down) swipeMove(e.clientX, e.clientY);
+    });
+    window.addEventListener("mouseup", swipeEnd);
+  }
+
+  if (picks.length) {
+    syncThemeSlider(picks[0], true);
+    window.addEventListener("resize", function () { syncThemeSlider(picks[activeThemeIdx], true); });
+    window.addEventListener("load", function () { syncThemeSlider(picks[activeThemeIdx], true); });
   }
 })();
 </script>
