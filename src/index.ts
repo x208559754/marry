@@ -4,6 +4,7 @@ import { page } from './frontend'
 import { site } from './site'
 import lockup from './brand-lockup.png'
 import mark from './brand-mark.png'
+import waxSeal from './wax-seal.png'
 import wechatQr from './wechat-qr.png'
 import type { AppEnv } from './auth'
 import { requireAdmin, getWid, getOpenid } from './auth'
@@ -92,6 +93,15 @@ app.get('/brand/lockup.png', () => {
 
 app.get('/brand/mark.png', () => {
   return new Response(mark, {
+    headers: {
+      'content-type': 'image/png',
+      'cache-control': 'public, max-age=86400',
+    },
+  })
+})
+
+app.get('/brand/wax-seal.png', () => {
+  return new Response(waxSeal, {
     headers: {
       'content-type': 'image/png',
       'cache-control': 'public, max-age=86400',

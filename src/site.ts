@@ -11,6 +11,8 @@ export const site = `<!DOCTYPE html>
 <meta name="description" content="有囍請柬是微信里的婚礼请柬。新人发专属小程序码，亲友扫码启封、看行程与相册、回执出席、留下祝福。">
 <title>有囍請柬</title>
 <link rel="icon" href="/brand/mark.png">
+<link rel="preload" as="image" href="/brand/wax-seal.png">
+<script>(function(){if(!location.hash||location.hash==="#"){document.documentElement.className+=" is-sealed";}})();</script>
 <style>
 ` + icpFooterStyle + `
 
@@ -367,11 +369,820 @@ export const site = `<!DOCTYPE html>
   @media (max-width: 640px) {
     .kefu-card { flex-direction: column; align-items: center; text-align: center; padding: 28px 22px; }
   }
+
+  /* ===== 全屏绯绒锦封 → 透光素绢 → 官网层层递进 ===== */
+  .splash {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  html.is-sealed .splash,
+  .splash.is-active {
+    display: flex;
+  }
+  .splash.is-gone {
+    display: none !important;
+  }
+  html.is-sealed body {
+    overflow: hidden;
+  }
+
+  /* 第二层：透光晨曦素绢衬页（绯绒门扉对开后显露，再如晨雾消散） */
+  .splash-vellum {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(circle at 50% 44%, rgba(255, 252, 247, 0.95) 0%, rgba(247, 238, 227, 0.9) 62%, rgba(238, 224, 208, 0.88) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: opacity 0.82s cubic-bezier(0.22, 1, 0.36, 1), transform 0.88s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+  .splash.is-vellum-out .splash-vellum {
+    opacity: 0;
+    transform: translate3d(0, -18px, 0) scale(1.04);
+  }
+  .vellum-card {
+    position: relative;
+    width: min(420px, calc(100% - 48px));
+    padding: 52px 32px 46px;
+    text-align: center;
+    border: 1px solid rgba(182, 145, 92, 0.38);
+    border-radius: 210px 210px 14px 14px;
+    background: linear-gradient(180deg, rgba(255, 253, 250, 0.92), rgba(251, 244, 234, 0.78));
+    box-shadow: 0 28px 70px -24px rgba(108, 42, 36, 0.16);
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.96);
+    transition: opacity 0.72s cubic-bezier(0.22, 1, 0.36, 1) 0.18s, transform 0.86s cubic-bezier(0.22, 1, 0.36, 1) 0.18s;
+  }
+  .vellum-card::before {
+    content: "";
+    position: absolute;
+    inset: 9px;
+    border: 1px solid rgba(182, 145, 92, 0.22);
+    border-radius: 202px 202px 10px 10px;
+    pointer-events: none;
+  }
+  .splash.is-wings-open .vellum-card {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  .vellum-mark {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(145deg, #9f2027, #6d1217);
+    color: #f6ddb0;
+    font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+    font-size: 18px;
+    box-shadow: 0 8px 20px rgba(139, 30, 30, 0.22);
+  }
+  .vellum-kicker {
+    margin: 0 0 10px;
+    font-size: 11px;
+    letter-spacing: 0.42em;
+    text-indent: 0.42em;
+    color: var(--gold);
+  }
+  .vellum-title {
+    margin: 0;
+    font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+    font-size: clamp(28px, 4.5vw, 38px);
+    letter-spacing: 0.32em;
+    text-indent: 0.32em;
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .vellum-rule {
+    width: 56px;
+    height: 1px;
+    margin: 20px auto;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    transform: scaleX(0.2);
+    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.32s;
+  }
+  .splash.is-wings-open .vellum-rule {
+    transform: scaleX(1);
+  }
+  .vellum-note {
+    margin: 0;
+    font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+    font-size: 14px;
+    letter-spacing: 0.3em;
+    text-indent: 0.3em;
+    color: var(--muted);
+  }
+
+  /* 第一层：全屏绯绒丝缎对开请柬双翼 */
+  .splash-wing {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50.5%;
+    z-index: 5;
+    overflow: hidden;
+    transition: transform 1.06s cubic-bezier(0.66, 0, 0.22, 1), box-shadow 0.45s ease;
+    will-change: transform;
+  }
+  .splash-wing.is-left {
+    left: 0;
+    background:
+      radial-gradient(ellipse at 100% 50%, rgba(168, 46, 56, 0.52) 0%, rgba(112, 22, 31, 0.14) 48%, transparent 72%),
+      radial-gradient(ellipse at 18% 16%, rgba(212, 148, 128, 0.14), transparent 52%),
+      linear-gradient(115deg, #32070d 0%, #520e17 44%, #6a1620 82%, #721924 100%);
+  }
+  .splash-wing.is-right {
+    right: 0;
+    background:
+      radial-gradient(ellipse at 0% 50%, rgba(168, 46, 56, 0.52) 0%, rgba(112, 22, 31, 0.14) 48%, transparent 72%),
+      radial-gradient(ellipse at 82% 84%, rgba(212, 162, 118, 0.14), transparent 52%),
+      linear-gradient(245deg, #32070d 0%, #520e17 44%, #6a1620 82%, #721924 100%);
+  }
+  /* 丝绒斜向织锦光泽 */
+  .splash-wing::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(
+        135deg,
+        rgba(255, 228, 196, 0.018) 0px,
+        rgba(255, 228, 196, 0.018) 2px,
+        transparent 2px,
+        transparent 10px
+      );
+  }
+  /* 中央鎏金拱形折翼金线与独立等比花枝 */
+  .wing-ornament {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .wing-floral {
+    position: absolute;
+    width: min(360px, 68vw);
+    height: auto;
+    pointer-events: none;
+  }
+  .wing-floral.is-tl { top: 26px; left: 26px; }
+  .wing-floral.is-br { bottom: 26px; right: 26px; }
+  .splash.is-wings-open .splash-wing.is-left {
+    transform: translate3d(-104%, 0, 0);
+    box-shadow: inset -1.5px 0 0 rgba(238, 206, 146, 0.48), 26px 0 64px rgba(24, 4, 7, 0.48);
+  }
+  .splash.is-wings-open .splash-wing.is-right {
+    transform: translate3d(104%, 0, 0);
+    box-shadow: inset 1.5px 0 0 rgba(238, 206, 146, 0.48), -26px 0 64px rgba(24, 4, 7, 0.48);
+  }
+
+  /* 左右错落竖排题字（避开中线丝带，留白如画卷） */
+  .wing-verse {
+    position: absolute;
+    writing-mode: vertical-rl;
+    font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+    font-size: 13px;
+    letter-spacing: 0.46em;
+    color: rgba(244, 219, 174, 0.62);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none;
+    opacity: 0;
+    animation: spVerseIn 1s cubic-bezier(0.22, 1, 0.36, 1) 0.42s forwards;
+  }
+  .wing-verse i {
+    display: block;
+    width: 1px;
+    height: 22px;
+    background: linear-gradient(180deg, transparent, rgba(238, 206, 146, 0.55), transparent);
+  }
+  .splash-wing.is-left .wing-verse { left: clamp(36px, 6vw, 88px); bottom: clamp(54px, 11vh, 110px); }
+  .splash-wing.is-right .wing-verse { right: clamp(36px, 6vw, 88px); top: clamp(78px, 13vh, 130px); }
+  @keyframes spVerseIn {
+    from { opacity: 0; transform: translate3d(0, 12px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+
+  /* 柔光光斑与飘落花瓣氛围层 */
+  .splash-ambient {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    pointer-events: none;
+    overflow: hidden;
+    transition: opacity 0.6s ease;
+  }
+  .splash.is-wings-open .splash-ambient {
+    opacity: 0;
+  }
+  .sp-bokeh {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(34px);
+    opacity: 0.35;
+    animation: spBokehFloat 9s ease-in-out infinite;
+  }
+  .sp-bokeh.b1 { width: 280px; height: 280px; left: 10%; top: 12%; background: radial-gradient(circle, rgba(246, 198, 152, 0.55), transparent 70%); animation-delay: 0s; }
+  .sp-bokeh.b2 { width: 340px; height: 340px; right: 8%; bottom: 10%; background: radial-gradient(circle, rgba(232, 150, 156, 0.42), transparent 70%); animation-delay: 2.5s; }
+  .sp-bokeh.b3 { width: 220px; height: 220px; left: 50%; top: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, rgba(252, 220, 168, 0.44), transparent 68%); animation-duration: 7s; animation-name: spCenterGlow; }
+  @keyframes spBokehFloat {
+    0%, 100% { opacity: 0.28; transform: translate3d(0, 0, 0) scale(0.96); }
+    50% { opacity: 0.48; transform: translate3d(0, -14px, 0) scale(1.06); }
+  }
+  @keyframes spCenterGlow {
+    0%, 100% { opacity: 0.32; transform: translate(-50%, -50%) scale(0.94); }
+    50% { opacity: 0.56; transform: translate(-50%, -50%) scale(1.08); }
+  }
+
+  .sp-petal {
+    position: absolute;
+    top: -32px;
+    width: 11px;
+    height: 16px;
+    border-radius: 85% 0 85% 0;
+    background: linear-gradient(145deg, rgba(252, 224, 214, 0.72), rgba(226, 148, 158, 0.32));
+    opacity: 0;
+    animation: spDrift 14s linear infinite;
+  }
+  .sp-petal.p1 { left: 14%; animation-duration: 14s; animation-delay: 0s; }
+  .sp-petal.p2 { left: 32%; animation-duration: 16.5s; animation-delay: 2.6s; width: 9px; height: 13px; }
+  .sp-petal.p3 { left: 54%; animation-duration: 13.2s; animation-delay: 5.1s; width: 12px; height: 17px; }
+  .sp-petal.p4 { left: 73%; animation-duration: 15s; animation-delay: 1.4s; width: 10px; height: 14px; }
+  .sp-petal.p5 { left: 88%; animation-duration: 17s; animation-delay: 3.9s; }
+  @keyframes spDrift {
+    0% { transform: translate3d(0, -10px, 0) rotate(0deg); opacity: 0; }
+    12% { opacity: 0.62; }
+    50% { transform: translate3d(28px, 50vh, 0) rotate(140deg); opacity: 0.45; }
+    88% { opacity: 0.28; }
+    100% { transform: translate3d(-16px, 108vh, 0) rotate(270deg); opacity: 0; }
+  }
+  .sp-mote {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 232, 178, 0.98), rgba(235, 192, 114, 0));
+    animation: spTwinkle 4.4s ease-in-out infinite;
+  }
+  .sp-mote.m1 { left: 20%; top: 26%; width: 5px; height: 5px; }
+  .sp-mote.m2 { left: 76%; top: 22%; animation-delay: 1.2s; width: 6px; height: 6px; }
+  .sp-mote.m3 { left: 26%; top: 74%; animation-delay: 2.3s; }
+  .sp-mote.m4 { left: 78%; top: 70%; animation-delay: 0.8s; width: 5px; height: 5px; }
+  .sp-mote.m5 { left: 48%; top: 18%; animation-delay: 2.8s; }
+  .sp-mote.m6 { left: 56%; top: 82%; animation-delay: 1.7s; }
+  @keyframes spTwinkle {
+    0%, 100% { opacity: 0.2; transform: scale(0.75); }
+    50% { opacity: 0.95; transform: scale(1.55); }
+  }
+
+  /* 鎏金礼盒外框 */
+  .splash-frame {
+    position: absolute;
+    inset: 20px;
+    z-index: 7;
+    pointer-events: none;
+    border: 1px solid rgba(236, 204, 144, 0.24);
+    transition: opacity 0.55s ease, transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .splash-frame::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border: 1px solid rgba(236, 204, 144, 0.11);
+  }
+  .splash-corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: rgba(242, 212, 158, 0.62);
+    border-style: solid;
+    border-width: 0;
+  }
+  .splash-corner.tl { top: -1px; left: -1px; border-top-width: 1.5px; border-left-width: 1.5px; }
+  .splash-corner.tr { top: -1px; right: -1px; border-top-width: 1.5px; border-right-width: 1.5px; }
+  .splash-corner.bl { bottom: -1px; left: -1px; border-bottom-width: 1.5px; border-left-width: 1.5px; }
+  .splash-corner.br { bottom: -1px; right: -1px; border-bottom-width: 1.5px; border-right-width: 1.5px; }
+  .splash.is-wings-open .splash-frame {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+
+  /* 贯穿全屏的香槟真丝缎带（严格居中 50%） */
+  .splash-ribbon {
+    position: absolute;
+    top: 50%;
+    height: 18px;
+    width: 50%;
+    z-index: 8;
+    transform: translateY(-50%);
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(248, 224, 174, 0.18) 0%,
+      rgba(226, 188, 126, 0.52) 22%,
+      rgba(255, 240, 206, 0.84) 50%,
+      rgba(204, 162, 98, 0.58) 78%,
+      rgba(128, 72, 42, 0.22) 100%
+    );
+    box-shadow: 0 6px 18px rgba(24, 4, 7, 0.34);
+    transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.52s ease;
+  }
+  .splash-ribbon::before,
+  .splash-ribbon::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255, 242, 212, 0.55);
+  }
+  .splash-ribbon::before { top: 2px; }
+  .splash-ribbon::after { bottom: 2px; opacity: 0.35; }
+  .splash-ribbon.is-l { left: 0; }
+  .splash-ribbon.is-r { right: 0; }
+  .splash.is-unsealing .splash-ribbon.is-l {
+    transform: translate3d(-100%, -50%, 0);
+    opacity: 0;
+  }
+  .splash.is-unsealing .splash-ribbon.is-r {
+    transform: translate3d(100%, -50%, 0);
+    opacity: 0;
+  }
+
+  /* 顶部右上角跳过按钮 */
+  .splash-skip {
+    position: absolute;
+    top: 30px;
+    right: 32px;
+    z-index: 12;
+    border: 1px solid rgba(242, 212, 158, 0.36);
+    background: rgba(48, 8, 14, 0.42);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: rgba(248, 232, 204, 0.84);
+    font: inherit;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    padding: 6px 15px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, opacity 0.4s ease;
+  }
+  .splash-skip:hover {
+    background: rgba(88, 18, 26, 0.78);
+    border-color: rgba(248, 224, 174, 0.72);
+    color: #fff6e6;
+  }
+  .splash-skip:focus-visible {
+    outline: 2px solid #f5d89e;
+    outline-offset: 2px;
+  }
+  .splash.is-unsealing .splash-skip,
+  .splash.is-wings-open .splash-skip {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* 中央主视觉：火漆印严格锁死视口 (50%, 50%) 与丝带、拱线精准交汇 */
+  .splash-center {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .splash-crown {
+    position: absolute;
+    left: 50%;
+    bottom: calc(50% + 112px);
+    width: min(560px, calc(100% - 48px));
+    text-align: center;
+    opacity: 0;
+    transform: translate3d(-50%, 14px, 0);
+    animation: spCrownIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s forwards;
+  }
+  .splash.is-unsealing .splash-crown {
+    animation: spCrownOut 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  @keyframes spCrownIn {
+    to { opacity: 1; transform: translate3d(-50%, 0, 0); }
+  }
+  @keyframes spCrownOut {
+    from { opacity: 1; transform: translate3d(-50%, 0, 0); }
+    to { opacity: 0; transform: translate3d(-50%, -18px, 0); }
+  }
+  @keyframes spCueIn {
+    to { opacity: 1; transform: translate3d(-50%, 0, 0); }
+  }
+  @keyframes spCueOut {
+    from { opacity: 1; transform: translate3d(-50%, 0, 0); }
+    to { opacity: 0; transform: translate3d(-50%, 14px, 0); }
+  }
+  .splash-en {
+    margin: 0 0 12px;
+    font-size: 11px;
+    letter-spacing: 0.48em;
+    text-indent: 0.48em;
+    color: rgba(240, 212, 160, 0.7);
+  }
+  .splash-brand {
+    margin: 0;
+    font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+    font-size: clamp(32px, 5vw, 48px);
+    font-weight: 500;
+    letter-spacing: 0.38em;
+    text-indent: 0.38em;
+    color: #fbf1df;
+    text-shadow: 0 6px 26px rgba(24, 3, 6, 0.46);
+  }
+  .splash-tagline {
+    margin: 12px 0 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+    font-size: 13px;
+    letter-spacing: 0.34em;
+    text-indent: 0.34em;
+    color: rgba(244, 218, 172, 0.82);
+  }
+  .splash-tagline i {
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(244, 218, 172, 0.65), transparent);
+  }
+
+  /* 中心珠宝感火漆印按钮（严格居中于 50%, 50%） */
+  .seal-stage {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.86);
+    animation: spSealIn 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.28s forwards;
+  }
+  @keyframes spSealIn {
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  /* 缓慢旋转鎏金细珠光环 */
+  .seal-orbit {
+    position: absolute;
+    width: 172px;
+    height: 172px;
+    border-radius: 50%;
+    border: 1px dashed rgba(244, 218, 168, 0.38);
+    pointer-events: none;
+    animation: sealSpin 32s linear infinite;
+    transition: opacity 0.42s ease, transform 0.55s ease;
+  }
+  .seal-orbit::before {
+    content: "";
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    border: 1px solid rgba(244, 218, 168, 0.16);
+  }
+  @keyframes sealSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .splash.is-unsealing .seal-orbit {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+  .seal-halo {
+    position: absolute;
+    width: 152px;
+    height: 152px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 232, 184, 0.34) 0%, rgba(255, 218, 152, 0.08) 54%, transparent 72%);
+    pointer-events: none;
+    animation: sealBreathe 3s ease-in-out infinite;
+  }
+  @keyframes sealBreathe {
+    0%, 100% { transform: scale(0.95); opacity: 0.65; }
+    50% { transform: scale(1.12); opacity: 1; }
+  }
+  .splash.is-unsealing .seal-halo {
+    animation: none;
+    opacity: 0;
+  }
+  .seal-burst {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(252, 226, 168, 0.92);
+    box-shadow: 0 0 32px rgba(252, 220, 152, 0.6);
+    transform: scale(0.65);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .splash.is-unsealing .seal-burst {
+    animation: sealRipple 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes sealRipple {
+    0% { transform: scale(0.8); opacity: 0.95; }
+    100% { transform: scale(2.8); opacity: 0; }
+  }
+  .env-seal {
+    position: relative;
+    width: 134px;
+    height: 134px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .env-seal:hover {
+    transform: scale(1.07);
+  }
+  .env-seal:active {
+    transform: scale(0.94);
+  }
+  .env-seal:focus-visible {
+    outline: 2px solid #f5d89e;
+    outline-offset: 8px;
+  }
+  .env-seal-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+    filter: drop-shadow(0 16px 28px rgba(24, 4, 7, 0.56)) drop-shadow(0 4px 10px rgba(24, 4, 7, 0.36));
+    transition: filter 0.38s ease;
+  }
+  .env-seal:hover .env-seal-img {
+    filter: drop-shadow(0 20px 34px rgba(24, 4, 7, 0.64)) drop-shadow(0 0 18px rgba(248, 222, 168, 0.32));
+  }
+  .splash.is-unsealing .env-seal {
+    transform: translate3d(0, -20px, 0) scale(1.2);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* 底部启封指引（对称位于火漆印下方） */
+  .splash-cue {
+    position: absolute;
+    left: 50%;
+    top: calc(50% + 124px);
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+    font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+    font-size: 13px;
+    letter-spacing: 0.34em;
+    color: rgba(246, 226, 188, 0.88);
+    opacity: 0;
+    transform: translate3d(-50%, 12px, 0);
+    animation: spCueIn 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.42s forwards;
+  }
+  .splash-cue-dot {
+    color: #f3d08b;
+    font-size: 10px;
+    animation: spPulseCue 2.4s ease-in-out infinite;
+  }
+  @keyframes spPulseCue {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+  }
+  .splash.is-unsealing .splash-cue {
+    animation: spCueOut 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  /* ===== 官网层层递进显影 ===== */
+  html.is-sealed .rv-hero,
+  html.is-sealed .rv-scroll {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+    will-change: transform, opacity;
+  }
+  html.is-sealed header.nav.rv-hero {
+    transform: translate3d(0, -14px, 0);
+  }
+  html.is-sealed .fab.rv-hero {
+    transform: translate3d(0, 14px, 0) scale(0.9);
+  }
+  html.is-revealed .rv-hero {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    transition:
+      opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms),
+      transform 0.92s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms);
+  }
+  html.is-revealed .rv-scroll {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+    transition:
+      opacity 0.78s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms),
+      transform 0.84s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms);
+  }
+  html.is-revealed .rv-scroll.is-in {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  .replay-splash {
+    border: 0;
+    background: transparent;
+    color: var(--gold);
+    font: inherit;
+    font-size: 13px;
+    padding: 0 4px;
+    margin-left: 8px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .replay-splash:hover { color: var(--red); }
+
+  @media (max-width: 720px) {
+    .splash-frame { inset: 12px; }
+    .splash-skip { top: 20px; right: 20px; padding: 5px 12px; }
+    .wing-verse { display: none; }
+    .wing-floral { width: min(220px, 56vw); }
+    .wing-floral.is-tl { top: 18px; left: 16px; }
+    .wing-floral.is-br { bottom: 18px; right: 16px; }
+    .splash-crown { bottom: calc(50% + 96px); }
+    .splash-cue { top: calc(50% + 106px); font-size: 12px; letter-spacing: 0.28em; }
+    .env-seal { width: 114px; height: 114px; }
+    .seal-orbit { width: 148px; height: 148px; }
+    .seal-halo { width: 130px; height: 130px; }
+    .splash-ribbon { height: 14px; }
+    .vellum-card { padding: 42px 22px 36px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sp-petal, .sp-mote, .sp-bokeh, .seal-halo, .seal-orbit, .splash-cue-dot { animation: none !important; }
+    .splash-crown, .seal-stage, .splash-cue, .wing-verse { animation: none !important; opacity: 1 !important; }
+    .splash-crown { transform: translate3d(-50%, 0, 0) !important; }
+    .seal-stage { transform: translate(-50%, -50%) !important; }
+    .splash-cue { transform: translate3d(-50%, 0, 0) !important; }
+    .splash-wing, .splash-vellum, .vellum-card, .vellum-rule, .splash-ribbon, .env-seal,
+    html.is-revealed .rv-hero, html.is-revealed .rv-scroll {
+      transition-duration: 0.01ms !important;
+      transition-delay: 0ms !important;
+    }
+  }
 </style>
 </head>
 <body>
+<div class="splash" id="splash" role="dialog" aria-modal="true" aria-label="有囍請柬开屏">
+  <!-- 第二层：透光晨曦素绢衬页 -->
+  <div class="splash-vellum" aria-hidden="true">
+    <div class="vellum-card">
+      <div class="vellum-mark">囍</div>
+      <p class="vellum-kicker">WEDDING INVITATION</p>
+      <p class="vellum-title">有囍請柬</p>
+      <div class="vellum-rule"></div>
+      <p class="vellum-note">良辰已备 · 恭迎启阅</p>
+    </div>
+  </div>
+
+  <!-- 第一层：全屏绯绒丝缎对开双翼 -->
+  <div class="splash-wing is-left" aria-hidden="true">
+    <svg class="wing-ornament" viewBox="0 0 640 800" preserveAspectRatio="none">
+      <path d="M640,0 Q568,210 640,400 Q568,590 640,800" fill="none" stroke="rgba(244,218,168,0.28)" stroke-width="1.2"/>
+      <path d="M626,0 Q550,210 626,400 Q550,590 626,800" fill="none" stroke="rgba(244,218,168,0.12)" stroke-width="0.9"/>
+    </svg>
+    <svg class="wing-floral is-tl" viewBox="0 0 360 220" preserveAspectRatio="xMinYMin meet">
+      <defs>
+        <linearGradient id="goldFoilL" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f7dfb0" stop-opacity="0.58"/>
+          <stop offset="55%" stop-color="#d8ae68" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="#f7dfb0" stop-opacity="0.1"/>
+        </linearGradient>
+      </defs>
+      <g fill="none" stroke="url(#goldFoilL)" stroke-width="1.15" stroke-linecap="round">
+        <path d="M0,78 C64,66 132,102 204,82 C250,69 292,44 342,54"/>
+        <path d="M98,84 C132,122 182,146 238,140"/>
+        <path d="M180,86 C206,54 238,28 280,16"/>
+        <circle cx="208" cy="80" r="7"/>
+        <circle cx="208" cy="80" r="2" fill="#f7dfb0" opacity="0.5"/>
+        <circle cx="280" cy="16" r="5"/>
+        <circle cx="238" cy="140" r="5.5"/>
+        <circle cx="340" cy="54" r="4"/>
+        <path d="M138,112 Q152,99 164,112 Q150,123 138,112 Z"/>
+        <path d="M248,60 Q262,48 272,60 Q258,72 248,60 Z"/>
+      </g>
+    </svg>
+    <div class="wing-verse"><i></i><span>一纸红笺 · 见字如晤</span><i></i></div>
+  </div>
+
+  <div class="splash-wing is-right" aria-hidden="true">
+    <svg class="wing-ornament" viewBox="0 0 640 800" preserveAspectRatio="none">
+      <path d="M0,0 Q72,210 0,400 Q72,590 0,800" fill="none" stroke="rgba(244,218,168,0.28)" stroke-width="1.2"/>
+      <path d="M14,0 Q90,210 14,400 Q90,590 14,800" fill="none" stroke="rgba(244,218,168,0.12)" stroke-width="0.9"/>
+    </svg>
+    <svg class="wing-floral is-br" viewBox="0 0 360 220" preserveAspectRatio="xMaxYMax meet">
+      <defs>
+        <linearGradient id="goldFoilR" x1="100%" y1="100%" x2="0%" y2="0%">
+          <stop offset="0%" stop-color="#f7dfb0" stop-opacity="0.58"/>
+          <stop offset="55%" stop-color="#d8ae68" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="#f7dfb0" stop-opacity="0.1"/>
+        </linearGradient>
+      </defs>
+      <g fill="none" stroke="url(#goldFoilR)" stroke-width="1.15" stroke-linecap="round">
+        <path d="M360,142 C296,154 228,118 156,138 C110,151 68,176 18,166"/>
+        <path d="M262,136 C228,98 178,74 122,80"/>
+        <path d="M180,134 C154,166 122,192 80,204"/>
+        <circle cx="152" cy="140" r="7"/>
+        <circle cx="152" cy="140" r="2" fill="#f7dfb0" opacity="0.5"/>
+        <circle cx="80" cy="204" r="5"/>
+        <circle cx="122" cy="80" r="5.5"/>
+        <circle cx="20" cy="166" r="4"/>
+        <path d="M222,108 Q208,121 196,108 Q210,97 222,108 Z"/>
+        <path d="M112,160 Q98,172 88,160 Q102,148 112,160 Z"/>
+      </g>
+    </svg>
+    <div class="wing-verse"><i></i><span>佳期如梦 · 共赴良辰</span><i></i></div>
+  </div>
+
+  <!-- 氛围柔光与花瓣 -->
+  <div class="splash-ambient" aria-hidden="true">
+    <span class="sp-bokeh b1"></span>
+    <span class="sp-bokeh b2"></span>
+    <span class="sp-bokeh b3"></span>
+    <span class="sp-petal p1"></span>
+    <span class="sp-petal p2"></span>
+    <span class="sp-petal p3"></span>
+    <span class="sp-petal p4"></span>
+    <span class="sp-petal p5"></span>
+    <span class="sp-mote m1"></span>
+    <span class="sp-mote m2"></span>
+    <span class="sp-mote m3"></span>
+    <span class="sp-mote m4"></span>
+    <span class="sp-mote m5"></span>
+    <span class="sp-mote m6"></span>
+  </div>
+
+  <!-- 鎏金双细框 -->
+  <div class="splash-frame" aria-hidden="true">
+    <span class="splash-corner tl"></span>
+    <span class="splash-corner tr"></span>
+    <span class="splash-corner bl"></span>
+    <span class="splash-corner br"></span>
+  </div>
+
+  <!-- 贯穿香槟金真丝缎带 -->
+  <span class="splash-ribbon is-l" aria-hidden="true"></span>
+  <span class="splash-ribbon is-r" aria-hidden="true"></span>
+
+  <button class="splash-skip" type="button" id="splash-skip">跳过启封</button>
+
+  <!-- 中央主视觉 -->
+  <div class="splash-center">
+    <div class="splash-crown">
+      <p class="splash-en">WEDDING INVITATION</p>
+      <p class="splash-brand">有囍請柬</p>
+      <p class="splash-tagline"><i></i><span>一纸红笺 · 敬邀雅鉴</span><i></i></p>
+    </div>
+
+    <div class="seal-stage">
+      <span class="seal-orbit" aria-hidden="true"></span>
+      <span class="seal-halo" aria-hidden="true"></span>
+      <span class="seal-burst" aria-hidden="true"></span>
+      <button class="env-seal" type="button" id="wax-seal-btn" aria-label="轻触火漆印，启封有囍請柬官网">
+        <img class="env-seal-img" src="/brand/wax-seal.png" alt="" draggable="false">
+      </button>
+    </div>
+
+    <div class="splash-cue">
+      <span class="splash-cue-dot">✦</span>
+      <span>轻触火漆印 · 启封官网</span>
+      <span class="splash-cue-dot">✦</span>
+    </div>
+  </div>
+</div>
+
 <a class="skip" href="#flow">跳到使用流程</a>
-<header class="nav">
+<header class="nav rv-hero" style="--d:0ms">
   <div class="wrap nav-inner">
     <a class="brand" href="/">
       <img src="/brand/mark.png" alt="">
@@ -391,10 +1202,10 @@ export const site = `<!DOCTYPE html>
 <main class="wrap">
   <section class="hero">
     <div>
-      <p class="kicker">微信小程序 · 婚礼请柬</p>
-      <h1>有囍請柬</h1>
-      <p class="lede">一对新人一张喜帖。亲友扫码启封，看日子、故事和照片，确认来不来，再留下一句祝福。这个网页是官网，喜帖在小程序里打开。</p>
-      <div class="hero-actions">
+      <p class="kicker rv-hero" style="--d:110ms">微信小程序 · 婚礼请柬</p>
+      <h1 class="rv-hero" style="--d:220ms">有囍請柬</h1>
+      <p class="lede rv-hero" style="--d:340ms">一对新人一张喜帖。亲友扫码启封，看日子、故事和照片，确认来不来，再留下一句祝福。这个网页是官网，喜帖在小程序里打开。</p>
+      <div class="hero-actions rv-hero" style="--d:460ms">
         <a class="btn" href="#flow">看使用流程</a>
         <a class="btn ghost" href="#kefu">联系客服</a>
       </div>
@@ -402,11 +1213,11 @@ export const site = `<!DOCTYPE html>
   </section>
 
   <section id="themes">
-    <div class="section-head">
+    <div class="section-head rv-hero" style="--d:560ms">
       <h2>颜色可以换</h2>
       <p>五套颜色写在喜帖旁边。点一个名字，这一张就换成那套。樱花会落下花瓣。</p>
     </div>
-    <div class="lookbook">
+    <div class="lookbook rv-hero" style="--d:680ms">
       <div class="look-index" id="theme-picks">
         <button class="look-item is-on" type="button" data-id="sakura" data-name="樱花 · 春日粉黛" data-line="粉瓣轻落，春风十里" data-symbol="樱" data-primary="#d4567c" data-accent="#f3b6c8" data-bg="#fff1f5" data-ink="#6b3044" data-petal="#f4a7c1" style="--pick:#d4567c;--pick-bg:#fff1f5">
           <span class="look-name">樱花</span>
@@ -440,18 +1251,18 @@ export const site = `<!DOCTYPE html>
   </section>
 
   <section id="flow">
-    <div class="section-head">
+    <div class="section-head rv-scroll" style="--d:0ms">
       <h2>一张喜帖，两条路</h2>
       <p>一条给新人，一条给宾客。点任意一步，看这一步实际发生什么。</p>
     </div>
-    <div class="flow-start">
+    <div class="flow-start rv-scroll" style="--d:80ms">
       <div>
         <strong>打开有囍請柬</strong>
         <span>没有婚礼码时，小程序只显示介绍；扫到哪一场，就进入那一场。</span>
       </div>
     </div>
 
-    <div class="lane lane-couple">
+    <div class="lane lane-couple rv-scroll" style="--d:140ms">
       <div class="lane-name">新人</div>
       <div class="lane-track" id="couple-track">
         <button class="node is-on" type="button" data-lane="couple" data-i="0"><span class="node-no">01</span><span class="node-name">开通这场婚礼</span></button>
@@ -466,7 +1277,7 @@ export const site = `<!DOCTYPE html>
       </div>
     </div>
 
-    <div class="lane lane-guest">
+    <div class="lane lane-guest rv-scroll" style="--d:220ms">
       <div class="lane-name">宾客</div>
       <div class="lane-track">
         <button class="node" type="button" data-lane="guest" data-i="0"><span class="node-no">01</span><span class="node-name">扫新人发来的码</span></button>
@@ -481,47 +1292,47 @@ export const site = `<!DOCTYPE html>
       </div>
     </div>
 
-    <div class="detail" id="flow-detail">
+    <div class="detail rv-scroll" id="flow-detail" style="--d:280ms">
       <p class="detail-kicker" id="detail-kicker">新人 · 第 1 步</p>
       <h3 id="detail-title">开通这场婚礼</h3>
       <p id="detail-body">平台为你们单独建一场婚礼。之后的照片、回执、祝福和宾客留下的称呼，都只属于这一场。</p>
     </div>
-    <p class="note">一个小程序可以同时招待很多场婚礼。同一位亲友参加两场，两边的回执和祝福互不影响。</p>
+    <p class="note rv-scroll" style="--d:340ms">一个小程序可以同时招待很多场婚礼。同一位亲友参加两场，两边的回执和祝福互不影响。</p>
   </section>
 
   <section id="inside">
-    <div class="section-head">
+    <div class="section-head rv-scroll" style="--d:0ms">
       <h2>请柬里的六件事</h2>
       <p>宾客扫码之后，小程序底部就是这些入口。故事写在「岁月印记」里，会出现在故事页和相册页。</p>
     </div>
     <div class="grid">
-      <article class="card"><div class="ix">01</div><h3>火漆请柬</h3><p>开屏是一封信封。轻触火漆印展开邀请信，首页按婚礼日期倒计时，背景音乐可以关掉。</p></article>
-      <article class="card"><div class="ix">02</div><h3>岁月印记</h3><p>把相遇、相知写成一段段纪事。保存之后，宾客在「我们相遇的故事」里按时间读到。</p></article>
-      <article class="card"><div class="ix">03</div><h3>婚纱相册</h3><p>照片在管理里上传，宾客在相册页翻看。带婚礼标识的网页链接，打开的是这场婚礼的照片墙。</p></article>
-      <article class="card"><div class="ix">04</div><h3>盛典日程</h3><p>当天的环节按时间排开。酒店和地址写好之后，宾客可以地图导航，也可以一键拨打电话。</p></article>
-      <article class="card"><div class="ix">05</div><h3>出席回执</h3><p>宾客选择出席或请假，填上称呼和同行人数，也可以附一句祝福。管理里能看到名单和人数。</p></article>
-      <article class="card"><div class="ix">06</div><h3>祝福墙</h3><p>亲友的寄语变成弹幕。同一句话不会重复刷上墙。</p></article>
+      <article class="card rv-scroll" style="--d:60ms"><div class="ix">01</div><h3>火漆请柬</h3><p>开屏是一封信封。轻触火漆印展开邀请信，首页按婚礼日期倒计时，背景音乐可以关掉。</p></article>
+      <article class="card rv-scroll" style="--d:130ms"><div class="ix">02</div><h3>岁月印记</h3><p>把相遇、相知写成一段段纪事。保存之后，宾客在「我们相遇的故事」里按时间读到。</p></article>
+      <article class="card rv-scroll" style="--d:200ms"><div class="ix">03</div><h3>婚纱相册</h3><p>照片在管理里上传，宾客在相册页翻看。带婚礼标识的网页链接，打开的是这场婚礼的照片墙。</p></article>
+      <article class="card rv-scroll" style="--d:270ms"><div class="ix">04</div><h3>盛典日程</h3><p>当天的环节按时间排开。酒店和地址写好之后，宾客可以地图导航，也可以一键拨打电话。</p></article>
+      <article class="card rv-scroll" style="--d:340ms"><div class="ix">05</div><h3>出席回执</h3><p>宾客选择出席或请假，填上称呼和同行人数，也可以附一句祝福。管理里能看到名单和人数。</p></article>
+      <article class="card rv-scroll" style="--d:410ms"><div class="ix">06</div><h3>祝福墙</h3><p>亲友的寄语变成弹幕。同一句话不会重复刷上墙。</p></article>
     </div>
   </section>
 
   <section id="start">
-    <div class="section-head">
+    <div class="section-head rv-scroll" style="--d:0ms">
       <h2>新人从这里开始</h2>
       <p>最短的路径就这三步。细一点的顺序，就是上面那条新人流程。</p>
     </div>
     <div class="steps">
-      <article class="step"><b>01</b><div><h3>开通一场婚礼</h3><p>告诉平台两个人的名字和日子。我们为这场婚礼单独建档，和其他场次隔开。</p></div></article>
-      <article class="step"><b>02</b><div><h3>写成你们的喜帖</h3><p>姓名、吉日、酒店、行程、故事和照片，都写进这一场。小程序首页长按新人姓名，进入管理。</p></div></article>
-      <article class="step"><b>03</b><div><h3>把码发给亲友</h3><p>生成这场婚礼的小程序码，发到亲友群。他们扫码就能看请柬、回执、祝福。</p></div></article>
+      <article class="step rv-scroll" style="--d:80ms"><b>01</b><div><h3>开通一场婚礼</h3><p>告诉平台两个人的名字和日子。我们为这场婚礼单独建档，和其他场次隔开。</p></div></article>
+      <article class="step rv-scroll" style="--d:180ms"><b>02</b><div><h3>写成你们的喜帖</h3><p>姓名、吉日、酒店、行程、故事和照片，都写进这一场。小程序首页长按新人姓名，进入管理。</p></div></article>
+      <article class="step rv-scroll" style="--d:280ms"><b>03</b><div><h3>把码发给亲友</h3><p>生成这场婚礼的小程序码，发到亲友群。他们扫码就能看请柬、回执、祝福。</p></div></article>
     </div>
   </section>
 
   <section id="kefu">
-    <div class="section-head">
+    <div class="section-head rv-scroll" style="--d:0ms">
       <h2>联系客服</h2>
       <p>加微信即可咨询开通、发票或使用上的问题。用微信扫描二维码，或复制微信号添加。</p>
     </div>
-    <div class="kefu-card">
+    <div class="kefu-card rv-scroll" style="--d:120ms">
       <img src="/kefu/wechat-qr.png" width="168" height="168" alt="客服微信二维码">
       <div class="kefu-meta">
         <p class="kefu-label">微信号</p>
@@ -534,11 +1345,11 @@ export const site = `<!DOCTYPE html>
 </main>
 
 <footer>
-  <div class="wrap">有囍請柬 · 微信婚礼请柬。完整喜帖在小程序里打开。</div>
+  <div class="wrap">有囍請柬 · 微信婚礼请柬。完整喜帖在小程序里打开。<button class="replay-splash" type="button" id="replay-splash">重温启封</button></div>
 ` + icpFooterHtml + `
 </footer>
 
-<button class="fab" type="button" id="chat-fab" aria-expanded="false" aria-controls="chat-panel">
+<button class="fab rv-hero" style="--d:800ms" type="button" id="chat-fab" aria-expanded="false" aria-controls="chat-panel">
   <span class="fab-seal">囍</span>
   <span>问小囍</span>
 </button>
@@ -571,6 +1382,50 @@ export const site = `<!DOCTYPE html>
 
 <script>
 (function () {
+  var root = document.documentElement;
+  var splash = document.getElementById("splash");
+  var sealBtn = document.getElementById("wax-seal-btn");
+  var skipBtn = document.getElementById("splash-skip");
+  var replayBtn = document.getElementById("replay-splash");
+  var splashTimers = [];
+  var splashBusy = false;
+  var scrollObserver = null;
+  var reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function clearSplashTimers() {
+    for (var i = 0; i < splashTimers.length; i++) clearTimeout(splashTimers[i]);
+    splashTimers = [];
+  }
+  function after(ms, fn) {
+    splashTimers.push(setTimeout(fn, ms));
+  }
+  function revealAllIn(scope) {
+    var list = (scope || document).querySelectorAll(".rv-scroll");
+    for (var i = 0; i < list.length; i++) list[i].classList.add("is-in");
+  }
+  function startScrollReveal() {
+    var items = document.querySelectorAll(".rv-scroll");
+    if (!items.length) return;
+    if (scrollObserver) {
+      scrollObserver.disconnect();
+      scrollObserver = null;
+    }
+    if (reducedMotion || typeof IntersectionObserver === "undefined") {
+      revealAllIn(document);
+      return;
+    }
+    scrollObserver = new IntersectionObserver(function (entries) {
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].isIntersecting) {
+          entries[i].target.classList.add("is-in");
+          scrollObserver.unobserve(entries[i].target);
+        }
+      }
+    }, { threshold: 0.06, rootMargin: "0px 0px -6% 0px" });
+    for (var j = 0; j < items.length; j++) {
+      scrollObserver.observe(items[j]);
+    }
+  }
   function syncNavOffset() {
     var nav = document.querySelector("header.nav");
     if (!nav) return;
@@ -582,12 +1437,88 @@ export const site = `<!DOCTYPE html>
     var target = null;
     try { target = document.querySelector(location.hash); } catch (e) {}
     if (!target) return;
+    revealAllIn(target);
     var nav = document.querySelector("header.nav");
     var offset = nav ? nav.getBoundingClientRect().height : 0;
     var y = window.pageYOffset + target.getBoundingClientRect().top - offset;
     if (y < 0) y = 0;
     window.scrollTo({ left: 0, top: y, behavior: "auto" });
   }
+  function enterSiteNow() {
+    root.classList.remove("is-sealed");
+    root.classList.add("is-revealed");
+    syncNavOffset();
+    startScrollReveal();
+  }
+  function unsealSplash() {
+    if (!splash || splashBusy) return;
+    splashBusy = true;
+    clearSplashTimers();
+    if (reducedMotion) {
+      enterSiteNow();
+      splash.className = "splash is-gone";
+      splashBusy = false;
+      return;
+    }
+    splash.classList.add("is-active", "is-unsealing");
+    after(260, function () {
+      splash.classList.add("is-wings-open");
+    });
+    after(1240, function () {
+      splash.classList.add("is-vellum-out");
+    });
+    after(1380, function () {
+      enterSiteNow();
+    });
+    after(2240, function () {
+      splash.className = "splash is-gone";
+      splashBusy = false;
+    });
+  }
+  function skipSplash() {
+    if (!splash || splashBusy) return;
+    splashBusy = true;
+    clearSplashTimers();
+    if (reducedMotion) {
+      enterSiteNow();
+      splash.className = "splash is-gone";
+      splashBusy = false;
+      return;
+    }
+    splash.classList.add("is-active", "is-unsealing", "is-wings-open", "is-vellum-out");
+    after(140, function () {
+      enterSiteNow();
+    });
+    after(1040, function () {
+      splash.className = "splash is-gone";
+      splashBusy = false;
+    });
+  }
+  function replaySplash() {
+    if (!splash) return;
+    clearSplashTimers();
+    splashBusy = false;
+    window.scrollTo({ left: 0, top: 0, behavior: "auto" });
+    var list = document.querySelectorAll(".rv-scroll");
+    for (var i = 0; i < list.length; i++) list[i].classList.remove("is-in");
+    if (scrollObserver) {
+      scrollObserver.disconnect();
+      scrollObserver = null;
+    }
+    root.classList.remove("is-revealed");
+    root.classList.add("is-sealed");
+    splash.className = "splash is-active";
+    if (sealBtn) sealBtn.focus();
+  }
+
+  if (sealBtn) sealBtn.addEventListener("click", unsealSplash);
+  if (skipBtn) skipBtn.addEventListener("click", skipSplash);
+  if (replayBtn) replayBtn.addEventListener("click", replaySplash);
+
+  if (!root.classList.contains("is-sealed") && splash) {
+    splash.className = "splash is-gone";
+  }
+
   document.documentElement.style.scrollBehavior = "auto";
   syncNavOffset();
   scrollToCurrentHash();
@@ -596,6 +1527,12 @@ export const site = `<!DOCTYPE html>
     scrollToCurrentHash();
   });
   window.addEventListener("hashchange", function () {
+    if (root.classList.contains("is-sealed")) {
+      clearSplashTimers();
+      splashBusy = false;
+      enterSiteNow();
+      if (splash) splash.className = "splash is-gone";
+    }
     scrollToCurrentHash();
   });
   window.addEventListener("load", function () {
@@ -751,7 +1688,9 @@ export const site = `<!DOCTYPE html>
   });
   document.getElementById("chat-close").addEventListener("click", closeChat);
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") closeChat();
+    if (e.key !== "Escape") return;
+    if (root.classList.contains("is-sealed")) skipSplash();
+    else if (panel.className.indexOf("is-open") >= 0) closeChat();
   });
 
   function addMsg(text, who) {
