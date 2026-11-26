@@ -197,17 +197,24 @@
     <!-- 2. 婚纱照管理与上传 -->
     <view class="tab-pane" wx:if="{{curTab === 'photos'}}">
       <view class="card upload-guide-card">
-        <text class="ug-title">上传相片至婚纱相册</text>
-        <text class="ug-desc">选取手机相册中的婚纱大片上传（自动转存图床并登记云端），小程序相册与请柬封面将自动同步更新。</text>
+        <text class="ug-title">上传相片与视频至婚纱相册</text>
+        <text class="ug-desc">照片走图床，视频直传到七牛云（库里只存路径，访问域名可在平台设置里更换）。小程序相册与请柬将自动同步更新。</text>
 
         <button class="btn-primary ug-btn" bindtap="chooseAndUploadPhoto" loading="{{uploading}}">
-          选取并上传婚纱照
+          选取并上传照片或视频
         </button>
+        <button class="btn-primary ug-btn ug-btn-gap" bindtap="chooseAndUploadVideo" loading="{{uploadingVideo}}" disabled="{{uploading}}">
+          选取并上传视频
+        </button>
+        <text class="ug-progress" wx:if="{{uploadingVideo}}">视频上传中 {{uploadProgress}}%</text>
       </view>
 
       <view class="photos-manage-grid">
         <view wx:for="{{photosList}}" wx:key="url" class="pm-item">
-          <image class="pm-img" src="{{item.thumbUrl || item.url}}" mode="aspectFill" bindtap="previewPhoto" data-url="{{item.url}}"></image>
+          <view class="pm-thumb" bindtap="previewPhoto" data-url="{{item.url}}" data-kind="{{item.kind}}">
+            <image class="pm-img" src="{{item.thumb_url || item.thumbUrl || item.url}}" mode="aspectFill"></image>
+            <view class="pm-play" wx:if="{{item.isVideo || item.kind === 'video'}}">▶</view>
+          </view>
           <view class="pm-caption">
             <text class="pm-title">{{item.title || '婚纱照'}}</text>
             <text bindtap="deletePhoto" data-id="{{item.id}}" style="color: #B23A3A; font-size: 24rpx; padding: 4rpx 12rpx;">删除</text>
@@ -216,7 +223,7 @@
       </view>
 
       <view wx:if="{{photosList.length === 0}}" class="empty-tip">
-        <text>相册还是空的，点击上方按钮上传第一张婚纱照</text>
+        <text>相册还是空的，点击上方按钮上传第一张照片或视频</text>
       </view>
 
       <!-- 岁月印记 · 恋爱纪事（存于婚礼配置 story 字段） -->
@@ -228,7 +235,11 @@
         <text class="ug-desc rc-desc">这里的纪事会显示在婚纱相册页「岁月印记」时间轴，也会显示在「我们相遇的故事」页。尚未保存时，宾客端不显示任何纪事；保存后只显示这里的列表。</text>
 
         <view wx:for="{{storyList}}" wx:key="id" class="record-item">
-          <image wx:if="{{item.image}}" class="ri-thumb" src="{{item.image}}" mode="aspectFill"></image>
+          <view wx:if="{{item.image}}" class="ri-thumb-wrap">
+            <video wx:if="{{item.isVideo}}" class="ri-thumb" src="{{item.image}}" object-fit="cover" muted="{{true}}" controls="{{false}}" show-center-play-btn="{{false}}" show-fullscreen-btn="{{false}}" show-play-btn="{{false}}"></video>
+            <image wx:else class="ri-thumb" src="{{item.image}}" mode="aspectFill"></image>
+            <view class="ri-play" wx:if="{{item.isVideo}}">▶</view>
+          </view>
           <view wx:else class="ri-thumb ri-thumb-empty"><text>无配图</text></view>
           <view class="ri-body">
             <view class="ri-line">
@@ -654,24 +665,31 @@
       </view>
       <view class="modal-form-item">
         <text class="mf-label">配图（可选）</text>
-        <image wx:if="{{storyForm.image}}" class="sf-preview" src="{{storyForm.image}}" mode="aspectFill"></image>
+        <video wx:if="{{storyForm.image && storyForm.isVideo}}" class="sf-preview" src="{{storyForm.image}}" object-fit="cover" controls="{{true}}" show-center-play-btn="{{true}}"></video>
+        <image wx:elif="{{storyForm.image}}" class="sf-preview" src="{{storyForm.image}}" mode="aspectFill"></image>
         <view wx:else class="sf-preview sf-preview-empty"><text>暂无配图</text></view>
         <view class="rc-btn-row sf-btn-row">
           <view class="rc-btn rc-btn-gold" bindtap="toggleStoryPhotoPicker">{{showStoryPhotoPicker ? '收起相册' : '从相册选'}}</view>
-          <view class="rc-btn rc-btn-gold {{uploadingStoryImage ? 'ri-act-disabled' : ''}}" bindtap="uploadStoryImage">{{uploadingStoryImage ? '上传中…' : '上传新图'}}</view>
+          <view class="rc-btn rc-btn-gold {{uploadingStoryImage ? 'ri-act-disabled' : ''}}" bindtap="uploadStoryImage">{{uploadingStoryImage ? '上传中…' : '上传图片或视频'}}</view>
           <view class="rc-btn rc-btn-plain" wx:if="{{storyForm.image}}" bindtap="clearStoryImage">移除</view>
         </view>
-        <text class="sf-hint">「上传新图」只作纪事配图，不会出现在婚纱相册里。</text>
+        <text class="sf-hint">「上传图片或视频」只作纪事配图，不会出现在婚纱相册里。</text>
         <view class="sf-picker" wx:if="{{showStoryPhotoPicker}}">
-          <image
+          <view
             wx:for="{{photosList}}"
             wx:key="url"
-            class="sf-pick-img {{storyForm.image === item.url ? 'sf-pick-active' : ''}}"
-            src="{{item.thumbUrl || item.url}}"
-            mode="aspectFill"
+            class="sf-pick-wrap"
             bindtap="pickStoryPhoto"
             data-url="{{item.url}}"
-          ></image>
+            data-kind="{{item.kind}}"
+          >
+            <image
+              class="sf-pick-img {{storyForm.image === item.url ? 'sf-pick-active' : ''}}"
+              src="{{item.thumb_url || item.thumbUrl || item.url}}"
+              mode="aspectFill"
+            ></image>
+            <view class="sf-pick-play" wx:if="{{item.isVideo || item.kind === 'video'}}">▶</view>
+          </view>
         </view>
       </view>
 

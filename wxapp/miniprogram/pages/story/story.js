@@ -1,18 +1,20 @@
 // pages/story/story.js
 const app = getApp();
 const api = require('../../utils/api.js');
+const media = require('../../utils/media.js');
 
 function normalizeStories(list) {
   return (list || []).filter(function (it) { return it && typeof it === 'object'; }).map(function (it, i) {
-    return {
+    return media.tagMedia({
       id: String(it.id || ('s' + i)),
       year: it.year || it.date || '',
       date: it.date || it.year || '',
       title: it.title || '',
       image: it.image || '',
+      url: it.image || '',
       desc: it.desc || it.content || '',
       content: it.content || it.desc || ''
-    };
+    });
   });
 }
 

@@ -15,8 +15,16 @@
         <text class="sh-icon">✦</text>
         <text class="sh-title">{{item.title}}</text>
       </view>
+      <video
+        wx:if="{{item.image && item.isVideo}}"
+        class="story-img"
+        src="{{item.image}}"
+        object-fit="cover"
+        controls="{{true}}"
+        show-center-play-btn="{{true}}"
+      ></video>
       <image
-        wx:if="{{item.image}}"
+        wx:elif="{{item.image}}"
         class="story-img"
         src="{{item.image}}"
         mode="aspectFill"

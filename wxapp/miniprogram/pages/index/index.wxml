@@ -314,7 +314,23 @@
 
       <!-- 3:4 婚纱大片 (来自相册资源) -->
       <view class="hero-photo-box" bindtap="previewCover">
+        <video
+          wx:if="{{coverIsVideo}}"
+          class="hero-img"
+          src="{{coverImage}}"
+          poster="{{coverPoster}}"
+          object-fit="cover"
+          autoplay="{{true}}"
+          muted="{{true}}"
+          loop="{{true}}"
+          controls="{{false}}"
+          show-center-play-btn="{{false}}"
+          show-play-btn="{{false}}"
+          show-fullscreen-btn="{{false}}"
+          enable-progress-gesture="{{false}}"
+        ></video>
         <image
+          wx:else
           class="hero-img"
           src="{{coverImage}}"
           mode="aspectFill"

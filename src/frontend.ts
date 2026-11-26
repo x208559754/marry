@@ -30,7 +30,7 @@ export const page = `<!DOCTYPE html>
     overflow: hidden; transition: transform 0.15s, box-shadow 0.15s;
   }
   .photo:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08); }
-  .photo img { width: 100%; height: 180px; object-fit: cover; display: block; }
+  .photo img, .photo video { width: 100%; height: 180px; object-fit: cover; display: block; background: #111; }
   .photo .meta { padding: 12px; }
   .photo .meta .name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .photo .meta .date { font-size: 12px; color: #9ca3af; margin-top: 2px; }
@@ -63,6 +63,22 @@ export const page = `<!DOCTYPE html>
     return d.toLocaleString('zh-CN', { hour12: false });
   }
 
+  function mediaKindOf(item) {
+    if (!item) return 'image';
+    if (typeof item === 'string') item = { url: item };
+    var kind = String(item.kind || item.type || '').toLowerCase();
+    if (kind === 'video' || kind === 'image') return kind;
+    var keys = [item.url, item.image, item.src, item.thumb_url, item.thumbUrl];
+    for (var i = 0; i < keys.length; i++) {
+      var s = String(keys[i] || '').trim();
+      if (!s) continue;
+      if (s.indexOf('qiniu:video/') === 0 || s.indexOf('qiniu:video/') !== -1) return 'video';
+      var path = s.split('#')[0].split('?')[0];
+      if (/\.(mp4|mov|m4v|webm|avi|mkv|3gp|m3u8)$/i.test(path)) return 'video';
+    }
+    return 'image';
+  }
+
   function renderCard(img) {
     var card = document.createElement('div');
     card.className = 'photo';
@@ -71,11 +87,22 @@ export const page = `<!DOCTYPE html>
     a.href = img.url;
     a.target = '_blank';
     a.rel = 'noopener';
-    var image = document.createElement('img');
-    image.src = img.thumb_url || img.url;
-    image.loading = 'lazy';
-    image.alt = img.title || 'photo';
-    a.appendChild(image);
+    if (mediaKindOf(img) === 'video') {
+      var video = document.createElement('video');
+      video.src = img.url;
+      video.poster = img.thumb_url || '';
+      video.controls = true;
+      video.preload = 'metadata';
+      video.playsInline = true;
+      video.style.width = '100%';
+      a.appendChild(video);
+    } else {
+      var image = document.createElement('img');
+      image.src = img.thumb_url || img.url;
+      image.loading = 'lazy';
+      image.alt = img.title || 'photo';
+      a.appendChild(image);
+    }
     card.appendChild(a);
 
     var meta = document.createElement('div');

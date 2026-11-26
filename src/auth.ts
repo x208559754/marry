@@ -25,7 +25,15 @@ export type Bindings = {
   PAY?: PayProvider // 自建 Node 部署注入（server/wxpay.ts）；Worker 部署没有
   // ---- 平台总后台（仅在库中尚无哈希时作为种子；之后以数据库为准）----
   PLATFORM_ADMIN_PASSWORD?: string
+  // ---- 七牛云（视频直传；访问域名优先读数据库 config.qiniu_domain）----
+  QINIU_AK?: string
+  QINIU_SK?: string
+  QINIU_BUCKET?: string
+  QINIU_DOMAIN?: string // 仅作 config.qiniu_domain 的兜底
+  QINIU_UPLOAD_URL?: string
+  QINIU_RS_URL?: string
 }
+
 
 // 微信支付能力（由 server/wxpay.ts 实现并注入；src 内不直接依赖 node:crypto）
 export type PayProvider = {

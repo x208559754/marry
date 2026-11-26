@@ -1,12 +1,15 @@
 // pages/index/index.js
 const app = getApp();
 const api = require('../../utils/api.js');
+const media = require('../../utils/media.js');
 
 Page({
   data: {
     theme: 'red',
     config: {},
     coverImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1000&q=80',
+    coverIsVideo: false,
+    coverPoster: '',
     isPlayingBgm: false,
     
     // 开屏信封与开帖状态
@@ -239,17 +242,23 @@ Page({
   loadWeddingData: function (callback) {
     api.getWeddingConfig().then((cfg) => {
       let cover = 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1000&q=80';
+      let coverItem = { url: cover };
       if (cfg && cfg.photos && cfg.photos.length > 0) {
-        cover = cfg.photos[0].url;
+        coverItem = cfg.photos[0];
+        cover = coverItem.url || cover;
       } else if (cfg && cfg.coverImage) {
         cover = cfg.coverImage;
+        coverItem = { url: cover, image: cover, kind: cfg.coverKind };
       }
+      coverItem = media.tagMedia(Object.assign({}, coverItem, { url: cover }));
       const plan = (cfg && cfg._plan) || {};
       const resolvedTheme = (cfg && cfg.theme) || (app.getTheme && app.getTheme()) || 'red';
       this.setData({
         config: cfg,
         theme: resolvedTheme,
         coverImage: cover,
+        coverIsVideo: !!coverItem.isVideo,
+        coverPoster: coverItem.thumb_url || coverItem.thumbUrl || '',
         showBrand: plan.watermark !== undefined ? !!plan.watermark : !!plan.brand,
         canUpgrade: (plan.canUpgrade !== undefined ? !!plan.canUpgrade : !plan.premium) && api.isAdmin(),
         planBadge: plan.badge || '',
@@ -639,12 +648,15 @@ Page({
   },
 
   previewCover: function () {
-    if (this.data.coverImage) {
-      wx.previewImage({
-        current: this.data.coverImage,
-        urls: [this.data.coverImage]
-      });
+    if (!this.data.coverImage) return;
+    if (this.data.coverIsVideo) {
+      wx.previewMedia({ sources: [{ url: this.data.coverImage, type: 'video' }], current: 0 });
+      return;
     }
+    wx.previewImage({
+      current: this.data.coverImage,
+      urls: [this.data.coverImage]
+    });
   },
 
   onSecretAdminTrigger: function () {
@@ -660,7 +672,7 @@ Page({
     return {
       title: `喜帖：${groom} ＆ ${bride} 的结婚请柬，诚邀您的莅临！`,
       path: '/pages/index/index' + (app.globalData.wid ? ('?wid=' + app.globalData.wid) : ''),
-      imageUrl: this.data.coverImage
+      imageUrl: this.data.coverIsVideo ? (this.data.coverPoster || '') : this.data.coverImage
     };
   },
 
@@ -669,7 +681,7 @@ Page({
     const bride = (this.data.config.bride && this.data.config.bride.name) || '徐有容';
     return {
       title: `${groom} ＆ ${bride} 喜结良缘，诚邀亲友见证！`,
-      imageUrl: this.data.coverImage
+      imageUrl: this.data.coverIsVideo ? (this.data.coverPoster || '') : this.data.coverImage
     };
   }
 });

@@ -16,6 +16,20 @@ import { submitImageCheck, handleMediaCheckEvent } from './moderation'
 import { wedding } from './wedding'
 import { lottery } from './lottery'
 import { lotteryPage } from './lottery-page'
+import {
+  getQiniuCreds,
+  getQiniuDomain,
+  makeUploadToken,
+  newVideoKey,
+  videoKeyAllowed,
+  toQiniuMarker,
+  fromQiniuMarker,
+  publicObjectUrl,
+  videoThumbUrl,
+  deleteQiniuObject,
+  VIDEO_MAX_BYTES,
+} from './qiniu'
+import { mediaKindOf } from './media-kind'
 
 // 绑定的资源与环境变量见 src/auth.ts 的 Bindings 类型
 // （DB / PHOTOS / IMGBB_API_KEY / WX_APPID / WX_APPSECRET / WX_MOCK_LOGIN / SESSION_SECRET / ADMIN_OPENIDS）
@@ -27,6 +41,7 @@ type ImageRow = {
   url: string
   thumb_url: string
   created_at: string
+  kind?: string
 }
 
 // 根据文件头判断图片类型。微信 wx.uploadFile 常把文件标成 octet-stream，且临时文件名没有扩展名。
@@ -57,11 +72,18 @@ function mediaUrl(origin: string, storeId: string) {
   return origin + '/media/' + storeId
 }
 
-function withPublicUrls(origin: string, row: ImageRow): ImageRow {
+function withPublicUrls(origin: string, row: ImageRow, qiniuDomain?: string): ImageRow {
+  const key = fromQiniuMarker(row.url) || fromQiniuMarker(row.thumb_url)
+  const kind = mediaKindOf(row)
+  if (key) {
+    const domain = qiniuDomain || ''
+    const url = publicObjectUrl(domain, key)
+    return { ...row, url, thumb_url: kind === 'video' ? videoThumbUrl(domain, key) : url, kind }
+  }
   const m = /\/media\/([A-Za-z0-9._-]+)$/.exec(row.url || '')
-  if (!m) return row
+  if (!m) return { ...row, kind }
   const url = mediaUrl(origin, m[1])
-  return { ...row, url, thumb_url: url }
+  return { ...row, url, thumb_url: url, kind }
 }
 
 const app = new Hono<AppEnv>()
@@ -187,12 +209,13 @@ app.get('/l/:wid', (c) => {
 app.get('/api/images', async (c) => {
   const wid = getWid(c)
   const { results } = await c.env.DB.prepare(
-    "SELECT id, title, url, thumb_url, created_at FROM images WHERE wedding_id = ? AND status <> 'hidden' ORDER BY id DESC",
+    "SELECT id, title, url, thumb_url, created_at, kind FROM images WHERE wedding_id = ? AND status <> 'hidden' ORDER BY id DESC",
   )
     .bind(wid)
     .all<ImageRow>()
   const origin = new URL(c.req.url).origin
-  return c.json((results || []).map((row) => withPublicUrls(origin, row)))
+  const qiniuDomain = await getQiniuDomain(c.env.DB, c.env)
+  return c.json((results || []).map((row) => withPublicUrls(origin, row, qiniuDomain)))
 })
 
 // 上传到 ImgBB：返回 {id,url,thumb_url,delete_url}；失败抛错
@@ -303,13 +326,88 @@ app.post('/api/images', requireAdmin, async (c) => {
     .run()
 
   const row = await c.env.DB.prepare(
-    'SELECT id, title, url, thumb_url, created_at FROM images WHERE id = ?',
+    'SELECT id, title, url, thumb_url, created_at, kind FROM images WHERE id = ?',
   )
     .bind(inserted.meta.last_row_id)
     .first<ImageRow>()
   submitImageCheck(c.env, stored.url, { ...modTarget, targetId: inserted.meta.last_row_id }).catch(() => {})
 
   return c.json(row ? withPublicUrls(origin, row) : row, 201)
+})
+
+// 七牛视频直传：后台签发短时上传凭证，小程序直接传到七牛，再调用 POST /api/videos 登记。
+// 库里只存 qiniu:<对象键>，完整网址在读出时用 config.qiniu_domain 拼接。
+app.post('/api/videos/token', requireAdmin, async (c) => {
+  const wid = getWid(c)
+  const creds = getQiniuCreds(c.env)
+  if ('error' in creds) return c.json({ error: creds.error }, 503)
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const isGallery = !(body.gallery === 0 || body.gallery === '0' || body.gallery === false)
+  const wp = await getWeddingPlan(c.env.DB, wid)
+  if (wp.status === 'disabled') return c.json({ error: '该婚礼已被平台停用' }, 403)
+  if (isGallery) {
+    const cnt = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM images WHERE wedding_id = ? AND status <> 'hidden'").bind(wid).first<{ n: number }>()
+    const cap = wp.ent.photos
+    if ((Number(cnt?.n) || 0) >= cap) return limitReached(c, wp, '相册最多 ' + cap + ' 张')
+  }
+  const key = newVideoKey(wid)
+  const domain = await getQiniuDomain(c.env.DB, c.env)
+  const minted = await makeUploadToken(creds, key)
+  return c.json({
+    token: minted.token,
+    key,
+    uploadUrl: creds.uploadUrl,
+    fileUrl: publicObjectUrl(domain, key),
+    domain,
+    expireAt: minted.expireAt,
+    maxBytes: VIDEO_MAX_BYTES,
+  })
+})
+
+app.post('/api/videos', requireAdmin, async (c) => {
+  const wid = getWid(c)
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const key = typeof body.key === 'string' ? body.key.trim() : ''
+  if (!videoKeyAllowed(wid, key)) return c.json({ error: '无效的视频文件路径' }, 400)
+  const title = typeof body.title === 'string' ? body.title.trim() || null : null
+  const isGallery = !(body.gallery === 0 || body.gallery === '0' || body.gallery === false)
+  const wp = await getWeddingPlan(c.env.DB, wid)
+  if (wp.status === 'disabled') return c.json({ error: '该婚礼已被平台停用' }, 403)
+  if (isGallery) {
+    const cnt = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM images WHERE wedding_id = ? AND status <> 'hidden'").bind(wid).first<{ n: number }>()
+    const cap = wp.ent.photos
+    if ((Number(cnt?.n) || 0) >= cap) return limitReached(c, wp, '相册最多 ' + cap + ' 张')
+  }
+  const marker = toQiniuMarker(key)
+  const domain = await getQiniuDomain(c.env.DB, c.env)
+  const origin = new URL(c.req.url).origin
+  if (!isGallery) {
+    return c.json(
+      {
+        id: null,
+        title,
+        url: publicObjectUrl(domain, key),
+        thumb_url: videoThumbUrl(domain, key),
+        created_at: new Date().toISOString(),
+        kind: 'video',
+        key,
+        marker,
+        gallery: false,
+      },
+      201,
+    )
+  }
+  const inserted = await c.env.DB.prepare(
+    "INSERT INTO images (wedding_id, imgbb_id, title, url, thumb_url, delete_url, kind) VALUES (?, ?, ?, ?, ?, ?, 'video')",
+  )
+    .bind(wid, marker, title, marker, marker, null)
+    .run()
+  const row = await c.env.DB.prepare(
+    'SELECT id, title, url, thumb_url, created_at, kind FROM images WHERE id = ?',
+  )
+    .bind(inserted.meta.last_row_id)
+    .first<ImageRow>()
+  return c.json(row ? withPublicUrls(origin, row, domain) : row, 201)
 })
 
 // 公开取图：小程序 <image> 与网页都走这个地址（无需登录）
@@ -342,9 +440,9 @@ app.delete('/api/images/:id', requireAdmin, async (c) => {
   if (!Number.isInteger(id) || id <= 0) {
     return c.json({ error: '无效的 id' }, 400)
   }
-  const row = await c.env.DB.prepare('SELECT imgbb_id, delete_url, wedding_id FROM images WHERE id = ?')
+  const row = await c.env.DB.prepare('SELECT imgbb_id, delete_url, url, wedding_id FROM images WHERE id = ?')
     .bind(id)
-    .first<{ imgbb_id: string | null; delete_url: string | null; wedding_id: string }>()
+    .first<{ imgbb_id: string | null; delete_url: string | null; url: string | null; wedding_id: string }>()
   if (!row) {
     return c.json({ error: '照片不存在' }, 404)
   }
@@ -352,7 +450,17 @@ app.delete('/api/images/:id', requireAdmin, async (c) => {
     return c.json({ error: '这张照片不属于当前婚礼' }, 403)
   }
 
-  if (row.imgbb_id && row.imgbb_id.startsWith('photo:') && c.env.PHOTOS) {
+  const qiniuKey = fromQiniuMarker(row.imgbb_id) || fromQiniuMarker(row.url)
+  if (qiniuKey) {
+    const creds = getQiniuCreds(c.env)
+    if (!('error' in creds)) {
+      try {
+        await deleteQiniuObject(creds, qiniuKey)
+      } catch {
+        // 忽略存储删除失败，仍删库记录
+      }
+    }
+  } else if (row.imgbb_id && row.imgbb_id.startsWith('photo:') && c.env.PHOTOS) {
     try {
       await c.env.PHOTOS.delete(row.imgbb_id)
     } catch {

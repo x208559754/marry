@@ -352,6 +352,34 @@ button.unlock-btn {
 .ug-btn {
   width: 100%;
 }
+.ug-btn-gap {
+  margin-top: 16rpx;
+}
+.ug-progress {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #8a7a6e;
+  text-align: center;
+}
+.pm-thumb {
+  position: relative;
+}
+.pm-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 72rpx;
+  height: 72rpx;
+  margin: -36rpx 0 0 -36rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .photos-manage-grid {
   display: grid;
@@ -656,6 +684,13 @@ button.unlock-btn {
   border-radius: 16rpx;
 }
 
+.ri-thumb-wrap {
+  position: relative;
+  width: 132rpx;
+  height: 132rpx;
+  flex-shrink: 0;
+  margin-right: 20rpx;
+}
 .ri-thumb {
   width: 132rpx;
   height: 132rpx;
@@ -664,6 +699,24 @@ button.unlock-btn {
   margin-right: 20rpx;
   background: #FAF7F2;
 }
+.ri-thumb-wrap .ri-thumb { margin-right: 0; }
+.ri-play, .sf-pick-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48rpx;
+  height: 48rpx;
+  margin: -24rpx 0 0 -24rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.sf-pick-wrap { position: relative; }
 
 .ri-thumb-empty {
   display: flex;

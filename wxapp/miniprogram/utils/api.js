@@ -2,6 +2,7 @@
 // 所有请求都打到自建后端 https://youxitie.site（地址见 utils/config.js 的 BASE_URL）
 // 函数命名与旧版保持兼容，页面侧基本只需替换 require 路径
 const { BASE_URL } = require('./config.js');
+const media = require('./media.js');
 
 const TOKEN_KEY = 'wx_wedding_token';
 const TOKEN_EXP_KEY = 'wx_wedding_token_exp';
@@ -287,7 +288,14 @@ function getPromo() {
 function getPhotosList() {
   return request('GET', widPath('/api/images')).then(function (list) {
     return (list || []).map(function (it) {
-      return { id: it.id, url: it.url, thumbUrl: it.thumb_url, title: it.title || '' };
+      return media.tagMedia({
+        id: it.id,
+        url: it.url,
+        thumbUrl: it.thumb_url,
+        thumb_url: it.thumb_url,
+        title: it.title || '',
+        kind: it.kind
+      });
     });
   });
 }
@@ -305,12 +313,25 @@ function uploadMedia(filePath, title) {
   }).then(function (d) {
     var url = (d && (d.url || d.thumb_url)) || '';
     if (!url) throw new Error('上传成功但未返回图片地址');
-    return { url: url };
+    return media.tagMedia({ url: url, thumb_url: d.thumb_url, kind: d.kind || 'image' });
   });
 }
 
 function deletePhoto(id) {
   return request('DELETE', widPath('/api/images/' + id));
+}
+
+// 七牛视频直传：向服务端要凭证（含 uploadUrl），再由 qiniu-upload.js 直传到七牛，最后调用 saveVideo 登记。
+function getVideoUploadToken(opts) {
+  return ensureLogin().then(function () {
+    return request('POST', widPath('/api/videos/token'), opts || {});
+  });
+}
+
+function saveVideo(body) {
+  return ensureLogin().then(function () {
+    return request('POST', widPath('/api/videos'), body || {});
+  });
 }
 
 // ---------------- 宾客档案 / 回执（按婚礼） ----------------
@@ -637,6 +658,8 @@ module.exports = {
   uploadPhoto: uploadPhoto,
   uploadMedia: uploadMedia,
   deletePhoto: deletePhoto,
+  getVideoUploadToken: getVideoUploadToken,
+  saveVideo: saveVideo,
   getUserProfileByOpenid: getUserProfileByOpenid,
   checkGuestByOpenid: checkGuestByOpenid,
   submitRsvp: submitRsvp,

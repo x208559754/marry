@@ -2,6 +2,8 @@
 const app = getApp();
 const api = require('../../utils/api.js');
 const wechat = require('../../utils/wechat.js');
+const qiniuUpload = require('../../utils/qiniu-upload.js');
+const media = require('../../utils/media.js');
 
 // 现场抽奖主题（与服务端 src/lottery.ts LOTTERY_THEMES、大屏 src/lottery-page.ts 保持一致）
 const LOTTERY_THEMES = [
@@ -53,13 +55,15 @@ function genId(prefix) {
 
 function normalizeStoryItem(it, i) {
   it = it || {};
-  return {
+  var image = String(it.image || '');
+  return media.tagMedia({
     id: String(it.id || genId('s') + i),
     date: String(it.date || it.year || ''),
     title: String(it.title || ''),
     content: String(it.content || it.desc || ''),
-    image: String(it.image || '')
-  };
+    image: image,
+    url: image
+  });
 }
 
 function normalizeScheduleItem(it, i) {
@@ -105,6 +109,8 @@ Page({
     loadingRsvps: false,
     photosList: [],
     uploading: false,
+    uploadingVideo: false,
+    uploadProgress: 0,
     savingConfig: false,
     stats: {
       totalAttendees: 0,
@@ -599,32 +605,39 @@ Page({
 
   chooseAndUploadPhoto: function () {
     const that = this;
-    if (this.data.uploading) return;
+    if (this.data.uploading || this.data.uploadingVideo) return;
     wx.chooseMedia({
       count: 9,
-      mediaType: ['image'],
+      mediaType: ['image', 'video'],
       sourceType: ['album', 'camera'],
       sizeType: ['original', 'compressed'],
+      maxDuration: 60,
       success: function (res) {
-        const files = (res.tempFiles || []).map(function (f) { return f.tempFilePath; }).filter(Boolean);
+        const files = (res.tempFiles || []).filter(function (f) { return f && f.tempFilePath; });
         if (!files.length) {
-          wx.showToast({ title: '未选取到图片', icon: 'none' });
+          wx.showToast({ title: '未选取到文件', icon: 'none' });
           return;
         }
-        that.setData({ uploading: true });
+        var tooBig = files.filter(function (f) { return media.isVideoFile(f) && Number(f.size) > 200 * 1024 * 1024; });
+        if (tooBig.length) {
+          wx.showModal({ title: '视频过大', content: '单个视频不能超过 200MB', showCancel: false });
+          return;
+        }
+        var hasVideo = files.some(function (f) { return media.isVideoFile(f); });
+        that.setData({ uploading: true, uploadingVideo: hasVideo, uploadProgress: 0 });
         var i = 0;
         var okCount = 0;
         var lastErr = '';
         var next = function () {
           if (i >= files.length) {
-            that.setData({ uploading: false });
+            that.setData({ uploading: false, uploadingVideo: false, uploadProgress: 0 });
             that.loadPhotos();
             if (okCount === files.length) {
-              wx.showToast({ title: okCount === 1 ? '上传成功' : '已上传 ' + okCount + ' 张', icon: 'success' });
+              wx.showToast({ title: okCount === 1 ? '上传成功' : '已上传 ' + okCount + ' 个', icon: 'success' });
             } else if (okCount > 0) {
               wx.showModal({
                 title: '部分上传失败',
-                content: '成功 ' + okCount + ' 张，失败 ' + (files.length - okCount) + ' 张。' + (lastErr || ''),
+                content: '成功 ' + okCount + ' 个，失败 ' + (files.length - okCount) + ' 个。' + (lastErr || ''),
                 showCancel: false
               });
             } else {
@@ -636,17 +649,19 @@ Page({
             }
             return;
           }
-          var path = files[i++];
-          api.uploadPhoto(path, '婚纱照').then(function () {
+          var file = files[i++];
+          var title = media.isVideoFile(file) ? '婚礼视频' : '婚纱照';
+          qiniuUpload.uploadChosenFile(file, title, function (pct) {
+            if (media.isVideoFile(file)) that.setData({ uploadProgress: pct });
+          }).then(function () {
             okCount++;
             next();
           }).catch(function (err) {
             lastErr = (err && err.message) || '上传失败';
             if (err && err.needUpgrade) {
-              // 达到免费版相册上限：停止后续上传并引导升级
-              that.setData({ uploading: false });
+              that.setData({ uploading: false, uploadingVideo: false, uploadProgress: 0 });
               that.loadPhotos();
-              api.handleUpgradeError({ needUpgrade: true, message: (okCount ? '已上传 ' + okCount + ' 张。' : '') + lastErr });
+              api.handleUpgradeError({ needUpgrade: true, message: (okCount ? '已上传 ' + okCount + ' 个。' : '') + lastErr });
               return;
             }
             next();
@@ -674,8 +689,8 @@ Page({
     const that = this;
     const id = e.currentTarget.dataset.id;
     wx.showModal({
-      title: '删除照片',
-      content: '确定删除这张照片吗？',
+      title: '删除',
+      content: '确定从相册中删除吗？视频会同时从七牛云移除。',
       success: function (res) {
         if (!res.confirm) return;
         api.deletePhoto(id).then(function () {
@@ -690,9 +705,97 @@ Page({
 
   previewPhoto: function (e) {
     const url = e.currentTarget.dataset.url;
+    const list = this.data.photosList || [];
+    const kind = media.mediaKindOf({ url: url, kind: e.currentTarget.dataset.kind });
+    if (kind === 'video') {
+      const sources = list.filter(function (p) { return p && media.isVideoMedia(p) && p.url; }).map(function (p) {
+        return { url: p.url, type: 'video' };
+      });
+      var idx = 0;
+      for (var i = 0; i < sources.length; i++) {
+        if (sources[i].url === url) { idx = i; break; }
+      }
+      wx.previewMedia({ sources: sources.length ? sources : [{ url: url, type: 'video' }], current: idx });
+      return;
+    }
     wx.previewImage({
       current: url,
-      urls: this.data.photosList.map(function (p) { return p.url; })
+      urls: list.filter(function (p) { return p && p.url && !media.isVideoMedia(p); }).map(function (p) { return p.url; })
+    });
+  },
+
+  chooseAndUploadVideo: function () {
+    const that = this;
+    if (this.data.uploading || this.data.uploadingVideo) return;
+    wx.chooseMedia({
+      count: 3,
+      mediaType: ['video'],
+      sourceType: ['album', 'camera'],
+      maxDuration: 60,
+      success: function (res) {
+        const files = (res.tempFiles || []).filter(function (f) { return f && f.tempFilePath; });
+        if (!files.length) {
+          wx.showToast({ title: '未选取到视频', icon: 'none' });
+          return;
+        }
+        var tooBig = files.filter(function (f) { return Number(f.size) > 200 * 1024 * 1024; });
+        if (tooBig.length) {
+          wx.showModal({ title: '视频过大', content: '单个视频不能超过 200MB', showCancel: false });
+          return;
+        }
+        that.setData({ uploadingVideo: true, uploadProgress: 0 });
+        var i = 0;
+        var okCount = 0;
+        var lastErr = '';
+        var next = function () {
+          if (i >= files.length) {
+            that.setData({ uploadingVideo: false, uploadProgress: 0 });
+            that.loadPhotos();
+            if (okCount === files.length) {
+              wx.showToast({ title: okCount === 1 ? '上传成功' : '已上传 ' + okCount + ' 个视频', icon: 'success' });
+            } else if (okCount > 0) {
+              wx.showModal({
+                title: '部分上传失败',
+                content: '成功 ' + okCount + ' 个，失败 ' + (files.length - okCount) + ' 个。' + (lastErr || ''),
+                showCancel: false
+              });
+            } else {
+              wx.showModal({ title: '上传失败', content: lastErr || '请检查网络后重试', showCancel: false });
+            }
+            return;
+          }
+          var file = files[i++];
+          qiniuUpload.uploadVideo(file.tempFilePath, '婚礼视频', function (pct) {
+            that.setData({ uploadProgress: pct });
+          }).then(function () {
+            okCount++;
+            next();
+          }).catch(function (err) {
+            lastErr = (err && err.message) || '上传失败';
+            if (err && err.needUpgrade) {
+              that.setData({ uploadingVideo: false, uploadProgress: 0 });
+              that.loadPhotos();
+              api.handleUpgradeError({ needUpgrade: true, message: (okCount ? '已上传 ' + okCount + ' 个。' : '') + lastErr });
+              return;
+            }
+            next();
+          });
+        };
+        next();
+      },
+      fail: function (err) {
+        var msg = (err && err.errMsg) || '';
+        if (msg.indexOf('cancel') !== -1) return;
+        if (msg.indexOf('privacy') !== -1 || msg.indexOf('scope is not declared') !== -1) {
+          wx.showModal({
+            title: '需要先配置隐私协议',
+            content: '微信要求在公众平台「设置 → 服务内容声明 → 用户隐私保护指引」中勾选「收集你选中的照片或视频信息」（用于上传婚纱照和视频）。提交后，在开发者工具里清缓存并重新编译即可。',
+            showCancel: false
+          });
+          return;
+        }
+        wx.showToast({ title: msg || '无法打开相册', icon: 'none' });
+      }
     });
   },
 
@@ -749,8 +852,8 @@ Page({
       showStoryPhotoPicker: false,
       storyEditIndex: item ? idx : -1,
       storyForm: item
-        ? { date: item.date, title: item.title, content: item.content, image: item.image }
-        : { date: '', title: '', content: '', image: '' }
+        ? media.tagMedia({ date: item.date, title: item.title, content: item.content, image: item.image, url: item.image })
+        : { date: '', title: '', content: '', image: '', isVideo: false, kind: 'image' }
     });
   },
 
@@ -774,14 +877,19 @@ Page({
   },
 
   pickStoryPhoto: function (e) {
+    var url = e.currentTarget.dataset.url || '';
+    var kind = e.currentTarget.dataset.kind || '';
+    var tagged = media.tagMedia({ image: url, url: url, kind: kind });
     this.setData({
-      'storyForm.image': e.currentTarget.dataset.url || '',
+      'storyForm.image': url,
+      'storyForm.kind': tagged.kind,
+      'storyForm.isVideo': tagged.isVideo,
       showStoryPhotoPicker: false
     });
   },
 
   clearStoryImage: function () {
-    this.setData({ 'storyForm.image': '' });
+    this.setData({ 'storyForm.image': '', 'storyForm.kind': 'image', 'storyForm.isVideo': false });
   },
 
   // 上传新配图：只存图拿地址，不进婚纱相册
@@ -790,19 +898,34 @@ Page({
     if (this.data.uploadingStoryImage) return;
     wx.chooseMedia({
       count: 1,
-      mediaType: ['image'],
+      mediaType: ['image', 'video'],
       sourceType: ['album', 'camera'],
       sizeType: ['compressed'],
+      maxDuration: 60,
       success: function (res) {
         const f = (res.tempFiles || [])[0];
         if (!f || !f.tempFilePath) {
-          wx.showToast({ title: '未选取到图片', icon: 'none' });
+          wx.showToast({ title: '未选取到文件', icon: 'none' });
+          return;
+        }
+        if (media.isVideoFile(f) && Number(f.size) > 200 * 1024 * 1024) {
+          wx.showModal({ title: '视频过大', content: '单个视频不能超过 200MB', showCancel: false });
           return;
         }
         that.setData({ uploadingStoryImage: true });
-        api.uploadMedia(f.tempFilePath, '岁月印记').then(function (d) {
-          that.setData({ uploadingStoryImage: false, 'storyForm.image': d.url, showStoryPhotoPicker: false });
-          wx.showToast({ title: '配图已上传', icon: 'success' });
+        qiniuUpload.uploadChosenFile(f, '岁月印记', function (pct) {
+          that.setData({ uploadProgress: pct });
+        }, { gallery: 0 }).then(function (d) {
+          var url = (d && d.url) || '';
+          var tagged = media.tagMedia({ image: url, url: url, kind: d && d.kind });
+          that.setData({
+            uploadingStoryImage: false,
+            'storyForm.image': url,
+            'storyForm.kind': tagged.kind,
+            'storyForm.isVideo': tagged.isVideo,
+            showStoryPhotoPicker: false
+          });
+          wx.showToast({ title: tagged.isVideo ? '视频已上传' : '配图已上传', icon: 'success' });
         }).catch(function (err) {
           that.setData({ uploadingStoryImage: false });
           wx.showModal({ title: '上传失败', content: (err && err.message) || '请检查网络后重试', showCancel: false });
@@ -838,13 +961,14 @@ Page({
     }
     const list = this.data.storyList.slice();
     const idx = this.data.storyEditIndex;
-    const item = {
+    const item = normalizeStoryItem({
       id: idx >= 0 && list[idx] ? list[idx].id : genId('s'),
       date: (f.date || '').trim(),
       title: title,
       content: content,
-      image: (f.image || '').trim()
-    };
+      image: (f.image || '').trim(),
+      kind: f.kind
+    });
     if (idx >= 0 && idx < list.length) list[idx] = item;
     else list.push(item);
     this.setData({ storyList: list, storyDirty: true, showStoryModal: false, showStoryPhotoPicker: false });

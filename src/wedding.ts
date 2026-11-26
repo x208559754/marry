@@ -19,6 +19,7 @@ import type { AppEnv } from './auth'
 import { getWxAccessToken } from './wx'
 import { checkTexts, collectTexts, attachTarget } from './moderation'
 import { getWeddingPlan, displayPlan, allowedTheme } from './billing'
+import { getQiniuDomain, foldConfigMedia, expandConfigMedia } from './qiniu'
 
 export const wedding = new Hono<AppEnv>()
 
@@ -328,6 +329,8 @@ wedding.get('/config', requireWid, async (c) => {
     // 套餐信息（只读，客户端据此决定是否显示「有囍請柬」标识等）
     if (obj.theme) obj.theme = allowedTheme(wp, obj.theme)
     obj._plan = displayPlan(wp)
+    const qiniuDomain = await getQiniuDomain(c.env.DB, c.env)
+    expandConfigMedia(obj, qiniuDomain)
     cfg = obj
   }
   return ok(c, cfg)
@@ -371,6 +374,8 @@ wedding.put('/config', requireAdmin, async (c) => {
   delete existing.photos
   const merged = { ...existing, ...incoming }
   if (merged.venue) merged.venue = normalizeVenue(merged.venue)
+  const qiniuDomain = await getQiniuDomain(c.env.DB, c.env)
+  foldConfigMedia(merged as Record<string, unknown>, qiniuDomain)
 
   const obj = merged as Record<string, any>
   const groomName =

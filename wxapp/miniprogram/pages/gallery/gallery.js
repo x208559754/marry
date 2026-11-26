@@ -1,17 +1,19 @@
 // pages/gallery/gallery.js
 const app = getApp();
 const api = require('../../utils/api.js');
+const media = require('../../utils/media.js');
 
 // 云端字段兼容：date/year、content/desc
 function normalizeStories(list) {
   return (list || []).filter(function (it) { return it && typeof it === 'object'; }).map(function (it, i) {
-    return {
+    return media.tagMedia({
       id: String(it.id || ('s' + i)),
       date: it.date || it.year || '',
       title: it.title || '',
       content: it.content || it.desc || '',
-      image: it.image || ''
-    };
+      image: it.image || '',
+      url: it.image || ''
+    });
   });
 }
 
@@ -91,15 +93,32 @@ Page({
   previewStoryImage: function (e) {
     const url = e.currentTarget.dataset.url;
     if (!url) return;
+    if (media.isVideoMedia({ url: url, image: url, kind: e.currentTarget.dataset.kind })) {
+      wx.previewMedia({ sources: [{ url: url, type: 'video' }], current: 0 });
+      return;
+    }
     wx.previewImage({ current: url, urls: [url] });
   },
 
   previewImage: function (e) {
     const current = e.currentTarget.dataset.current;
-    const urls = this.data.photosList.map((item) => item.url);
+    const list = this.data.photosList || [];
+    const hit = list.filter(function (item) { return item && item.url === current; })[0] || { url: current };
+    if (media.isVideoMedia(hit)) {
+      const sources = list.filter(function (item) { return item && media.isVideoMedia(item) && item.url; }).map(function (item) {
+        return { url: item.url, type: 'video' };
+      });
+      var idx = 0;
+      for (var i = 0; i < sources.length; i++) {
+        if (sources[i].url === current) { idx = i; break; }
+      }
+      wx.previewMedia({ sources: sources.length ? sources : [{ url: current, type: 'video' }], current: idx });
+      return;
+    }
+    const urls = list.filter(function (item) { return item && item.url && !media.isVideoMedia(item); }).map(function (item) { return item.url; });
     wx.previewImage({
       current: current,
-      urls: urls
+      urls: urls.length ? urls : [current]
     });
   },
 

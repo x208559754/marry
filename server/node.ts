@@ -35,6 +35,13 @@ const bindings = {
   PAY: createWxPay(env, env.WX_APPID || ''),
   // 平台总后台
   PLATFORM_ADMIN_PASSWORD: env.PLATFORM_ADMIN_PASSWORD || '',
+  // 七牛云：AK/SK/空间在环境变量；访问域名优先读数据库 config.qiniu_domain，这里只作兜底
+  QINIU_AK: env.QINIU_AK || '',
+  QINIU_SK: env.QINIU_SK || '',
+  QINIU_BUCKET: env.QINIU_BUCKET || '',
+  QINIU_DOMAIN: env.QINIU_DOMAIN || '',
+  QINIU_UPLOAD_URL: env.QINIU_UPLOAD_URL || '',
+  QINIU_RS_URL: env.QINIU_RS_URL || '',
 }
 
 // Caddy 终止 HTTPS 后以 http 反代到本机：按 X-Forwarded-Proto 还原 https，

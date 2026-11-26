@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS images (
   thumb_url VARCHAR(1024) NOT NULL,
   delete_url VARCHAR(1024) NULL,
   status VARCHAR(16) NOT NULL DEFAULT 'visible',
+  kind VARCHAR(16) NOT NULL DEFAULT 'image',
   created_at VARCHAR(40) NOT NULL DEFAULT (DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-%d %H:%i:%s')),
   KEY idx_images_wedding (wedding_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
@@ -86,6 +87,7 @@ CREATE TABLE IF NOT EXISTS config (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 INSERT IGNORE INTO config (`key`, value) VALUES ('super_admin_passcode', 'root@123');
+INSERT IGNORE INTO config (`key`, value) VALUES ('qiniu_domain', 'https://qn.youxitie.site');
 
 CREATE TABLE IF NOT EXISTS heart_clicks (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,

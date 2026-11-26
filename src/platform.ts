@@ -10,6 +10,7 @@ import {
   getWeddingPlan, getUsage, logPlan, isExpired, CODE_RE, ALL_THEMES, THEME_NAMES, EFFECTS, EFFECT_NAMES,
 } from './billing'
 import { LABEL_NAMES, resetKeywordCache } from './moderation'
+import { getQiniuDomain, setQiniuDomain, DEFAULT_QINIU_DOMAIN } from './qiniu'
 
 export const platform = new Hono<AppEnv>()
 
@@ -656,6 +657,19 @@ platform.put('/keywords', async (c) => {
     .run()
   resetKeywordCache()
   return ok(c, { keywords: v })
+})
+
+// 七牛视频访问域名：存在 config.qiniu_domain，改了不必重启服务
+platform.get('/qiniu-domain', async (c) => {
+  const domain = await getQiniuDomain(c.env.DB, c.env)
+  return ok(c, { domain, key: 'qiniu_domain', fallback: DEFAULT_QINIU_DOMAIN })
+})
+platform.put('/qiniu-domain', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const raw = typeof body.domain === 'string' ? body.domain : ''
+  const res = await setQiniuDomain(c.env.DB, raw)
+  if (!res.ok) return fail(c, res.error, 400)
+  return ok(c, { domain: res.domain, key: 'qiniu_domain' })
 })
 
 // ---------------- 修改总后台密码 ----------------

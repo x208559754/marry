@@ -97,6 +97,7 @@ const COLUMNS: [string, string, string][] = [
   ['weddings', 'plan_note', 'VARCHAR(255) NULL'],
   ['blessings', 'status', "VARCHAR(16) NOT NULL DEFAULT 'visible'"],
   ['images', 'status', "VARCHAR(16) NOT NULL DEFAULT 'visible'"],
+  ['images', 'kind', "VARCHAR(16) NOT NULL DEFAULT 'image'"],
 ]
 
 export async function migrate(pool: mysql.Pool) {
@@ -117,4 +118,8 @@ export async function migrate(pool: mysql.Pool) {
     await pool.query("UPDATE weddings SET plan = 'premium', plan_activated_at = DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-%dT%H:%i:%sZ'), plan_order_no = 'GRANDFATHERED'")
     console.log('migrate: existing weddings set to premium (grandfathered)')
   }
+  // 七牛视频访问域名：写入 config 表，改库即可切换，不必重启
+  await pool.query(
+    "INSERT IGNORE INTO config (`key`, value, updated_at) VALUES ('qiniu_domain', 'https://qn.youxitie.site', DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-%dT%H:%i:%sZ'))",
+  )
 }

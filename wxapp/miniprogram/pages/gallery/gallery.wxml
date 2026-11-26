@@ -18,10 +18,11 @@
     >
       <image
         class="grid-img"
-        src="{{item.url}}"
+        src="{{item.thumb_url || item.url}}"
         mode="aspectFill"
         lazy-load="{{true}}"
       ></image>
+      <view class="photo-play" wx:if="{{item.isVideo || item.kind === 'video'}}">▶</view>
       <view class="photo-overlay">
         <text class="p-title">{{item.title || '幸福剪影'}}</text>
         <text class="p-sub">良缘留影</text>
@@ -55,8 +56,17 @@
             <text class="story-tag">岁月印记</text>
           </view>
           <view class="story-title">{{item.title}}</view>
+          <video
+            wx:if="{{item.image && item.isVideo}}"
+            class="story-img"
+            src="{{item.image}}"
+            object-fit="cover"
+            controls="{{true}}"
+            show-center-play-btn="{{true}}"
+            poster=""
+          ></video>
           <image
-            wx:if="{{item.image}}"
+            wx:elif="{{item.image}}"
             class="story-img"
             src="{{item.image}}"
             mode="aspectFill"
@@ -77,6 +87,6 @@
   </view>
 
   <view class="save-tip">
-    <text>点击照片可全屏阅览欣赏</text>
+    <text>点击照片或视频可全屏阅览欣赏</text>
   </view>
 </view>

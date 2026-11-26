@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS images (
   url TEXT NOT NULL,                 -- 原图地址（i.ibb.co/...）
   thumb_url TEXT NOT NULL,           -- 缩略图地址
   delete_url TEXT,                   -- ImgBB 提供的删除链接
+  status TEXT NOT NULL DEFAULT 'visible',
+  kind TEXT NOT NULL DEFAULT 'image', -- image | video（视频 url 存 qiniu:对象键，展示时再拼域名）
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
