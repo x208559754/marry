@@ -1379,7 +1379,7 @@ Page({
       count: Math.min(9, remaining),
       mediaType: this.data.canUploadVideo ? ['image', 'video'] : ['image'],
       sourceType: ['album', 'camera'],
-      sizeType: ['original', 'compressed'],
+      sizeType: ['compressed'],
       maxDuration: 60,
       success: function (res) {
         const files = (res.tempFiles || []).filter(function (f) { return f && f.tempFilePath; });
@@ -1519,6 +1519,7 @@ Page({
       count: 3,
       mediaType: ['video'],
       sourceType: ['album', 'camera'],
+      sizeType: ['compressed'],
       maxDuration: 60,
       success: function (res) {
         const files = (res.tempFiles || []).filter(function (f) { return f && f.tempFilePath; });
