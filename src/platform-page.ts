@@ -342,13 +342,16 @@ function dialog(html, wide){
   return m;
 }
 // ---- 权益展示 ----
-var ENT_KEYS = ['photos', 'lotteryPrizes', 'lotteryParticipants', 'lotteryThemes', 'watermark', 'badge', 'effect', 'opening'];
-var ENT_LABEL = { photos: '相册上限', lotteryPrizes: '抽奖奖项', lotteryParticipants: '抽奖人数', lotteryThemes: '可用主题', watermark: '平台标识', badge: '专属标识', effect: '氛围特效', opening: '开场动画' };
+var ENT_KEYS = ['photos', 'photoMaxKb', 'videoMaxMb', 'lotteryPrizes', 'lotteryParticipants', 'lotteryThemes', 'watermark', 'badge', 'effect', 'opening'];
+var ENT_LABEL = { photos: '相册上限', photoMaxKb: '单图上限', videoMaxMb: '单视频上限', lotteryPrizes: '抽奖奖项', lotteryParticipants: '抽奖人数', lotteryThemes: '可用主题', watermark: '平台标识', badge: '专属标识', effect: '氛围特效', opening: '开场动画' };
 function themeName(k){ for (var i = 0; i < THEMES.length; i++) if (THEMES[i].key === k) return THEMES[i].name; return k; }
 function effectName(k){ for (var i = 0; i < EFFECTS.length; i++) if (EFFECTS[i].key === k) return EFFECTS[i].name; return k; }
+function fmtKb(v){ var n = Number(v) || 500; return n >= 1024 && n % 1024 === 0 ? (n / 1024) + ' MB（' + n + ' KB）' : n + ' KB'; }
 function entVal(k, e){
   var v = e[k];
   if (k === 'photos') return v + ' 张';
+  if (k === 'photoMaxKb') return fmtKb(v);
+  if (k === 'videoMaxMb') return (v || 100) + ' MB';
   if (k === 'lotteryPrizes') return v > 0 ? v + ' 个' : '不限';
   if (k === 'lotteryParticipants') return v > 0 ? v + ' 人' : '不限';
   if (k === 'lotteryThemes') return v.length >= THEMES.length ? '全部 ' + v.length + ' 套' : v.map(themeName).join('、');
@@ -421,20 +424,20 @@ function overrideDialog(w, done){
   var pi = w.planInfo, ov = pi.overrides || {}, base = pi.base;
   var has = function(k){ return Object.prototype.hasOwnProperty.call(ov, k); };
   var numRow = function(k, hint){
-    var photos = k === 'photos';
-    var range = photos ? 'min="1" max="' + pi.photoLimit + '"' : 'min="0"';
+    var photos = k === 'photos', pkb = k === 'photoMaxKb', vid = k === 'videoMaxMb';
+    var range = photos ? 'min="1" max="' + pi.photoLimit + '"' : (pkb ? 'min="50" max="15360"' : (vid ? 'min="1" max="500"' : 'min="0"'));
     var value = has(k) ? (photos ? Math.min(ov[k], pi.photoLimit) : ov[k]) : '';
     return '<label>' + ENT_LABEL[k] + '</label><div><input id="o_' + k + '" type="number" ' + range + ' style="width:120px" placeholder="跟随套餐" value="' + value + '"> <span class="muted" style="font-size:12px">套餐默认 ' + String(entVal(k, base)).replace(/<[^>]+>/g, '') + (hint || '') + '，留空 = 跟随套餐</span></div>';
   };
   var triRow = function(k, on, off){ var v = has(k) ? (ov[k] ? '1' : '0') : ''; return '<label>' + ENT_LABEL[k] + '</label><div>' + sel('o_' + k, [['', '跟随套餐（' + (base[k] ? on : off) + '）'], ['1', on], ['0', off]], v) + '</div>'; };
   var html = '<h3><span>单独调整权益 · ' + esc(w.couple || w.id) + '</span><a data-close>✕</a></h3><div class="muted" style="font-size:13px;margin-bottom:12px">只对这一场婚礼生效，优先于套餐设置；改套餐后仍然保留。当前套餐：' + esc(pi.name) + '</div><div class="form">' +
-    numRow('photos', '，最多 ' + pi.photoLimit + ' 张') + numRow('lotteryPrizes', '，0 = 不限') + numRow('lotteryParticipants', '，0 = 不限') +
+    numRow('photos', '，最多 ' + pi.photoLimit + ' 张') + numRow('photoMaxKb', '，50–15360 KB（500=500KB，2048=2MB）') + numRow('videoMaxMb', '，1–500 MB（付费版生效）') + numRow('lotteryPrizes', '，0 = 不限') + numRow('lotteryParticipants', '，0 = 不限') +
     '<label>' + ENT_LABEL.lotteryThemes + '</label><div><label style="color:var(--ink)"><input type="checkbox" id="o_th_on"' + (has('lotteryThemes') ? ' checked' : '') + '> 单独设置</label> <span id="o_th">' + THEMES.map(function(t){ var on = (has('lotteryThemes') ? ov.lotteryThemes : base.lotteryThemes).indexOf(t.key) >= 0; return '<label style="color:var(--ink);margin-left:10px"><input type="checkbox" value="' + t.key + '"' + (on ? ' checked' : '') + '> ' + esc(t.name) + '</label>'; }).join('') + '</span></div>' +
     triRow('watermark', '显示平台标识', '去除平台标识') +
     '<label>' + ENT_LABEL.badge + '</label><div><label style="color:var(--ink)"><input type="checkbox" id="o_badge_on"' + (has('badge') ? ' checked' : '') + '> 单独设置</label> <input id="o_badge" maxlength="6" style="width:120px" placeholder="如：尊享，留空=不显示" value="' + esc(has('badge') ? ov.badge : base.badge) + '"></div>' +
     '<label>' + ENT_LABEL.effect + '</label><div>' + sel('o_effect', [['', '跟随套餐（' + effectName(base.effect) + '）']].concat(EFFECTS.map(function(x){ return [x.key, x.name]; })), has('effect') ? ov.effect : '') + '</div>' +
     triRow('opening', '开启开场动画', '关闭开场动画') +
-    '<label>备注 / 原因</label><input id="o_note" placeholder="如：客户加购 50 张相册">' +
+    '<label>备注 / 原因</label><input id="o_note" placeholder="如：客户加购 50 张相册或调大图片/视频上限">' +
     '</div><div class="bar" style="justify-content:space-between;margin:18px 0 0"><button class="danger" id="oClear">清除全部调整</button><span><button data-close2>取消</button> <button class="pri" id="oGo">保存</button></span></div>';
   var m = dialog(html);
   m.querySelector('[data-close2]').onclick = function(){ m.remove(); };
@@ -442,8 +445,10 @@ function overrideDialog(w, done){
   m.querySelector('#oClear').onclick = function(){ if (confirm('清除后这场婚礼的权益完全跟随套餐，确定？')) save({}); };
   m.querySelector('#oGo').onclick = function(){
     var o = {};
-    ['photos', 'lotteryPrizes', 'lotteryParticipants'].forEach(function(k){ var v = $('o_' + k).value.trim(); if (v !== '') o[k] = Number(v); });
-    if (!$('o_photos').validity.valid) return toast('请输入 1–' + pi.photoLimit + ' 张');
+    ['photos', 'photoMaxKb', 'videoMaxMb', 'lotteryPrizes', 'lotteryParticipants'].forEach(function(k){ var v = $('o_' + k).value.trim(); if (v !== '') o[k] = Number(v); });
+    if (!$('o_photos').validity.valid) return toast('相册上限请输入 1–' + pi.photoLimit + ' 张');
+    if (!$('o_photoMaxKb').validity.valid) return toast('单图上限请输入 50–15360 KB');
+    if (!$('o_videoMaxMb').validity.valid) return toast('单视频上限请输入 1–500 MB');
     if ($('o_th_on').checked) { var ts = []; var cb = m.querySelectorAll('#o_th input:checked'); for (var i = 0; i < cb.length; i++) ts.push(cb[i].value); if (!ts.length) return toast('至少选一个主题'); o.lotteryThemes = ts; }
     ['watermark', 'opening'].forEach(function(k){ var v = $('o_' + k).value; if (v !== '') o[k] = v === '1'; });
     if ($('o_badge_on').checked) o.badge = $('o_badge').value.trim();
@@ -592,7 +597,7 @@ VIEWS.plans = function(){
 function planEditor(p){
   var isNew = !p, isFree = p && p.code === 'free';
   var top = PLANS.length ? PLANS[PLANS.length - 1] : null;
-  if (isNew) p = { code: '', name: '', level: (top ? top.level : 0) + 10, priceFen: 9900, originalFen: 0, days: 0, desc: '', features: [], active: false, sort: (top ? top.sort : 0) + 10, ent: JSON.parse(JSON.stringify((top || {}).ent || { photos: 200, lotteryPrizes: 0, lotteryParticipants: 0, lotteryThemes: ['red'], watermark: false, badge: '', effect: 'petals', opening: false })) };
+  if (isNew) p = { code: '', name: '', level: (top ? top.level : 0) + 10, priceFen: 9900, originalFen: 0, days: 0, desc: '', features: [], active: false, sort: (top ? top.sort : 0) + 10, ent: JSON.parse(JSON.stringify((top || {}).ent || { photos: 200, photoMaxKb: 2048, videoMaxMb: 100, lotteryPrizes: 0, lotteryParticipants: 0, lotteryThemes: ['red'], watermark: false, badge: '', effect: 'petals', opening: false })) };
   var e = p.ent;
   var html = '<h3><span>' + (isNew ? '新增套餐' : '编辑套餐 · ' + esc(p.name)) + '</span><a data-close>✕</a></h3><div class="grid2"><div class="form">' +
     (isNew ? '<label>套餐编码</label><input id="eCode" placeholder="英文，如 basic / vip（创建后不可改）">' : '<label>套餐编码</label><div class="muted">' + esc(p.code) + '</div>') +
@@ -607,6 +612,8 @@ function planEditor(p){
     '<label>权益文案（每行一条）</label><textarea id="eFeat" rows="6">' + esc(p.features.join('\\n')) + '</textarea>' +
     '</div><div class="form">' +
     '<label>相册上限（张）</label><div><input id="ePhotos" type="number" min="1" value="' + e.photos + '"><div class="muted" style="font-size:12px">普通版和免费版可设为 1–4 张</div></div>' +
+    '<label>单图上限（KB）</label><div><input id="ePhotoMaxKb" type="number" min="50" max="15360" value="' + (e.photoMaxKb || (isFree ? 500 : 2048)) + '"><div class="muted" style="font-size:12px">50–15360 KB（免费版默认 500KB，付费版默认 2048KB=2MB，上传超出自动压缩）</div></div>' +
+    '<label>单视频上限（MB）</label><div><input id="eVideoMaxMb" type="number" min="1" max="500" value="' + (e.videoMaxMb || 100) + '"><div class="muted" style="font-size:12px">1–500 MB，默认 100MB（上传自动压缩画质，仅付费套餐可传视频）</div></div>' +
     '<label>抽奖奖项上限</label><input id="ePrizes" type="number" min="0" value="' + e.lotteryPrizes + '" placeholder="0 = 不限">' +
     '<label>抽奖人数上限</label><input id="ePeople" type="number" min="0" value="' + e.lotteryParticipants + '" placeholder="0 = 不限">' +
     '<label>可用主题</label><div id="eThemes">' + THEMES.map(function(t){ return '<label style="color:var(--ink);margin-right:10px;white-space:nowrap"><input type="checkbox" value="' + t.key + '"' + (e.lotteryThemes.indexOf(t.key) >= 0 ? ' checked' : '') + '> ' + esc(t.name) + '</label>'; }).join('') + '</div>' +
@@ -622,8 +629,10 @@ function planEditor(p){
     if (!ts.length) return toast('至少选一个主题');
     if (!$('eName').value.trim()) return toast('请填写名称');
     if (!$('ePhotos').value || !$('ePhotos').validity.valid) return toast('请输入至少 1 张的整数');
+    if (!$('ePhotoMaxKb').value || !$('ePhotoMaxKb').validity.valid) return toast('单图上限请输入 50–15360 KB');
+    if (!$('eVideoMaxMb').value || !$('eVideoMaxMb').validity.valid) return toast('单视频上限请输入 1–500 MB');
     var body = { name: $('eName').value, desc: $('eDesc').value, features: $('eFeat').value.split('\\n').map(function(s){ return s.trim(); }).filter(Boolean),
-      ent: { photos: Number($('ePhotos').value), lotteryPrizes: Number($('ePrizes').value || 0), lotteryParticipants: Number($('ePeople').value || 0), lotteryThemes: ts, watermark: $('eWm').checked, badge: $('eBadge').value.trim(), effect: $('eEffect').value, opening: $('eOpen').checked } };
+      ent: { photos: Number($('ePhotos').value), photoMaxKb: Number($('ePhotoMaxKb').value || (isFree ? 500 : 2048)), videoMaxMb: Number($('eVideoMaxMb').value || 100), lotteryPrizes: Number($('ePrizes').value || 0), lotteryParticipants: Number($('ePeople').value || 0), lotteryThemes: ts, watermark: $('eWm').checked, badge: $('eBadge').value.trim(), effect: $('eEffect').value, opening: $('eOpen').checked } };
     if (!isFree) {
       body.level = Number($('eLevel').value); body.priceFen = Math.round(Number($('ePrice').value) * 100); body.originalFen = Math.round(Number($('eOrig').value || 0) * 100); body.days = Number($('eDays').value || 0); body.active = $('eActive').checked;
       if (!(body.priceFen > 0)) return toast('售价必须大于 0');

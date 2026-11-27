@@ -17,16 +17,13 @@
     <view class="ta-spark s8"></view>
   </view>
 
-  <!-- 飘落花瓣粒子层（随主题自动变换为金箔/樱瓣/星尘/绿叶/气泡；付费套餐再叠加密度与流光） -->
-  <view class="petals-layer petals-{{planEffect}}">
-    <view class="petal"></view>
-    <view class="petal"></view>
-    <view class="petal"></view>
-    <view class="petal"></view>
-    <block wx:if="{{planEffect === 'petals' || planEffect === 'gold'}}">
-      <view class="petal" wx:for="{{[1,2,3,4,5,6,7,8]}}" wx:key="*this"></view>
-    </block>
-  </view>
+  <!-- 全屏飘散花瓣 + 任意位置横向飘屏弹幕（开屏即满屏飘花瓣，开帖后全屏飘祝福弹幕） -->
+  <ambient-overlay
+    theme="{{theme || config.theme || 'red'}}"
+    show-petals="{{true}}"
+    show-danmaku="{{isAppOpened && !isPromo && !isWeddingNotFound}}"
+    toggle-offset-top="{{topSafeHeight + 54}}"
+  />
   <view class="glints-layer" wx:if="{{planEffect === 'gold'}}">
     <view class="glint" wx:for="{{[1,2,3,4,5,6,7,8,9,10,11,12]}}" wx:key="*this"></view>
   </view>

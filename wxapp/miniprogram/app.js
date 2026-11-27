@@ -60,7 +60,13 @@ App({
     isPlayingBgm: false,
 
     // 是否当前婚礼的管理员（由 api 登录结果写入，按婚礼区分）
-    isAdmin: false
+    isAdmin: false,
+
+    // 全屏祝福弹幕状态与缓存（跨页面共享，发新祝福立即飘屏）
+    danmakuVisible: true,
+    blessingsCache: [],
+    blessingsCacheWid: '',
+    blessingsLoadedAt: 0
   },
 
   onLaunch: function (options) {
@@ -440,6 +446,90 @@ App({
     this.guestMatchedListeners.forEach(fn => {
       try { fn(guest); } catch (e) {}
     });
+  },
+
+  // 全屏飘屏弹幕：状态同步与祝福共享缓存
+  danmakuListeners: [],
+  addDanmakuListener: function (fn) {
+    if (typeof fn !== 'function') return;
+    if (this.danmakuListeners.indexOf(fn) === -1) this.danmakuListeners.push(fn);
+    try {
+      fn({
+        visible: this.globalData.danmakuVisible !== false,
+        list: this.globalData.blessingsCache || []
+      });
+    } catch (e) {}
+  },
+  removeDanmakuListener: function (fn) {
+    this.danmakuListeners = this.danmakuListeners.filter(function (f) { return f !== fn; });
+  },
+  notifyDanmakuChange: function () {
+    var payload = {
+      visible: this.globalData.danmakuVisible !== false,
+      list: this.globalData.blessingsCache || []
+    };
+    this.danmakuListeners.forEach(function (fn) {
+      try { fn(payload); } catch (e) {}
+    });
+  },
+  setDanmakuVisible: function (visible) {
+    this.globalData.danmakuVisible = !!visible;
+    this.notifyDanmakuChange();
+  },
+  loadSharedBlessings: function (force, cb) {
+    var that = this;
+    var wid = this.globalData.wid || '';
+    if (!wid) {
+      if (typeof cb === 'function') cb([]);
+      return;
+    }
+    var now = Date.now();
+    if (
+      !force &&
+      this.globalData.blessingsCacheWid === wid &&
+      this.globalData.blessingsLoadedAt > 0 &&
+      now - this.globalData.blessingsLoadedAt < 25000
+    ) {
+      if (typeof cb === 'function') cb(this.globalData.blessingsCache || []);
+      return;
+    }
+    if (this._loadingSharedBlessings) return;
+    this._loadingSharedBlessings = true;
+    api.getBlessingsList().then(function (list) {
+      that._loadingSharedBlessings = false;
+      var formatted = (Array.isArray(list) ? list : []).map(function (it, idx) {
+        return {
+          id: it.id || ('b_' + idx),
+          author: it.author || it.name || '挚友',
+          content: it.content || it.text || ''
+        };
+      }).filter(function (it) { return !!String(it.content || '').trim(); });
+      that.globalData.blessingsCache = formatted;
+      that.globalData.blessingsCacheWid = wid;
+      that.globalData.blessingsLoadedAt = Date.now();
+      that.notifyDanmakuChange();
+      if (typeof cb === 'function') cb(formatted);
+    }).catch(function () {
+      that._loadingSharedBlessings = false;
+      that.notifyDanmakuChange();
+      if (typeof cb === 'function') cb(that.globalData.blessingsCache || []);
+    });
+  },
+  pushSharedBlessing: function (item) {
+    if (!item || !String(item.content || '').trim()) return;
+    var entry = {
+      id: item.id || ('just_' + Date.now()),
+      author: item.author || item.name || '特邀宾客',
+      content: String(item.content || '').trim(),
+      _justSent: true
+    };
+    var next = [entry].concat((this.globalData.blessingsCache || []).filter(function (x) {
+      return x && x.content !== entry.content;
+    })).slice(0, 20);
+    this.globalData.blessingsCache = next;
+    this.globalData.blessingsCacheWid = this.globalData.wid || '';
+    this.globalData.blessingsLoadedAt = Date.now();
+    this.notifyDanmakuChange();
   },
 
   // 将当前微信身份绑定到「当前婚礼」新人预填的宾客名单（按姓名/手机号匹配）

@@ -1,5 +1,6 @@
 <!-- pages/rsvp/rsvp.wxml - 高定唯美结婚席位回函 (良缘天成 · 敬候台光) -->
 <view class="container theme-{{theme || 'red'}}">
+  <ambient-overlay theme="{{theme || 'red'}}" show-petals="{{true}}" show-danmaku="{{true}}" />
   <!-- 头部艺术标题 -->
   <view class="section-title">
     <text class="title-cn">出席回执</text>

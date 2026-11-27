@@ -63,6 +63,9 @@
   },
   "requiredPrivateInfos": [
   ],
+  "usingComponents": {
+    "ambient-overlay": "/components/ambient-overlay/ambient-overlay"
+  },
   "sitemapLocation": "sitemap.json",
   "style": "v2",
   "__usePrivacyCheck__": false

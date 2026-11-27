@@ -89,6 +89,12 @@ Page({
         });
         patch.blessingsList = formatted;
         that.buildDanmaku(formatted);
+        if (app.globalData) {
+          app.globalData.blessingsCache = formatted;
+          app.globalData.blessingsCacheWid = app.globalData.wid || '';
+          app.globalData.blessingsLoadedAt = Date.now();
+          if (app.notifyDanmakuChange) app.notifyDanmakuChange();
+        }
       } else if (!(that.data.danmakuLanes && that.data.danmakuLanes.length)) {
         that.buildDanmaku([]);
       }
@@ -216,6 +222,7 @@ Page({
         isSending: false,
         inputContent: ''
       });
+      if (app.pushSharedBlessing) app.pushSharedBlessing(newBlessing);
       wx.showToast({ title: '祝福已送达新人', icon: 'success' });
       that.loadBlessings();
     }).catch(function (err) {

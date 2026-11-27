@@ -11,7 +11,14 @@ import bgmAudio from './bgm.mp3'
 import wechatQr from './wechat-qr.png'
 import type { AppEnv } from './auth'
 import { requireAdmin, getWid, getOpenid } from './auth'
-import { billing, getWeddingPlan, limitReached } from './billing'
+import {
+  billing,
+  getWeddingPlan,
+  limitReached,
+  MIN_PHOTO_KB,
+  MAX_PHOTO_KB,
+  DEFAULT_FREE_PHOTO_MAX_KB,
+} from './billing'
 import { platform } from './platform'
 import { platformPage } from './platform-page'
 import { submitImageCheck, handleMediaCheckEvent } from './moderation'
@@ -29,7 +36,8 @@ import {
   publicObjectUrl,
   videoThumbUrl,
   deleteQiniuObject,
-  VIDEO_MAX_BYTES,
+  DEFAULT_VIDEO_MAX_MB,
+  MAX_VIDEO_MB,
 } from './qiniu'
 import { mediaKindOf } from './media-kind'
 
@@ -346,8 +354,25 @@ app.post('/api/images', requireAdmin, async (c) => {
   if (!raw || typeof raw === 'string' || !(raw instanceof Blob) || raw.size === 0) {
     return c.json({ error: '请选择要上传的图片文件' }, 400)
   }
-  if (raw.size > 15 * 1024 * 1024) {
+  if (raw.size > MAX_PHOTO_KB * 1024) {
     return c.json({ error: '图片不能超过 15MB' }, 400)
+  }
+
+  // 套餐限制：单张图片大小 & 相册张数（gallery=0 的配图不计入相册张数，但仍受单图大小限制）
+  const isGallery = !(typeof body['gallery'] === 'string' && (body['gallery'] === '0' || body['gallery'] === 'false'))
+  const wp = await getWeddingPlan(c.env.DB, wid)
+  if (wp.status === 'disabled') return c.json({ error: '该婚礼已被平台停用' }, 403)
+  const maxPhotoKb = Math.min(MAX_PHOTO_KB, Math.max(MIN_PHOTO_KB, wp.ent.photoMaxKb || DEFAULT_FREE_PHOTO_MAX_KB))
+  if (raw.size > maxPhotoKb * 1024) {
+    const limitLabel = maxPhotoKb >= 1024 && maxPhotoKb % 1024 === 0 ? (maxPhotoKb / 1024) + 'MB' : maxPhotoKb + 'KB'
+    const actualKb = Math.ceil(raw.size / 1024)
+    const actualLabel = actualKb >= 1024 ? (actualKb / 1024).toFixed(2) + 'MB' : actualKb + 'KB'
+    const msg = '单张图片不能超过 ' + limitLabel + '（当前 ' + actualLabel + '）'
+    return wp.canUpgrade ? limitReached(c, wp, msg) : c.json({ error: msg }, 400)
+  }
+  const cap = wp.ent.photos
+  if (isGallery && await albumIsFull(c.env.DB, wid, cap)) {
+    return limitReached(c, wp, '相册最多 ' + cap + ' 张')
   }
 
   const buf = await raw.arrayBuffer()
@@ -358,15 +383,6 @@ app.post('/api/images', requireAdmin, async (c) => {
   }
   const { mime, ext } = image
   const origin = new URL(c.req.url).origin
-
-  // 套餐限制：相册张数（gallery=0 的配图不计入）
-  const isGallery = !(typeof body['gallery'] === 'string' && (body['gallery'] === '0' || body['gallery'] === 'false'))
-  const wp = await getWeddingPlan(c.env.DB, wid)
-  if (wp.status === 'disabled') return c.json({ error: '该婚礼已被平台停用' }, 403)
-  const cap = wp.ent.photos
-  if (isGallery && await albumIsFull(c.env.DB, wid, cap)) {
-    return limitReached(c, wp, '相册最多 ' + cap + ' 张')
-  }
 
   let stored: { id: string; url: string; thumb_url: string; delete_url: string | null }
   if (c.env.IMGBB_API_KEY) {
@@ -439,7 +455,9 @@ app.post('/api/videos/token', requireAdmin, async (c) => {
   }
   const key = newVideoKey(wid)
   const domain = await getQiniuDomain(c.env.DB, c.env)
-  const minted = await makeUploadToken(creds, key)
+  const maxMb = Math.min(MAX_VIDEO_MB, Math.max(1, wp.ent.videoMaxMb || DEFAULT_VIDEO_MAX_MB))
+  const maxBytes = maxMb * 1024 * 1024
+  const minted = await makeUploadToken(creds, key, { fsizeLimit: maxBytes })
   return c.json({
     token: minted.token,
     key,
@@ -447,7 +465,8 @@ app.post('/api/videos/token', requireAdmin, async (c) => {
     fileUrl: publicObjectUrl(domain, key),
     domain,
     expireAt: minted.expireAt,
-    maxBytes: VIDEO_MAX_BYTES,
+    maxBytes,
+    maxMb,
   })
 })
 

@@ -1,0 +1,242 @@
+/* components/ambient-overlay/ambient-overlay.wxss */
+.ao-root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 180;
+  overflow: hidden;
+}
+
+/* ==================== ① 全屏花瓣飘散层 ==================== */
+.ao-petals-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ao-petal {
+  position: absolute;
+  top: -48rpx;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.ao-shape-petal {
+  border-radius: 78% 12% 78% 18%;
+}
+
+.ao-shape-petal-wide {
+  border-radius: 86% 0 86% 22%;
+}
+
+.ao-shape-leaf {
+  border-radius: 94% 0 94% 0;
+}
+
+.ao-shape-flake {
+  border-radius: 50%;
+}
+
+.ao-path-a {
+  animation-name: aoPetalDriftA;
+}
+
+.ao-path-b {
+  animation-name: aoPetalDriftB;
+}
+
+.ao-path-c {
+  animation-name: aoPetalDriftC;
+}
+
+@keyframes aoPetalDriftA {
+  0% {
+    transform: translate3d(0, -4vh, 0) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.85;
+  }
+  28% {
+    transform: translate3d(68rpx, 28vh, 0) rotateX(110deg) rotateY(70deg) rotateZ(95deg);
+    opacity: 0.78;
+  }
+  56% {
+    transform: translate3d(-48rpx, 58vh, 0) rotateX(210deg) rotateY(150deg) rotateZ(200deg);
+    opacity: 0.72;
+  }
+  84% {
+    transform: translate3d(52rpx, 88vh, 0) rotateX(310deg) rotateY(220deg) rotateZ(295deg);
+    opacity: 0.52;
+  }
+  100% {
+    transform: translate3d(-24rpx, 110vh, 0) rotateX(380deg) rotateY(270deg) rotateZ(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes aoPetalDriftB {
+  0% {
+    transform: translate3d(0, -4vh, 0) rotateX(20deg) rotateY(0deg) rotateZ(30deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.82;
+  }
+  32% {
+    transform: translate3d(-64rpx, 30vh, 0) rotateX(130deg) rotateY(-80deg) rotateZ(-80deg);
+    opacity: 0.76;
+  }
+  62% {
+    transform: translate3d(58rpx, 64vh, 0) rotateX(235deg) rotateY(-160deg) rotateZ(-195deg);
+    opacity: 0.68;
+  }
+  88% {
+    transform: translate3d(-38rpx, 92vh, 0) rotateX(325deg) rotateY(-230deg) rotateZ(-300deg);
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate3d(26rpx, 110vh, 0) rotateX(390deg) rotateY(-280deg) rotateZ(-360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes aoPetalDriftC {
+  0% {
+    transform: translate3d(0, -4vh, 0) rotateX(0deg) rotateY(40deg) rotateZ(-20deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.78;
+  }
+  36% {
+    transform: translate3d(42rpx, 35vh, 0) rotateX(95deg) rotateY(120deg) rotateZ(110deg);
+    opacity: 0.74;
+  }
+  66% {
+    transform: translate3d(86rpx, 68vh, 0) rotateX(195deg) rotateY(210deg) rotateZ(225deg);
+    opacity: 0.62;
+  }
+  100% {
+    transform: translate3d(-18rpx, 110vh, 0) rotateX(320deg) rotateY(320deg) rotateZ(350deg);
+    opacity: 0;
+  }
+}
+
+/* ==================== ② 全屏任意高度横向飘屏弹幕 ==================== */
+.ao-danmaku-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  transition: opacity 0.3s ease;
+}
+
+.ao-danmaku-layer.is-on {
+  opacity: 1;
+}
+
+.ao-danmaku-layer.is-off {
+  opacity: 0;
+}
+
+.ao-dm-pill {
+  position: absolute;
+  left: 100%;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  white-space: nowrap;
+  padding: 8rpx 22rpx;
+  border-radius: 999rpx;
+  background: rgba(20, 16, 16, 0.62);
+  border: 1rpx solid rgba(255, 255, 255, 0.24);
+  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(10rpx);
+  will-change: transform;
+  animation-name: aoDanmakuFly;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.ao-dm-pill.is-highlight {
+  background: rgba(139, 30, 30, 0.78);
+  border-color: rgba(252, 211, 77, 0.65);
+  box-shadow: 0 6rpx 22rpx rgba(139, 30, 30, 0.28);
+}
+
+.ao-dm-author {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #FCD34D;
+  margin-right: 10rpx;
+  line-height: 1.35;
+}
+
+.ao-dm-text {
+  font-size: 23rpx;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.96);
+  line-height: 1.35;
+}
+
+@keyframes aoDanmakuFly {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(calc(-100vw - 135%), 0, 0);
+  }
+}
+
+/* ==================== ③ 右侧悬浮弹幕开关 ==================== */
+.ao-dm-toggle {
+  position: absolute;
+  right: 24rpx;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(24, 18, 18, 0.44);
+  border: 1rpx solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(10rpx);
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.12);
+  z-index: 46;
+}
+
+.ao-dm-toggle.is-active {
+  background: rgba(24, 18, 18, 0.58);
+  border-color: rgba(252, 211, 77, 0.52);
+}
+
+.ao-dm-toggle-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.ao-dm-toggle.is-active .ao-dm-toggle-dot {
+  background: #FCD34D;
+  box-shadow: 0 0 8rpx rgba(252, 211, 77, 0.85);
+}
+
+.ao-dm-toggle-txt {
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 1rpx;
+}

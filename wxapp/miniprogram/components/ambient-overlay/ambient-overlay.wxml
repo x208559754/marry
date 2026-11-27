@@ -1,0 +1,36 @@
+<!-- components/ambient-overlay/ambient-overlay.wxml - 全屏飘散花瓣 + 任意位置横向飘屏弹幕 -->
+<view class="ao-root theme-{{theme || 'red'}}" aria-hidden="true">
+  <!-- ① 全屏飘散花瓣层（26片错峰 3D 飘散，开屏即满屏柔美飘舞，不阻挡任何点击） -->
+  <view class="ao-petals-layer" wx:if="{{showPetals}}">
+    <view
+      wx:for="{{petals}}"
+      wx:key="id"
+      class="ao-petal ao-shape-{{item.shape}} ao-path-{{item.path}}"
+      style="left: {{item.left}}%; width: {{item.w}}rpx; height: {{item.h}}rpx; background: {{item.bg}}; box-shadow: {{item.shadow}}; opacity: {{item.opacity}}; animation-duration: {{item.duration}}s; animation-delay: {{item.delay}}s;"
+    ></view>
+  </view>
+
+  <!-- ② 全屏任意高度横向飘屏弹幕层（7条分布轨道覆盖屏幕 14%–77%，不挡点击） -->
+  <view class="ao-danmaku-layer {{danmakuOn ? 'is-on' : 'is-off'}}" wx:if="{{showDanmaku && danmakuItems.length}}">
+    <view
+      wx:for="{{danmakuItems}}"
+      wx:key="id"
+      class="ao-dm-pill {{item.highlight ? 'is-highlight' : ''}}"
+      style="top: {{item.top}}vh; animation-duration: {{item.duration}}s; animation-delay: {{item.delay}}s;"
+    >
+      <text class="ao-dm-author" wx:if="{{item.author}}">{{item.author}}:</text>
+      <text class="ao-dm-text">{{item.text}}</text>
+    </view>
+  </view>
+
+  <!-- ③ 右侧小巧悬浮弹幕开关（不遮内容，随时一键开/关飘屏弹幕） -->
+  <view
+    wx:if="{{showDanmaku && showToggle}}"
+    class="ao-dm-toggle {{danmakuOn ? 'is-active' : ''}}"
+    style="top: {{toggleTopPx}}px;"
+    bindtap="onToggleDanmaku"
+  >
+    <text class="ao-dm-toggle-dot"></text>
+    <text class="ao-dm-toggle-txt">{{danmakuOn ? '弹幕' : '已关'}}</text>
+  </view>
+</view>

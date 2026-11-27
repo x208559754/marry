@@ -17,6 +17,10 @@ function themeOf(key) {
   for (let i = 0; i < LOTTERY_THEMES.length; i++) if (LOTTERY_THEMES[i].key === key) return LOTTERY_THEMES[i];
   return LOTTERY_THEMES[0];
 }
+function formatKbText(kb) {
+  var n = Math.max(50, Math.round(Number(kb) || 500));
+  return n >= 1024 && n % 1024 === 0 ? (n / 1024) + 'MB' : n + 'KB';
+}
 
 // 与相册页 pages/gallery/gallery.js 内置的三条示例一致（「载入示例再改」用）
 const SAMPLE_STORIES = [
@@ -99,7 +103,7 @@ Page({
     superEntData: null,
     superHasOverrides: false,
     superPlanForm: { plan: 'free', expiresAt: '', note: '' },
-    superOvForm: { photos: '4', lotteryPrizes: '1', lotteryParticipants: '30', badge: '', effect: 'none', watermark: true, opening: false },
+    superOvForm: { photos: '4', photoMaxKb: '500', videoMaxMb: '100', lotteryPrizes: '1', lotteryParticipants: '30', badge: '', effect: 'none', watermark: true, opening: false },
     superThemeOptions: [],
     superEffectOptions: [
       { key: 'none', name: '基础' },
@@ -162,6 +166,10 @@ Page({
     uploading: false,
     uploadingVideo: false,
     uploadProgress: 0,
+    videoUploadStage: '',
+    photoMaxKb: 500,
+    photoMaxText: '500KB',
+    videoMaxMb: 100,
     savingConfig: false,
     stats: {
       totalAttendees: 0,
@@ -477,6 +485,8 @@ Page({
         },
         superOvForm: {
           photos: String(ent.photos != null ? ent.photos : 4),
+          photoMaxKb: String(ent.photoMaxKb != null ? ent.photoMaxKb : 500),
+          videoMaxMb: String(ent.videoMaxMb != null ? ent.videoMaxMb : 100),
           lotteryPrizes: String(ent.lotteryPrizes != null ? ent.lotteryPrizes : 1),
           lotteryParticipants: String(ent.lotteryParticipants != null ? ent.lotteryParticipants : 30),
           badge: ent.badge || '',
@@ -594,6 +604,8 @@ Page({
     api.saveSuperAdminWeddingOverrides(d.id, {
       overrides: {
         photos: parseInt(f.photos, 10) || 4,
+        photoMaxKb: Math.min(15360, Math.max(50, parseInt(f.photoMaxKb, 10) || 500)),
+        videoMaxMb: Math.min(500, Math.max(1, parseInt(f.videoMaxMb, 10) || 100)),
         lotteryPrizes: Math.max(0, parseInt(f.lotteryPrizes, 10) || 0),
         lotteryParticipants: Math.max(0, parseInt(f.lotteryParticipants, 10) || 0),
         lotteryThemes: themes.length ? themes : ['red'],
@@ -638,8 +650,10 @@ Page({
     api.getSuperAdminPlans().then(function (d) {
       var list = ((d && d.plans) || []).map(function (p) {
         var yuan = p.priceFen > 0 ? ('¥' + (p.priceFen % 100 === 0 ? (p.priceFen / 100) : (p.priceFen / 100).toFixed(2))) : '免费';
+        var defaultKb = p.code === 'free' ? 500 : 2048;
         return Object.assign({}, p, {
           priceText: yuan,
+          photoMaxText: formatKbText((p.ent && p.ent.photoMaxKb) || defaultKb),
           effectLabel: effMap[(p.ent && p.ent.effect) || 'none'] || '基础特效'
         });
       });
@@ -655,6 +669,7 @@ Page({
     var plan = (this.data.superPlansList || []).find(function (p) { return p.code === code; });
     if (!plan) return;
     var ent = plan.ent || {};
+    var defaultKb = plan.code === 'free' ? 500 : 2048;
     this.setData({
       showPlanEditModal: true,
       planEditForm: {
@@ -665,6 +680,8 @@ Page({
         days: String(plan.days || 0),
         active: !!plan.active,
         photos: String(ent.photos != null ? ent.photos : 4),
+        photoMaxKb: String(ent.photoMaxKb != null ? ent.photoMaxKb : defaultKb),
+        videoMaxMb: String(ent.videoMaxMb != null ? ent.videoMaxMb : 100),
         lotteryPrizes: String(ent.lotteryPrizes != null ? ent.lotteryPrizes : 1),
         lotteryParticipants: String(ent.lotteryParticipants != null ? ent.lotteryParticipants : 30),
         badge: ent.badge || '',
@@ -724,6 +741,7 @@ Page({
     var themes = (this.data.planEditThemeOptions || []).filter(function (t) { return t.on; }).map(function (t) { return t.key; });
     var priceFen = f.code === 'free' ? 0 : Math.max(1, Math.round((parseFloat(f.priceYuan) || 0) * 100));
     var origNum = parseFloat(f.originalYuan);
+    var defaultKb = f.code === 'free' ? 500 : 2048;
     var payload = {
       name: (f.name || '').trim(),
       priceFen: priceFen,
@@ -732,6 +750,8 @@ Page({
       active: f.code === 'free' ? true : !!f.active,
       ent: {
         photos: Math.max(1, parseInt(f.photos, 10) || 4),
+        photoMaxKb: Math.min(15360, Math.max(50, parseInt(f.photoMaxKb, 10) || defaultKb)),
+        videoMaxMb: Math.min(500, Math.max(1, parseInt(f.videoMaxMb, 10) || 100)),
         lotteryPrizes: Math.max(0, parseInt(f.lotteryPrizes, 10) || 0),
         lotteryParticipants: Math.max(0, parseInt(f.lotteryParticipants, 10) || 0),
         lotteryThemes: themes.length ? themes : ['red'],
@@ -1074,7 +1094,7 @@ Page({
     const wid = api.getWid() || '';
     if (this._planWid !== wid) {
       this._planWid = wid;
-      this.setData({ planLoaded: false, canUploadVideo: false, albumPhotoLimit: 0 });
+      this.setData({ planLoaded: false, canUploadVideo: false, albumPhotoLimit: 0, photoMaxKb: 500, photoMaxText: '500KB', videoMaxMb: 100 });
     }
     api.getPlan().then(function (d) {
       if ((api.getWid() || '') !== wid || !d) return;
@@ -1095,6 +1115,9 @@ Page({
       };
       const allowed = ent.lotteryThemes || ['red'];
       const themeCount = (d.themes || []).length || 5;
+      const photoMaxKb = Number(ent.photoMaxKb) || (w.premium ? 2048 : 500);
+      const photoMaxText = formatKbText(photoMaxKb);
+      const videoMaxMb = Number(ent.videoMaxMb) || 100;
       const expiry = w.expired ? '付费套餐已过期，当前按免费版使用' : (w.expiresAt ? String(w.expiresAt).slice(0, 10) + ' 到期' : (w.premium ? '永久有效' : '基础功能永久免费'));
       that.setData({
         planLoaded: true,
@@ -1106,6 +1129,9 @@ Page({
         planCanUpgrade: !!w.canUpgrade && higher.length > 0,
         canUploadVideo: w.canUploadVideo === true,
         albumPhotoLimit: Number(ent.photos) || 0,
+        photoMaxKb: photoMaxKb,
+        photoMaxText: photoMaxText,
+        videoMaxMb: videoMaxMb,
         planMultiple: higher.length > 1,
         planPriceText: price ? ('¥' + (price % 1 ? price.toFixed(2) : price)) : '',
         planUsage: [
@@ -1116,6 +1142,8 @@ Page({
         planBless: u.blessings || 0,
         planThemeName: u.themeName || '中式红金',
         planPerks: [
+          { text: '单图上限 ' + photoMaxText, on: true },
+          { text: w.canUploadVideo ? ('视频上传（单视频最高 ' + videoMaxMb + 'MB）') : '视频上传（升级解锁）', on: w.canUploadVideo === true },
           { text: allowed.length >= themeCount ? '全部 ' + themeCount + ' 套主题' : '主题 ' + allowed.length + '/' + themeCount + ' 套', on: allowed.length >= themeCount },
           { text: ent.watermark ? '平台标识（升级可去除）' : '已去除平台标识', on: !ent.watermark },
           { text: ent.effect === 'gold' ? '金箔流光特效' : '花瓣纷飞特效', on: ent.effect === 'petals' || ent.effect === 'gold' },
@@ -1364,18 +1392,20 @@ Page({
           wx.showToast({ title: '当前套餐仅支持上传图片', icon: 'none' });
           return;
         }
-        var tooBig = files.filter(function (f) { return media.isVideoFile(f) && Number(f.size) > 200 * 1024 * 1024; });
+        var maxMb = that.data.videoMaxMb || 100;
+        var rawGuardMb = Math.max(maxMb * 5, 500);
+        var tooBig = files.filter(function (f) { return media.isVideoFile(f) && Number(f.size) > rawGuardMb * 1024 * 1024; });
         if (tooBig.length) {
-          wx.showModal({ title: '视频过大', content: '单个视频不能超过 200MB', showCancel: false });
+          wx.showModal({ title: '视频过大', content: '原视频超过 ' + rawGuardMb + 'MB，无法直接压缩，请先裁剪后再上传（单视频上限 ' + maxMb + 'MB）', showCancel: false });
           return;
         }
-        that.setData({ uploading: true, uploadingVideo: hasVideo, uploadProgress: 0 });
+        that.setData({ uploading: true, uploadingVideo: hasVideo, uploadProgress: 0, videoUploadStage: hasVideo ? '准备中…' : '' });
         var i = 0;
         var okCount = 0;
         var lastErr = '';
         var next = function () {
           if (i >= files.length) {
-            that.setData({ uploading: false, uploadingVideo: false, uploadProgress: 0 });
+            that.setData({ uploading: false, uploadingVideo: false, uploadProgress: 0, videoUploadStage: '' });
             that.loadPhotos();
             if (okCount === files.length) {
               wx.showToast({ title: okCount === 1 ? '上传成功' : '已上传 ' + okCount + ' 个', icon: 'success' });
@@ -1395,16 +1425,27 @@ Page({
             return;
           }
           var file = files[i++];
-          var title = media.isVideoFile(file) ? '婚礼视频' : '婚纱照';
+          var isVid = media.isVideoFile(file);
+          var title = isVid ? '婚礼视频' : '婚纱照';
           qiniuUpload.uploadChosenFile(file, title, function (pct) {
-            if (media.isVideoFile(file)) that.setData({ uploadProgress: pct });
+            if (isVid) that.setData({ uploadProgress: pct });
+          }, isVid ? {
+            onStage: function (stage) {
+              that.setData({
+                videoUploadStage: stage === 'compressing' ? '正在压缩画质…' : '视频上传中',
+                uploadProgress: stage === 'compressing' ? 0 : that.data.uploadProgress
+              });
+            }
+          } : {
+            maxImageKb: that.data.photoMaxKb || 500,
+            canUpgrade: !!that.data.planCanUpgrade
           }).then(function () {
             okCount++;
             next();
           }).catch(function (err) {
             lastErr = (err && err.message) || '上传失败';
             if (err && err.needUpgrade) {
-              that.setData({ uploading: false, uploadingVideo: false, uploadProgress: 0 });
+              that.setData({ uploading: false, uploadingVideo: false, uploadProgress: 0, videoUploadStage: '' });
               that.loadPhotos();
               api.handleUpgradeError({ needUpgrade: true, message: (okCount ? '已上传 ' + okCount + ' 个。' : '') + lastErr });
               return;
@@ -1485,18 +1526,20 @@ Page({
           wx.showToast({ title: '未选取到视频', icon: 'none' });
           return;
         }
-        var tooBig = files.filter(function (f) { return Number(f.size) > 200 * 1024 * 1024; });
+        var maxMb = that.data.videoMaxMb || 100;
+        var rawGuardMb = Math.max(maxMb * 5, 500);
+        var tooBig = files.filter(function (f) { return Number(f.size) > rawGuardMb * 1024 * 1024; });
         if (tooBig.length) {
-          wx.showModal({ title: '视频过大', content: '单个视频不能超过 200MB', showCancel: false });
+          wx.showModal({ title: '视频过大', content: '原视频超过 ' + rawGuardMb + 'MB，无法直接压缩，请先裁剪后再上传（单视频上限 ' + maxMb + 'MB）', showCancel: false });
           return;
         }
-        that.setData({ uploadingVideo: true, uploadProgress: 0 });
+        that.setData({ uploadingVideo: true, uploadProgress: 0, videoUploadStage: '准备中…' });
         var i = 0;
         var okCount = 0;
         var lastErr = '';
         var next = function () {
           if (i >= files.length) {
-            that.setData({ uploadingVideo: false, uploadProgress: 0 });
+            that.setData({ uploadingVideo: false, uploadProgress: 0, videoUploadStage: '' });
             that.loadPhotos();
             if (okCount === files.length) {
               wx.showToast({ title: okCount === 1 ? '上传成功' : '已上传 ' + okCount + ' 个视频', icon: 'success' });
@@ -1514,13 +1557,20 @@ Page({
           var file = files[i++];
           qiniuUpload.uploadVideo(file.tempFilePath, '婚礼视频', function (pct) {
             that.setData({ uploadProgress: pct });
+          }, {
+            onStage: function (stage) {
+              that.setData({
+                videoUploadStage: stage === 'compressing' ? '正在压缩画质…' : '视频上传中',
+                uploadProgress: stage === 'compressing' ? 0 : that.data.uploadProgress
+              });
+            }
           }).then(function () {
             okCount++;
             next();
           }).catch(function (err) {
             lastErr = (err && err.message) || '上传失败';
             if (err && err.needUpgrade) {
-              that.setData({ uploadingVideo: false, uploadProgress: 0 });
+              that.setData({ uploadingVideo: false, uploadProgress: 0, videoUploadStage: '' });
               that.loadPhotos();
               api.handleUpgradeError({ needUpgrade: true, message: (okCount ? '已上传 ' + okCount + ' 个。' : '') + lastErr });
               return;
@@ -1660,14 +1710,28 @@ Page({
           wx.showToast({ title: '当前套餐仅支持上传图片', icon: 'none' });
           return;
         }
-        if (isVideo && Number(f.size) > 200 * 1024 * 1024) {
-          wx.showModal({ title: '视频过大', content: '单个视频不能超过 200MB', showCancel: false });
+        var maxMb = that.data.videoMaxMb || 100;
+        var rawGuardMb = Math.max(maxMb * 5, 500);
+        if (isVideo && Number(f.size) > rawGuardMb * 1024 * 1024) {
+          wx.showModal({ title: '视频过大', content: '原视频超过 ' + rawGuardMb + 'MB，无法直接压缩，请先裁剪后再上传（单视频上限 ' + maxMb + 'MB）', showCancel: false });
           return;
         }
         that.setData({ uploadingStoryImage: true });
         qiniuUpload.uploadChosenFile(f, '岁月印记', function (pct) {
           that.setData({ uploadProgress: pct });
-        }, { gallery: 0 }).then(function (d) {
+        }, {
+          gallery: 0,
+          maxImageKb: that.data.photoMaxKb || 500,
+          canUpgrade: !!that.data.planCanUpgrade,
+          onStage: function (stage) {
+            if (stage === 'compressing') {
+              wx.showLoading({ title: '正在压缩画质…', mask: true });
+            } else {
+              wx.hideLoading();
+            }
+          }
+        }).then(function (d) {
+          wx.hideLoading();
           var url = (d && d.url) || '';
           var tagged = media.tagMedia({ image: url, url: url, kind: d && d.kind });
           that.setData({
@@ -1679,6 +1743,7 @@ Page({
           });
           wx.showToast({ title: tagged.isVideo ? '视频已上传' : '配图已上传', icon: 'success' });
         }).catch(function (err) {
+          wx.hideLoading();
           that.setData({ uploadingStoryImage: false });
           if (api.handleUpgradeError(err)) return;
           wx.showModal({ title: '上传失败', content: (err && err.message) || '请检查网络后重试', showCancel: false });

@@ -6,6 +6,7 @@ import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { ok, fail, requireAdmin, getWid, getOpenid } from './auth'
 import type { AppEnv, Bindings } from './auth'
+import { DEFAULT_VIDEO_MAX_MB, MAX_VIDEO_MB } from './qiniu'
 
 export const billing = new Hono<AppEnv>()
 
@@ -18,6 +19,8 @@ export type Effect = (typeof EFFECTS)[number]
 // 套餐权益（0 = 不限，仅用于奖项数 / 抽奖人数）
 export type Entitlements = {
   photos: number // 相册上限（张）
+  photoMaxKb: number // 单张图片上限（KB）
+  videoMaxMb: number // 单个视频上限（MB，仅支持上传视频的付费套餐生效）
   lotteryPrizes: number // 抽奖奖项上限，0 = 不限
   lotteryParticipants: number // 抽奖人数上限，0 = 不限
   lotteryThemes: string[] // 可用主题（请柬 + 大屏）
@@ -41,10 +44,15 @@ export type PlanDef = {
 }
 
 export const MAX_PHOTOS = 2000
+export const MIN_PHOTO_KB = 50
+export const MAX_PHOTO_KB = 15360 // 15MB
+export const DEFAULT_FREE_PHOTO_MAX_KB = 500
+export const DEFAULT_PAID_PHOTO_MAX_KB = 2048
+export const DEFAULT_SUPREME_PHOTO_MAX_KB = 5120
 const BASIC_PHOTO_LIMIT = 4
 export const PREMIUM_PHOTO_LIMIT = 200 // 兼容旧接口
 
-const DEFAULT_ENT: Entitlements = { photos: BASIC_PHOTO_LIMIT, lotteryPrizes: 1, lotteryParticipants: 30, lotteryThemes: ['red'], watermark: true, badge: '', effect: 'none', opening: false }
+const DEFAULT_ENT: Entitlements = { photos: BASIC_PHOTO_LIMIT, photoMaxKb: DEFAULT_FREE_PHOTO_MAX_KB, videoMaxMb: DEFAULT_VIDEO_MAX_MB, lotteryPrizes: 1, lotteryParticipants: 30, lotteryThemes: ['red'], watermark: true, badge: '', effect: 'none', opening: false }
 
 export const DEFAULT_PLANS: PlanDef[] = [
   {
@@ -56,14 +64,14 @@ export const DEFAULT_PLANS: PlanDef[] = [
   {
     code: 'premium', name: '高级版', level: 10, priceFen: 6800, originalFen: 12800, days: 0, active: true, sort: 10,
     desc: '每场婚礼一次付费，永久有效',
-    features: ['婚纱相册最多 200 张', '现场抽奖不限奖项与人数', '5 套大屏抽奖主题', '去除「有囍請柬」标识', '请柬花瓣纷飞特效', '优先客服支持'],
-    ent: { photos: 200, lotteryPrizes: 0, lotteryParticipants: 0, lotteryThemes: [...ALL_THEMES], watermark: false, badge: '', effect: 'petals', opening: false },
+    features: ['婚纱相册最多 200 张', '支持上传婚礼视频（单视频最高 100MB）', '现场抽奖不限奖项与人数', '5 套大屏抽奖主题', '去除「有囍請柬」标识', '请柬花瓣纷飞特效', '优先客服支持'],
+    ent: { photos: 200, photoMaxKb: DEFAULT_PAID_PHOTO_MAX_KB, videoMaxMb: DEFAULT_VIDEO_MAX_MB, lotteryPrizes: 0, lotteryParticipants: 0, lotteryThemes: [...ALL_THEMES], watermark: false, badge: '', effect: 'petals', opening: false },
   },
   {
     code: 'supreme', name: '至尊版', level: 20, priceFen: 16800, originalFen: 29900, days: 0, active: false, sort: 20,
     desc: '尊享专属标识与开场动画，婚礼更有仪式感',
-    features: ['包含高级版全部权益', '婚纱相册最多 500 张', '请柬与大屏「尊享」专属标识', '专属开场动画（红金启幕）', '金箔流光特效（请柬 + 抽奖大屏）', '一对一专属客服'],
-    ent: { photos: 500, lotteryPrizes: 0, lotteryParticipants: 0, lotteryThemes: [...ALL_THEMES], watermark: false, badge: '尊享', effect: 'gold', opening: true },
+    features: ['包含高级版全部权益', '婚纱相册最多 500 张', '支持上传婚礼视频（单视频最高 100MB）', '请柬与大屏「尊享」专属标识', '专属开场动画（红金启幕）', '金箔流光特效（请柬 + 抽奖大屏）', '一对一专属客服'],
+    ent: { photos: 500, photoMaxKb: DEFAULT_SUPREME_PHOTO_MAX_KB, videoMaxMb: DEFAULT_VIDEO_MAX_MB, lotteryPrizes: 0, lotteryParticipants: 0, lotteryThemes: [...ALL_THEMES], watermark: false, badge: '尊享', effect: 'gold', opening: true },
   },
 ]
 
@@ -97,6 +105,8 @@ export function sanitizeEnt(raw: any, def: Entitlements): Entitlements {
   const r = raw && typeof raw === 'object' ? raw : {}
   return {
     photos: num(r.photos, def.photos, 1, MAX_PHOTOS),
+    photoMaxKb: num(r.photoMaxKb, def.photoMaxKb ?? DEFAULT_FREE_PHOTO_MAX_KB, MIN_PHOTO_KB, MAX_PHOTO_KB),
+    videoMaxMb: num(r.videoMaxMb, def.videoMaxMb ?? DEFAULT_VIDEO_MAX_MB, 1, MAX_VIDEO_MB),
     lotteryPrizes: num(r.lotteryPrizes, def.lotteryPrizes, 0, 50),
     lotteryParticipants: num(r.lotteryParticipants, def.lotteryParticipants, 0, 2000),
     lotteryThemes: themes(r.lotteryThemes, def.lotteryThemes),
@@ -156,9 +166,11 @@ export function sanitizePlan(raw: any, base?: PlanDef): PlanDef {
     if (out.level < 1) out.level = 1
   }
   out.ent.photos = Math.min(out.ent.photos, planPhotoLimit(out))
-  out.features = out.features.map((feature) =>
-    /^婚纱相册最多\s*\d+\s*张$/.test(feature) ? '婚纱相册最多 ' + out.ent.photos + ' 张' : feature,
-  )
+  out.features = out.features.map((feature) => {
+    if (/^婚纱相册最多\s*\d+\s*张$/.test(feature)) return '婚纱相册最多 ' + out.ent.photos + ' 张'
+    if (/^支持上传婚礼视频（单视频最高\s*\d+\s*MB）$/.test(feature)) return '支持上传婚礼视频（单视频最高 ' + out.ent.videoMaxMb + 'MB）'
+    return feature
+  })
   return out
 }
 

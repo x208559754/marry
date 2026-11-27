@@ -179,18 +179,28 @@
             <input class="sp-input" type="number" value="{{superOvForm.photos}}" bindinput="onSuperOvInput" data-field="photos" />
           </view>
           <view class="sp-field">
-            <text class="sp-label">抽奖奖项（0=不限）</text>
-            <input class="sp-input" type="number" value="{{superOvForm.lotteryPrizes}}" bindinput="onSuperOvInput" data-field="lotteryPrizes" />
+            <text class="sp-label">单图上限（KB，50–15360）</text>
+            <input class="sp-input" type="number" value="{{superOvForm.photoMaxKb}}" bindinput="onSuperOvInput" data-field="photoMaxKb" />
           </view>
         </view>
         <view class="sp-pair">
           <view class="sp-field">
-            <text class="sp-label">抽奖人数（0=不限）</text>
-            <input class="sp-input" type="number" value="{{superOvForm.lotteryParticipants}}" bindinput="onSuperOvInput" data-field="lotteryParticipants" />
+            <text class="sp-label">单视频上限（MB，1–500）</text>
+            <input class="sp-input" type="number" value="{{superOvForm.videoMaxMb}}" bindinput="onSuperOvInput" data-field="videoMaxMb" />
           </view>
           <view class="sp-field">
             <text class="sp-label">专属角标（如 尊享）</text>
             <input class="sp-input" maxlength="6" placeholder="留空不显示" value="{{superOvForm.badge}}" bindinput="onSuperOvInput" data-field="badge" />
+          </view>
+        </view>
+        <view class="sp-pair">
+          <view class="sp-field">
+            <text class="sp-label">抽奖奖项（0=不限）</text>
+            <input class="sp-input" type="number" value="{{superOvForm.lotteryPrizes}}" bindinput="onSuperOvInput" data-field="lotteryPrizes" />
+          </view>
+          <view class="sp-field">
+            <text class="sp-label">抽奖人数（0=不限）</text>
+            <input class="sp-input" type="number" value="{{superOvForm.lotteryParticipants}}" bindinput="onSuperOvInput" data-field="lotteryParticipants" />
           </view>
         </view>
 
@@ -252,6 +262,8 @@
         <text class="sp-pc-desc">{{item.desc}}</text>
         <view class="sp-pc-limits">
           <text class="sp-lim">相册最多 {{item.ent.photos}} 张</text>
+          <text class="sp-lim">单图最高 {{item.photoMaxText}}</text>
+          <text class="sp-lim" wx:if="{{item.code !== 'free'}}">单视频最高 {{item.ent.videoMaxMb || 100}}MB</text>
           <text class="sp-lim">抽奖奖项 {{item.ent.lotteryPrizes ? (item.ent.lotteryPrizes + ' 个') : '不限'}}</text>
           <text class="sp-lim">抽奖人数 {{item.ent.lotteryParticipants ? (item.ent.lotteryParticipants + ' 人') : '不限'}}</text>
           <text class="sp-lim">主题 {{item.ent.lotteryThemes.length}} 套</text>
@@ -402,7 +414,8 @@
       <view class="card upload-guide-card">
         <text class="ug-title">{{canUploadVideo ? '上传照片和视频' : '上传照片'}}</text>
         <text class="ug-desc" wx:if="{{planLoaded && !canUploadVideo}}">当前套餐仅支持上传图片。</text>
-        <text class="ug-desc" wx:if="{{albumPhotoLimit}}">相册 {{photosList.length}} / {{albumPhotoLimit}} 张</text>
+        <text class="ug-desc" wx:if="{{albumPhotoLimit}}">相册 {{photosList.length}} / {{albumPhotoLimit}} 张 · 单图最高 {{photoMaxText}}（超出自动压缩）</text>
+        <text class="ug-desc" wx:if="{{canUploadVideo}}">单个视频最高 {{videoMaxMb}}MB（上传前自动压缩画质）</text>
 
         <button class="btn-primary ug-btn" bindtap="chooseAndUploadPhoto" loading="{{uploading}}" disabled="{{movingPhoto || photoDragId}}">
           {{canUploadVideo ? '选取并上传照片或视频' : '选取并上传照片'}}
@@ -410,7 +423,7 @@
         <button wx:if="{{canUploadVideo}}" class="btn-primary ug-btn ug-btn-gap" bindtap="chooseAndUploadVideo" loading="{{uploadingVideo}}" disabled="{{uploading || movingPhoto || photoDragId}}">
           选取并上传视频
         </button>
-        <text class="ug-progress" wx:if="{{uploadingVideo}}">视频上传中 {{uploadProgress}}%</text>
+        <text class="ug-progress" wx:if="{{uploadingVideo}}">{{videoUploadStage === '正在压缩画质…' ? '正在压缩视频画质…' : ((videoUploadStage || '视频上传中') + ' ' + uploadProgress + '%')}}</text>
       </view>
 
       <text wx:if="{{photosList.length > 1}}" class="pm-reorder-tip">{{movingPhoto ? '正在保存顺序…' : '长按照片拖动排序'}}</text>
@@ -1036,7 +1049,17 @@
             <text class="mf-label">相册上限（张）</text>
             <input class="mf-input" type="number" value="{{planEditForm.photos}}" bindinput="onPlanEditInput" data-field="photos" />
           </view>
-          <view class="modal-form-item" style="flex:1;margin-left:12rpx;" wx:if="{{planEditForm.code !== 'free'}}">
+          <view class="modal-form-item" style="flex:1;margin-left:12rpx;">
+            <text class="mf-label">单图上限（KB）</text>
+            <input class="mf-input" type="number" value="{{planEditForm.photoMaxKb}}" bindinput="onPlanEditInput" data-field="photoMaxKb" placeholder="如 500 / 2048" />
+          </view>
+        </view>
+        <view class="modal-form-row" wx:if="{{planEditForm.code !== 'free'}}">
+          <view class="modal-form-item" style="flex:1;margin-right:12rpx;">
+            <text class="mf-label">单视频上限（MB，1–500）</text>
+            <input class="mf-input" type="number" value="{{planEditForm.videoMaxMb}}" bindinput="onPlanEditInput" data-field="videoMaxMb" />
+          </view>
+          <view class="modal-form-item" style="flex:1;margin-left:12rpx;">
             <text class="mf-label">有效天数（0=永久）</text>
             <input class="mf-input" type="number" value="{{planEditForm.days}}" bindinput="onPlanEditInput" data-field="days" />
           </view>

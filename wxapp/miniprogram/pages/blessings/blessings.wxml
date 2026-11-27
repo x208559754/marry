@@ -1,23 +1,10 @@
 <!-- pages/blessings/blessings.wxml - 亲友真挚祝福与留言墙 -->
 <view class="container theme-{{theme || 'red'}}">
+  <ambient-overlay theme="{{theme || 'red'}}" show-petals="{{true}}" show-danmaku="{{true}}" />
   <view class="section-header">
     <text class="section-en">BLESSINGS & WISHES</text>
     <text class="section-cn">亲友祝福 · 美好寄语</text>
     <view class="section-divider"></view>
-  </view>
-
-  <!-- 三轨无缝弹幕：每轨内容复制一份，向左走一半宽度后无缝循环 -->
-  <view class="danmaku-stage" wx:if="{{danmakuLanes.length}}">
-    <view class="dm-lane" wx:for="{{danmakuLanes}}" wx:key="id">
-      <view class="dm-track" style="animation-duration: {{item.duration}}s; animation-delay: {{item.delay}}s;">
-        <view class="dm-half" wx:for="{{item.copies}}" wx:for-item="copy" wx:key="*this">
-          <view class="danmaku-item" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="key">
-            <text class="dm-author" wx:if="{{tag.author}}">{{tag.author}}</text>
-            <text class="dm-text">{{tag.text}}</text>
-          </view>
-        </view>
-      </view>
-    </view>
   </view>
 
   <view class="card heart-energy-card">
