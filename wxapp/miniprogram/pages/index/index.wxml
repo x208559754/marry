@@ -1,6 +1,23 @@
 <!-- pages/index/index.wxml - 原生微信小程序高定婚礼请柬 (开屏火漆印开帖 + 典雅信笺) -->
 <view class="container theme-{{theme || config.theme || 'red'}}" style="padding-top: {{topSafeHeight}}px;">
-  <!-- 飘落花瓣粒子层（付费套餐：花瓣纷飞 = 更多花瓣；金箔流光 = 再加金色粒子） -->
+  <!-- 主题专属唯美动态氛围层（5 套主题各自呈现专属光晕、粒子、流星/晨光/气泡/樱雪/金箔） -->
+  <view class="theme-ambient" aria-hidden="true">
+    <view class="ta-glow g1"></view>
+    <view class="ta-glow g2"></view>
+    <view class="ta-sheen"></view>
+    <view class="ta-meteor m1"></view>
+    <view class="ta-meteor m2"></view>
+    <view class="ta-spark s1"></view>
+    <view class="ta-spark s2"></view>
+    <view class="ta-spark s3"></view>
+    <view class="ta-spark s4"></view>
+    <view class="ta-spark s5"></view>
+    <view class="ta-spark s6"></view>
+    <view class="ta-spark s7"></view>
+    <view class="ta-spark s8"></view>
+  </view>
+
+  <!-- 飘落花瓣粒子层（随主题自动变换为金箔/樱瓣/星尘/绿叶/气泡；付费套餐再叠加密度与流光） -->
   <view class="petals-layer petals-{{planEffect}}">
     <view class="petal"></view>
     <view class="petal"></view>

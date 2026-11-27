@@ -1545,25 +1545,91 @@ export const site = `<!DOCTYPE html>
     .look-item { flex: 1; width: auto; padding: 14px 4px; }
   }
   .splash-center { transition: transform 0.28s ease-out; will-change: transform; }
+  .look-sheet::before {
+    content: "";
+    position: absolute;
+    inset: -25%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+  }
+  /* 樱花：粉雾梦幻呼吸光晕 + 3D 旋落花瓣 */
+  .is-sakura::before {
+    opacity: 1;
+    background:
+      radial-gradient(circle at 22% 24%, rgba(255, 198, 220, 0.58), transparent 46%),
+      radial-gradient(circle at 80% 78%, rgba(244, 154, 186, 0.36), transparent 50%);
+    animation: themeAura 9s ease-in-out infinite;
+  }
+  .is-sakura .petal {
+    top: -28px;
+    width: 13px; height: 17px;
+    border-radius: 88% 0 88% 12%;
+    background: linear-gradient(145deg, rgba(255, 214, 228, 0.92), rgba(212, 86, 124, 0.42));
+    box-shadow: 0 2px 8px rgba(212, 86, 124, 0.16);
+    animation-name: sakura3D;
+    animation-timing-function: ease-in-out;
+  }
+  /* 新中式：红金丝缎斜向流光 + 升腾金箔与暖金星火 */
+  .is-chinese::before {
+    opacity: 1;
+    background: linear-gradient(116deg, transparent 36%, rgba(236, 194, 114, 0.32) 50%, transparent 64%);
+    animation: galleryBeam 7.5s ease-in-out infinite;
+  }
   .is-chinese .petal {
-    display: block; position: absolute; bottom: -16px; width: 8px; height: 8px; border-radius: 50%;
-    background: radial-gradient(circle, #d49632 0%, rgba(196, 138, 48, 0.72) 55%, transparent 100%);
-    box-shadow: 0 0 8px rgba(212, 150, 50, 0.45);
+    display: block; position: absolute; bottom: -18px; width: 9px; height: 9px; border-radius: 50%;
+    background: radial-gradient(circle, #ffe49c 0%, #d49632 55%, transparent 100%);
+    box-shadow: 0 0 10px rgba(212, 150, 50, 0.55);
     opacity: 0; pointer-events: none;
     animation-name: goldRise; animation-duration: 7.5s; animation-timing-function: ease-in-out; animation-iteration-count: infinite;
   }
+  .is-chinese .petal:nth-child(2n) {
+    width: 11px; height: 7px; border-radius: 2px;
+    background: linear-gradient(135deg, #ffe7a8, #c4882a);
+  }
+  /* 法式：香槟玫瑰丝光掠过 + 晶莹香槟气泡袅袅升腾 */
+  .is-french::before {
+    opacity: 1;
+    background: linear-gradient(114deg, transparent 38%, rgba(255, 244, 214, 0.72) 50%, transparent 62%);
+    animation: galleryBeam 7s ease-in-out infinite;
+  }
   .is-french .petal {
-    display: block; position: absolute; bottom: -20px; width: 18px; height: 18px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(224, 174, 96, 0.65), rgba(231, 201, 138, 0.22) 65%, transparent 100%);
-    filter: blur(0.6px); opacity: 0; pointer-events: none;
-    animation-name: goldRise; animation-duration: 9s; animation-timing-function: ease-in-out; animation-iteration-count: infinite;
+    display: block; position: absolute; bottom: -22px; width: 16px; height: 16px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 32%, rgba(255, 255, 255, 0.95), rgba(224, 178, 102, 0.25) 68%, rgba(196, 152, 74, 0.44) 100%);
+    border: 1px solid rgba(206, 162, 82, 0.45);
+    opacity: 0; pointer-events: none;
+    animation-name: bubbleRise; animation-duration: 8.6s; animation-timing-function: ease-in; animation-iteration-count: infinite;
+  }
+  .is-french .petal:nth-child(2n) { width: 11px; height: 11px; }
+  /* 森系：摇曳林间丁达尔晨光 + 随风轻摆橄榄新叶 */
+  .is-forest::before {
+    opacity: 1;
+    background: linear-gradient(128deg, transparent 26%, rgba(242, 250, 224, 0.55) 38%, transparent 50%, rgba(168, 228, 186, 0.32) 60%, transparent 70%);
+    animation: forestBeam 8.5s ease-in-out infinite;
   }
   .is-forest .petal {
-    display: block; position: absolute; top: -24px; width: 13px; height: 18px; border-radius: 90% 0 90% 0;
-    background: linear-gradient(135deg, rgba(134, 239, 172, 0.78), rgba(22, 101, 52, 0.32));
-    opacity: 0.78; pointer-events: none;
-    animation-name: fall; animation-duration: 11s; animation-timing-function: linear; animation-iteration-count: infinite;
+    display: block; position: absolute; top: -24px; width: 14px; height: 20px; border-radius: 92% 0 92% 0;
+    background: linear-gradient(135deg, rgba(134, 224, 162, 0.85), rgba(22, 101, 52, 0.36));
+    opacity: 0.82; pointer-events: none;
+    animation-name: leafSway; animation-duration: 10.5s; animation-timing-function: ease-in-out; animation-iteration-count: infinite;
   }
+  /* 轻奢：画廊极简双光束 + 铂金微星闪烁 */
+  .is-minimal .petal {
+    display: block; position: absolute; width: 7px; height: 7px; border-radius: 50%;
+    background: radial-gradient(circle, #52525b 0%, rgba(161, 161, 170, 0.45) 55%, transparent 100%);
+    box-shadow: 0 0 8px rgba(82, 82, 91, 0.25);
+    opacity: 0; pointer-events: none;
+    animation-name: starPulse; animation-duration: 4.4s; animation-timing-function: ease-in-out; animation-iteration-count: infinite;
+  }
+  .is-minimal .petal:nth-child(1) { top: 18%; }
+  .is-minimal .petal:nth-child(2) { top: 68%; }
+  .is-minimal .petal:nth-child(3) { top: 14%; }
+  .is-minimal .petal:nth-child(4) { top: 76%; }
+  .is-minimal .petal:nth-child(5) { top: 26%; }
+  .is-minimal .petal:nth-child(6) { top: 52%; }
+  .is-minimal .petal:nth-child(7) { top: 82%; }
+  .is-minimal .petal:nth-child(8) { top: 34%; }
+  .is-minimal .petal:nth-child(9) { top: 62%; }
   .look-sheet .petal:nth-child(1) { left: 8%; animation-delay: 0s; animation-duration: 8.2s; }
   .look-sheet .petal:nth-child(2) { left: 28%; animation-delay: 1.5s; animation-duration: 9.4s; }
   .look-sheet .petal:nth-child(3) { left: 52%; animation-delay: 3s; animation-duration: 10.8s; }
@@ -1578,14 +1644,46 @@ export const site = `<!DOCTYPE html>
     position: absolute;
     inset: -30%;
     pointer-events: none;
-    background: linear-gradient(118deg, transparent 40%, rgba(255, 255, 255, 0.72) 50%, transparent 60%);
-    animation: galleryBeam 6.5s ease-in-out infinite;
+    background: linear-gradient(118deg, transparent 40%, rgba(255, 255, 255, 0.78) 50%, transparent 60%);
+    animation: galleryBeam 6.2s ease-in-out infinite;
+  }
+  @keyframes themeAura {
+    0%, 100% { transform: scale(0.96) translate3d(0, 0, 0); opacity: 0.7; }
+    50% { transform: scale(1.06) translate3d(12px, -10px, 0); opacity: 1; }
+  }
+  @keyframes sakura3D {
+    0% { transform: translate3d(0, -20px, 0) rotateX(0deg) rotateY(0deg) rotateZ(0deg); opacity: 0; }
+    12% { opacity: 0.88; }
+    42% { transform: translate3d(36px, 210px, 0) rotateX(135deg) rotateY(75deg) rotateZ(115deg); opacity: 0.76; }
+    74% { transform: translate3d(-24px, 380px, 0) rotateX(250deg) rotateY(165deg) rotateZ(225deg); opacity: 0.6; }
+    100% { transform: translate3d(20px, 510px, 0) rotateX(360deg) rotateY(240deg) rotateZ(330deg); opacity: 0; }
+  }
+  @keyframes leafSway {
+    0% { transform: translate3d(0, -24px, 0) rotate(-18deg); opacity: 0; }
+    14% { opacity: 0.82; }
+    40% { transform: translate3d(42px, 200px, 0) rotate(26deg); opacity: 0.74; }
+    72% { transform: translate3d(-32px, 370px, 0) rotate(-22deg); opacity: 0.6; }
+    100% { transform: translate3d(22px, 510px, 0) rotate(30deg); opacity: 0; }
+  }
+  @keyframes forestBeam {
+    0%, 100% { transform: translate3d(-6%, 0, 0) rotate(-2deg); opacity: 0.55; }
+    50% { transform: translate3d(6%, 0, 0) rotate(2deg); opacity: 0.95; }
   }
   @keyframes goldRise {
-    0% { transform: translate3d(0, 0, 0) scale(0.5); opacity: 0; }
-    20% { opacity: 0.85; }
-    75% { opacity: 0.55; }
-    100% { transform: translate3d(20px, -460px, 0) scale(1.25); opacity: 0; }
+    0% { transform: translate3d(0, 0, 0) scale(0.5) rotate(0deg); opacity: 0; }
+    20% { opacity: 0.9; }
+    65% { transform: translate3d(24px, -310px, 0) scale(1.15) rotate(150deg); opacity: 0.65; }
+    100% { transform: translate3d(-14px, -490px, 0) scale(0.45) rotate(290deg); opacity: 0; }
+  }
+  @keyframes bubbleRise {
+    0% { transform: translate3d(0, 0, 0) scale(0.65); opacity: 0; }
+    18% { opacity: 0.82; }
+    52% { transform: translate3d(18px, -260px, 0) scale(1.06); opacity: 0.66; }
+    100% { transform: translate3d(-14px, -490px, 0) scale(1.22); opacity: 0; }
+  }
+  @keyframes starPulse {
+    0%, 100% { opacity: 0.12; transform: scale(0.55); }
+    50% { opacity: 0.88; transform: scale(1.3); }
   }
   @keyframes galleryBeam {
     0%, 20% { transform: translateX(-70%); opacity: 0; }

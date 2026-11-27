@@ -1626,3 +1626,250 @@
 .vo-open .vo-l { transform: translateX(-102%); }
 .vo-open .vo-r { transform: translateX(102%); }
 .vo-open .vo-seal { opacity: 0; transform: scale(1.5); }
+
+/* ================= 五套主题专属唯美动态氛围特效 ================= */
+.theme-ambient {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 6;
+  overflow: hidden;
+}
+.ta-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(56rpx);
+  opacity: 0.45;
+  animation: taBreath 11s ease-in-out infinite;
+}
+.ta-glow.g1 { width: 420rpx; height: 420rpx; left: -120rpx; top: 8%; }
+.ta-glow.g2 { width: 380rpx; height: 380rpx; right: -100rpx; bottom: 16%; animation-delay: 4.5s; animation-duration: 14s; }
+@keyframes taBreath {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(0.95); opacity: 0.34; }
+  50% { transform: translate3d(18rpx, -22rpx, 0) scale(1.1); opacity: 0.56; }
+}
+.ta-sheen {
+  position: absolute;
+  top: -20%; left: -30%; right: -30%; bottom: -20%;
+  opacity: 0;
+  pointer-events: none;
+}
+.ta-meteor {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+}
+.ta-spark {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+}
+.ta-spark.s1 { left: 10%; animation-delay: 0s; }
+.ta-spark.s2 { left: 22%; animation-delay: 1.6s; }
+.ta-spark.s3 { left: 36%; animation-delay: 3.1s; }
+.ta-spark.s4 { left: 49%; animation-delay: 0.9s; }
+.ta-spark.s5 { left: 62%; animation-delay: 2.5s; }
+.ta-spark.s6 { left: 74%; animation-delay: 4.2s; }
+.ta-spark.s7 { left: 85%; animation-delay: 1.9s; }
+.ta-spark.s8 { left: 93%; animation-delay: 3.7s; }
+
+/* ① 中式红金（theme-red）：绯绒暖光 + 丝缎金流光 + 升腾金箔星火 */
+.theme-red .ta-glow.g1 { background: radial-gradient(circle, rgba(212, 168, 92, 0.42), transparent 70%); }
+.theme-red .ta-glow.g2 { background: radial-gradient(circle, rgba(163, 41, 41, 0.24), transparent 70%); }
+.theme-red .ta-sheen {
+  opacity: 1;
+  background: linear-gradient(115deg, transparent 38%, rgba(246, 223, 168, 0.26) 50%, transparent 62%);
+  animation: taSheenSweep 8.5s ease-in-out infinite;
+}
+.theme-red .ta-spark {
+  bottom: -24rpx;
+  width: 10rpx; height: 10rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff3c4 0%, #d4a042 60%, transparent 100%);
+  box-shadow: 0 0 12rpx rgba(212, 160, 66, 0.65);
+  animation: taGoldRise 9.5s ease-in-out infinite;
+}
+.theme-red .ta-spark.s2, .theme-red .ta-spark.s5, .theme-red .ta-spark.s8 {
+  width: 14rpx; height: 10rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(135deg, #ffe7a3, #c9923a);
+  animation-duration: 11.5s;
+}
+.theme-red .petal {
+  top: -32rpx;
+  background: linear-gradient(135deg, rgba(224, 178, 96, 0.72), rgba(168, 42, 42, 0.35));
+  border-radius: 65% 15% 65% 15%;
+  animation-name: taPetal3D;
+}
+
+/* ② 浪漫樱粉（theme-pink）：粉雾柔光 + 3D 旋落樱吹雪 + 粉白微尘 */
+.theme-pink .ta-glow.g1 { background: radial-gradient(circle, rgba(244, 154, 186, 0.46), transparent 70%); }
+.theme-pink .ta-glow.g2 { background: radial-gradient(circle, rgba(255, 210, 224, 0.56), transparent 70%); }
+.theme-pink .ta-sheen {
+  opacity: 1;
+  background: linear-gradient(122deg, transparent 40%, rgba(255, 240, 246, 0.48) 50%, transparent 60%);
+  animation: taSheenSweep 9.5s ease-in-out infinite;
+}
+.theme-pink .ta-spark {
+  top: -32rpx;
+  width: 18rpx; height: 24rpx;
+  border-radius: 85% 0 85% 15%;
+  background: linear-gradient(145deg, rgba(255, 218, 232, 0.92), rgba(224, 118, 156, 0.45));
+  box-shadow: 0 0 10rpx rgba(244, 167, 193, 0.35);
+  animation: taPetal3D 10.5s linear infinite;
+}
+.theme-pink .ta-spark.s3, .theme-pink .ta-spark.s6 { width: 14rpx; height: 18rpx; animation-duration: 13s; }
+.theme-pink .petal {
+  top: -32rpx;
+  width: 22rpx; height: 28rpx;
+  border-radius: 88% 0 88% 12%;
+  background: linear-gradient(145deg, rgba(255, 206, 224, 0.88), rgba(214, 96, 138, 0.38));
+  animation-name: taPetal3D;
+}
+
+/* ③ 星河夜空（theme-night）：星云极光 + 闪烁星芒 + 浪漫流星尾迹 */
+.theme-night .ta-glow.g1 { background: radial-gradient(circle, rgba(132, 112, 236, 0.38), transparent 70%); }
+.theme-night .ta-glow.g2 { background: radial-gradient(circle, rgba(96, 156, 255, 0.30), transparent 70%); }
+.theme-night .ta-meteor {
+  display: block;
+  width: 180rpx;
+  height: 3rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, rgba(255, 244, 204, 0.95) 0%, rgba(186, 198, 255, 0.55) 38%, transparent 100%);
+  box-shadow: 0 0 12rpx rgba(224, 214, 255, 0.75);
+  opacity: 0;
+  transform: rotate(-28deg);
+}
+.theme-night .ta-meteor.m1 { top: 14%; right: -160rpx; animation: taMeteor 7.5s ease-in 1.2s infinite; }
+.theme-night .ta-meteor.m2 { top: 38%; right: -180rpx; width: 140rpx; animation: taMeteor 10.5s ease-in 5.4s infinite; }
+.theme-night .ta-spark {
+  width: 10rpx; height: 10rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, #d4cbff 55%, transparent 100%);
+  box-shadow: 0 0 14rpx 2rpx rgba(186, 178, 255, 0.72);
+  animation: taStarTwinkle 4.2s ease-in-out infinite;
+}
+.theme-night .ta-spark.s1 { top: 12%; }
+.theme-night .ta-spark.s2 { top: 24%; width: 7rpx; height: 7rpx; }
+.theme-night .ta-spark.s3 { top: 18%; }
+.theme-night .ta-spark.s4 { top: 36%; width: 12rpx; height: 12rpx; }
+.theme-night .ta-spark.s5 { top: 52%; width: 8rpx; height: 8rpx; }
+.theme-night .ta-spark.s6 { top: 44%; }
+.theme-night .ta-spark.s7 { top: 68%; width: 9rpx; height: 9rpx; }
+.theme-night .ta-spark.s8 { top: 76%; width: 7rpx; height: 7rpx; }
+.theme-night .petal {
+  bottom: -24rpx;
+  width: 10rpx; height: 10rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff8dc 0%, rgba(168, 158, 245, 0.75) 60%, transparent 100%);
+  box-shadow: 0 0 12rpx rgba(168, 158, 245, 0.55);
+  animation-name: taGoldRise;
+}
+
+/* ④ 森系花园（theme-forest）：丁达尔晨曦光束 + 旋转橄榄新叶 + 森林萤火 */
+.theme-forest .ta-glow.g1 { background: radial-gradient(circle, rgba(134, 214, 156, 0.42), transparent 70%); }
+.theme-forest .ta-glow.g2 { background: radial-gradient(circle, rgba(214, 200, 126, 0.34), transparent 70%); }
+.theme-forest .ta-sheen {
+  opacity: 1;
+  background: linear-gradient(128deg, transparent 28%, rgba(246, 248, 220, 0.36) 38%, transparent 48%, rgba(188, 232, 198, 0.24) 58%, transparent 68%);
+  animation: taSunbeam 9s ease-in-out infinite;
+}
+.theme-forest .ta-spark {
+  bottom: -20rpx;
+  width: 10rpx; height: 10rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f6f4c2 0%, rgba(166, 218, 146, 0.75) 55%, transparent 100%);
+  box-shadow: 0 0 16rpx rgba(226, 230, 146, 0.8);
+  animation: taFirefly 8.8s ease-in-out infinite;
+}
+.theme-forest .petal {
+  top: -32rpx;
+  width: 24rpx; height: 32rpx;
+  border-radius: 92% 0 92% 0;
+  background: linear-gradient(135deg, rgba(134, 206, 152, 0.72), rgba(44, 90, 62, 0.34));
+  animation-name: taLeafSway;
+}
+
+/* ⑤ 香槟白金（theme-champagne）：香槟丝缎流光 + 袅袅上升香槟气泡 + 钻光微闪 */
+.theme-champagne .ta-glow.g1 { background: radial-gradient(circle, rgba(228, 192, 124, 0.44), transparent 70%); }
+.theme-champagne .ta-glow.g2 { background: radial-gradient(circle, rgba(255, 242, 214, 0.56), transparent 70%); }
+.theme-champagne .ta-sheen {
+  opacity: 1;
+  background: linear-gradient(112deg, transparent 36%, rgba(255, 250, 234, 0.58) 50%, transparent 64%);
+  animation: taSheenSweep 7.6s ease-in-out infinite;
+}
+.theme-champagne .ta-spark {
+  bottom: -28rpx;
+  width: 20rpx; height: 20rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 32%, rgba(255, 255, 255, 0.92), rgba(228, 194, 130, 0.24) 68%, rgba(197, 160, 89, 0.42) 100%);
+  border: 1rpx solid rgba(212, 175, 55, 0.42);
+  animation: taBubbleRise 9.2s ease-in infinite;
+}
+.theme-champagne .ta-spark.s2, .theme-champagne .ta-spark.s5, .theme-champagne .ta-spark.s7 {
+  width: 13rpx; height: 13rpx;
+  animation-duration: 7.4s;
+}
+.theme-champagne .petal {
+  bottom: -24rpx;
+  width: 16rpx; height: 16rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ffffff, rgba(216, 178, 108, 0.36) 72%, transparent 100%);
+  border: 1rpx solid rgba(206, 168, 96, 0.45);
+  animation-name: taBubbleRise;
+}
+
+@keyframes taSheenSweep {
+  0%, 20% { transform: translate3d(-68%, 0, 0); opacity: 0; }
+  45% { opacity: 0.9; }
+  72%, 100% { transform: translate3d(68%, 0, 0); opacity: 0; }
+}
+@keyframes taSunbeam {
+  0%, 100% { transform: translate3d(-6%, 0, 0) rotate(-2deg); opacity: 0.45; }
+  50% { transform: translate3d(6%, 0, 0) rotate(2deg); opacity: 0.85; }
+}
+@keyframes taGoldRise {
+  0% { transform: translate3d(0, 0, 0) scale(0.5) rotate(0deg); opacity: 0; }
+  16% { opacity: 0.85; }
+  55% { transform: translate3d(28rpx, -52vh, 0) scale(1.1) rotate(140deg); opacity: 0.65; }
+  100% { transform: translate3d(-18rpx, -104vh, 0) scale(0.4) rotate(290deg); opacity: 0; }
+}
+@keyframes taPetal3D {
+  0% { transform: translate3d(0, -30rpx, 0) rotateX(0deg) rotateY(0deg) rotateZ(0deg); opacity: 0; }
+  12% { opacity: 0.82; }
+  40% { transform: translate3d(52rpx, 38vh, 0) rotateX(130deg) rotateY(70deg) rotateZ(110deg); opacity: 0.72; }
+  72% { transform: translate3d(-34rpx, 74vh, 0) rotateX(240deg) rotateY(160deg) rotateZ(220deg); opacity: 0.56; }
+  100% { transform: translate3d(30rpx, 108vh, 0) rotateX(360deg) rotateY(240deg) rotateZ(330deg); opacity: 0; }
+}
+@keyframes taLeafSway {
+  0% { transform: translate3d(0, -30rpx, 0) rotate(-18deg); opacity: 0; }
+  14% { opacity: 0.78; }
+  36% { transform: translate3d(58rpx, 34vh, 0) rotate(28deg); opacity: 0.72; }
+  68% { transform: translate3d(-44rpx, 70vh, 0) rotate(-24deg); opacity: 0.58; }
+  100% { transform: translate3d(26rpx, 108vh, 0) rotate(32deg); opacity: 0; }
+}
+@keyframes taStarTwinkle {
+  0%, 100% { opacity: 0.16; transform: scale(0.65); }
+  50% { opacity: 0.96; transform: scale(1.3); }
+}
+@keyframes taMeteor {
+  0%, 72% { transform: translate3d(0, 0, 0) rotate(-28deg) scaleX(0.4); opacity: 0; }
+  76% { opacity: 1; }
+  88% { transform: translate3d(-920rpx, 490rpx, 0) rotate(-28deg) scaleX(1.1); opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes taFirefly {
+  0% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
+  20% { opacity: 0.9; }
+  45% { transform: translate3d(42rpx, -38vh, 0) scale(1.25); opacity: 0.35; }
+  72% { transform: translate3d(-32rpx, -72vh, 0) scale(1.1); opacity: 0.85; }
+  100% { transform: translate3d(18rpx, -102vh, 0) scale(0.5); opacity: 0; }
+}
+@keyframes taBubbleRise {
+  0% { transform: translate3d(0, 0, 0) scale(0.65); opacity: 0; }
+  18% { opacity: 0.78; }
+  50% { transform: translate3d(22rpx, -50vh, 0) scale(1.05); opacity: 0.62; }
+  85% { opacity: 0.4; }
+  100% { transform: translate3d(-16rpx, -104vh, 0) scale(1.22); opacity: 0; }
+}
+
