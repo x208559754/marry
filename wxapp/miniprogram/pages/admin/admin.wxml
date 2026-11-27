@@ -414,8 +414,8 @@
       <view class="card upload-guide-card">
         <text class="ug-title">{{canUploadVideo ? '上传照片和视频' : '上传照片'}}</text>
         <text class="ug-desc" wx:if="{{planLoaded && !canUploadVideo}}">当前套餐仅支持上传图片。</text>
-        <text class="ug-desc" wx:if="{{albumPhotoLimit}}">相册 {{photosList.length}} / {{albumPhotoLimit}} 张 · 单图最高 {{photoMaxText}}（超出自动压缩）</text>
-        <text class="ug-desc" wx:if="{{canUploadVideo}}">单个视频最高 {{videoMaxMb}}MB（上传前自动压缩画质）</text>
+        <text class="ug-desc" wx:if="{{albumPhotoLimit}}">相册 {{photosList.length}} / {{albumPhotoLimit}} 张 · 单图最高 {{photoMaxText}}</text>
+        <text class="ug-desc" wx:if="{{canUploadVideo}}">单个视频最高 {{videoMaxMb}}MB</text>
 
         <button class="btn-primary ug-btn" bindtap="chooseAndUploadPhoto" loading="{{uploading}}" disabled="{{movingPhoto || photoDragId}}">
           {{canUploadVideo ? '选取并上传照片或视频' : '选取并上传照片'}}
@@ -423,7 +423,7 @@
         <button wx:if="{{canUploadVideo}}" class="btn-primary ug-btn ug-btn-gap" bindtap="chooseAndUploadVideo" loading="{{uploadingVideo}}" disabled="{{uploading || movingPhoto || photoDragId}}">
           选取并上传视频
         </button>
-        <text class="ug-progress" wx:if="{{uploadingVideo}}">{{videoUploadStage === '正在压缩画质…' ? '正在压缩视频画质…' : ((videoUploadStage || '视频上传中') + ' ' + uploadProgress + '%')}}</text>
+        <text class="ug-progress" wx:if="{{uploadingVideo}}">{{uploadProgress > 0 ? ('视频上传中 ' + uploadProgress + '%') : '视频上传中…'}}</text>
       </view>
 
       <text wx:if="{{photosList.length > 1}}" class="pm-reorder-tip">{{movingPhoto ? '正在保存顺序…' : '长按照片拖动排序'}}</text>

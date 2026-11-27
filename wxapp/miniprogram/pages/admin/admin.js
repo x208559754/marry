@@ -1396,10 +1396,10 @@ Page({
         var rawGuardMb = Math.max(maxMb * 5, 500);
         var tooBig = files.filter(function (f) { return media.isVideoFile(f) && Number(f.size) > rawGuardMb * 1024 * 1024; });
         if (tooBig.length) {
-          wx.showModal({ title: '视频过大', content: '原视频超过 ' + rawGuardMb + 'MB，无法直接压缩，请先裁剪后再上传（单视频上限 ' + maxMb + 'MB）', showCancel: false });
+          wx.showModal({ title: '视频过大', content: '单个视频不能超过 ' + maxMb + 'MB，请裁剪后再上传', showCancel: false });
           return;
         }
-        that.setData({ uploading: true, uploadingVideo: hasVideo, uploadProgress: 0, videoUploadStage: hasVideo ? '准备中…' : '' });
+        that.setData({ uploading: true, uploadingVideo: hasVideo, uploadProgress: 0, videoUploadStage: hasVideo ? '视频上传中' : '' });
         var i = 0;
         var okCount = 0;
         var lastErr = '';
@@ -1432,7 +1432,7 @@ Page({
           }, isVid ? {
             onStage: function (stage) {
               that.setData({
-                videoUploadStage: stage === 'compressing' ? '正在压缩画质…' : '视频上传中',
+                videoUploadStage: '视频上传中',
                 uploadProgress: stage === 'compressing' ? 0 : that.data.uploadProgress
               });
             }
@@ -1531,10 +1531,10 @@ Page({
         var rawGuardMb = Math.max(maxMb * 5, 500);
         var tooBig = files.filter(function (f) { return Number(f.size) > rawGuardMb * 1024 * 1024; });
         if (tooBig.length) {
-          wx.showModal({ title: '视频过大', content: '原视频超过 ' + rawGuardMb + 'MB，无法直接压缩，请先裁剪后再上传（单视频上限 ' + maxMb + 'MB）', showCancel: false });
+          wx.showModal({ title: '视频过大', content: '单个视频不能超过 ' + maxMb + 'MB，请裁剪后再上传', showCancel: false });
           return;
         }
-        that.setData({ uploadingVideo: true, uploadProgress: 0, videoUploadStage: '准备中…' });
+        that.setData({ uploadingVideo: true, uploadProgress: 0, videoUploadStage: '视频上传中' });
         var i = 0;
         var okCount = 0;
         var lastErr = '';
@@ -1561,7 +1561,7 @@ Page({
           }, {
             onStage: function (stage) {
               that.setData({
-                videoUploadStage: stage === 'compressing' ? '正在压缩画质…' : '视频上传中',
+                videoUploadStage: '视频上传中',
                 uploadProgress: stage === 'compressing' ? 0 : that.data.uploadProgress
               });
             }
@@ -1714,7 +1714,7 @@ Page({
         var maxMb = that.data.videoMaxMb || 100;
         var rawGuardMb = Math.max(maxMb * 5, 500);
         if (isVideo && Number(f.size) > rawGuardMb * 1024 * 1024) {
-          wx.showModal({ title: '视频过大', content: '原视频超过 ' + rawGuardMb + 'MB，无法直接压缩，请先裁剪后再上传（单视频上限 ' + maxMb + 'MB）', showCancel: false });
+          wx.showModal({ title: '视频过大', content: '单个视频不能超过 ' + maxMb + 'MB，请裁剪后再上传', showCancel: false });
           return;
         }
         that.setData({ uploadingStoryImage: true });
@@ -1726,7 +1726,7 @@ Page({
           canUpgrade: !!that.data.planCanUpgrade,
           onStage: function (stage) {
             if (stage === 'compressing') {
-              wx.showLoading({ title: '正在压缩画质…', mask: true });
+              wx.showLoading({ title: '正在上传中…', mask: true });
             } else {
               wx.hideLoading();
             }

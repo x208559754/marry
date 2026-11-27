@@ -229,7 +229,7 @@ function uploadImageWithLimit(filePath, title, opts) {
   var maxBytes = maxKb > 0 ? maxKb * 1024 : 0;
   return compressImageToLimit(filePath, maxBytes).then(function (prepared) {
     if (maxBytes > 0 && prepared.sizeBytes > 0 && prepared.sizeBytes > maxBytes) {
-      var err = new Error('图片压缩后仍为 ' + formatBytesLabel(prepared.sizeBytes) + '，超出当前套餐单图上限（' + formatKbLabel(maxKb) + '）');
+      var err = new Error('图片大小为 ' + formatBytesLabel(prepared.sizeBytes) + '，超出当前套餐单图上限（' + formatKbLabel(maxKb) + '）');
       if (opts.canUpgrade) err.needUpgrade = true;
       throw err;
     }
