@@ -591,6 +591,37 @@ function updateSuperAdminPasscode(newPasscode) {
   return request('PUT', '/api/superadmin/passcode', { newPasscode: newPasscode });
 }
 
+function getSuperAdminUsers(q, filter) {
+  var qs = [];
+  if (q) qs.push('q=' + encodeURIComponent(q));
+  if (filter) qs.push('filter=' + encodeURIComponent(filter));
+  return request('GET', '/api/superadmin/users' + (qs.length ? ('?' + qs.join('&')) : ''));
+}
+
+function getSuperAdminWeddingPlan(wid) {
+  return request('GET', '/api/superadmin/wedding/' + encodeURIComponent(wid) + '/plan');
+}
+
+function saveSuperAdminWeddingPlan(wid, data) {
+  return request('POST', '/api/superadmin/wedding/' + encodeURIComponent(wid) + '/plan', data || {});
+}
+
+function saveSuperAdminWeddingOverrides(wid, data) {
+  return request('PUT', '/api/superadmin/wedding/' + encodeURIComponent(wid) + '/overrides', data || {});
+}
+
+function setSuperAdminWeddingStatus(wid, data) {
+  return request('POST', '/api/superadmin/wedding/' + encodeURIComponent(wid) + '/status', data || {});
+}
+
+function getSuperAdminPlans() {
+  return request('GET', '/api/superadmin/plans');
+}
+
+function saveSuperAdminPlan(code, data) {
+  return request('PUT', '/api/superadmin/plans/' + encodeURIComponent(code), data || {});
+}
+
 // ---------------- 套餐 / 支付 ----------------
 
 // { plans:[{code,name,level,priceFen,originalFen,days,desc,features,ent}], themes, wedding:{plan,planName,level,premium,expired,expiresAt,ent,usage,canUpgrade}, payMode:'wxpay'|'mock'|'unavailable', pricing(旧结构) }
@@ -706,6 +737,13 @@ module.exports = {
   getSuperAdminWeddings: getSuperAdminWeddings,
   saveSuperAdminWedding: saveSuperAdminWedding,
   updateSuperAdminPasscode: updateSuperAdminPasscode,
+  getSuperAdminUsers: getSuperAdminUsers,
+  getSuperAdminWeddingPlan: getSuperAdminWeddingPlan,
+  saveSuperAdminWeddingPlan: saveSuperAdminWeddingPlan,
+  saveSuperAdminWeddingOverrides: saveSuperAdminWeddingOverrides,
+  setSuperAdminWeddingStatus: setSuperAdminWeddingStatus,
+  getSuperAdminPlans: getSuperAdminPlans,
+  saveSuperAdminPlan: saveSuperAdminPlan,
   // 业务（与旧版同名，页面侧改动最小）
   getWeddingConfig: getWeddingConfig,
   getConfig: getConfig,

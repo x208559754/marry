@@ -89,6 +89,32 @@ Page({
     weddingOptions: [],
     selectedWeddingIndex: 0,
     currentWeddingDisplay: '',
+    superMode: 'wedding',
+    superUsersLoading: false,
+    superUserFilter: 'all',
+    superUserQuery: '',
+    superUserStats: { total: 0, registered: 0, admin: 0 },
+    superUsersList: [],
+    superEntLoading: false,
+    superEntData: null,
+    superHasOverrides: false,
+    superPlanForm: { plan: 'free', expiresAt: '', note: '' },
+    superOvForm: { photos: '4', lotteryPrizes: '1', lotteryParticipants: '30', badge: '', effect: 'none', watermark: true, opening: false },
+    superThemeOptions: [],
+    superEffectOptions: [
+      { key: 'none', name: '基础' },
+      { key: 'petals', name: '花瓣纷飞' },
+      { key: 'gold', name: '金箔流光' }
+    ],
+    savingSuperStatus: false,
+    savingSuperPlan: false,
+    savingSuperOv: false,
+    superPlansLoading: false,
+    superPlansList: [],
+    showPlanEditModal: false,
+    savingPlanEdit: false,
+    planEditForm: {},
+    planEditThemeOptions: [],
     showNewWeddingModal: false,
     submittingNewWedding: false,
     newWeddingForm: {
@@ -350,7 +376,381 @@ Page({
     this.refreshAll(null, true);
     this.loadConfigForm();
     this.loadQr();
+    if (this.data.superMode === 'entitlement') this.loadSuperEntitlement();
     wx.showToast({ title: '已切换至 ' + item.wid, icon: 'none' });
+  },
+
+  // ---- 小程序总后台：注册用户 / 单场套餐与权益 / 全平台套餐限制 ----
+
+  _buildThemeOptions: function (selected) {
+    var set = {};
+    (selected || []).forEach(function (k) { set[k] = true; });
+    return LOTTERY_THEMES.map(function (t) {
+      return { key: t.key, name: t.name, on: !!set[t.key] };
+    });
+  },
+
+  switchSuperMode: function (e) {
+    if (!this.data.isSuperAdmin) return;
+    var mode = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.mode) || 'wedding';
+    if (mode !== 'wedding') this.cancelPhotoDrag();
+    this.setData({ superMode: mode });
+    if (mode === 'users') this.loadSuperUsers();
+    else if (mode === 'entitlement') this.loadSuperEntitlement();
+    else if (mode === 'plans') this.loadSuperPlans();
+    else this.loadPlan();
+  },
+
+  onSuperUserQueryInput: function (e) {
+    this.setData({ superUserQuery: e.detail.value });
+  },
+
+  onSuperUserFilter: function (e) {
+    var f = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.filter) || 'all';
+    this.setData({ superUserFilter: f });
+    this.loadSuperUsers();
+  },
+
+  loadSuperUsers: function () {
+    if (!this.data.isSuperAdmin) return;
+    var that = this;
+    this.setData({ superUsersLoading: true });
+    api.getSuperAdminUsers(this.data.superUserQuery, this.data.superUserFilter).then(function (d) {
+      d = d || {};
+      that.setData({
+        superUsersLoading: false,
+        superUserStats: {
+          total: d.total || 0,
+          registered: d.registeredCount || 0,
+          admin: d.adminCount || 0
+        },
+        superUsersList: d.items || []
+      });
+    }).catch(function (err) {
+      that.setData({ superUsersLoading: false });
+      wx.showToast({ title: (err && err.message) || '加载用户失败', icon: 'none' });
+    });
+  },
+
+  copySuperPhone: function (e) {
+    var phone = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.phone) || '';
+    if (!phone) return;
+    wx.setClipboardData({
+      data: phone,
+      success: function () { wx.showToast({ title: '已复制手机号', icon: 'success' }); }
+    });
+  },
+
+  jumpUserWeddingEntitlement: function (e) {
+    var wid = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.wid) || '';
+    if (!wid) return;
+    api.setWid(wid);
+    var opts = this.data.weddingOptions || [];
+    var idx = opts.findIndex(function (o) { return o.wid === wid; });
+    this.setData({
+      wid: wid,
+      selectedWeddingIndex: idx >= 0 ? idx : this.data.selectedWeddingIndex,
+      currentWeddingDisplay: idx >= 0 ? opts[idx].label : wid,
+      superMode: 'entitlement'
+    });
+    this.loadSuperEntitlement();
+    this.refreshAll(null, true);
+  },
+
+  loadSuperEntitlement: function () {
+    if (!this.data.isSuperAdmin) return;
+    var that = this;
+    var wid = this.data.wid || api.getWid() || 'demo';
+    this.setData({ superEntLoading: true });
+    api.getSuperAdminWeddingPlan(wid).then(function (d) {
+      if (!d) return;
+      var ent = d.ent || {};
+      var ov = d.overrides || {};
+      that.setData({
+        superEntLoading: false,
+        superEntData: d,
+        superHasOverrides: Object.keys(ov).length > 0,
+        superPlanForm: {
+          plan: d.plan || 'free',
+          expiresAt: d.expiresDate || '',
+          note: d.note || ''
+        },
+        superOvForm: {
+          photos: String(ent.photos != null ? ent.photos : 4),
+          lotteryPrizes: String(ent.lotteryPrizes != null ? ent.lotteryPrizes : 1),
+          lotteryParticipants: String(ent.lotteryParticipants != null ? ent.lotteryParticipants : 30),
+          badge: ent.badge || '',
+          effect: ent.effect || 'none',
+          watermark: ent.watermark !== false,
+          opening: !!ent.opening
+        },
+        superThemeOptions: that._buildThemeOptions(ent.lotteryThemes || ['red'])
+      });
+    }).catch(function (err) {
+      that.setData({ superEntLoading: false });
+      wx.showToast({ title: (err && err.message) || '加载套餐权益失败', icon: 'none' });
+    });
+  },
+
+  toggleSuperWeddingStatus: function () {
+    var d = this.data.superEntData;
+    if (!d || this.data.savingSuperStatus) return;
+    var that = this;
+    var nextStatus = d.status === 'disabled' ? 'active' : 'disabled';
+    wx.showModal({
+      title: nextStatus === 'disabled' ? '停用本场婚礼' : '恢复启用本场婚礼',
+      content: nextStatus === 'disabled' ? '停用后宾客将无法打开本场请柬，可随时恢复。' : '恢复后宾客可正常访问本场请柬。',
+      success: function (r) {
+        if (!r.confirm) return;
+        that.setData({ savingSuperStatus: true });
+        api.setSuperAdminWeddingStatus(d.id, { status: nextStatus }).then(function () {
+          that.setData({ savingSuperStatus: false });
+          wx.showToast({ title: nextStatus === 'disabled' ? '已停用' : '已恢复启用', icon: 'success' });
+          that.loadSuperEntitlement();
+        }).catch(function (err) {
+          that.setData({ savingSuperStatus: false });
+          wx.showToast({ title: (err && err.message) || '操作失败', icon: 'none' });
+        });
+      }
+    });
+  },
+
+  pickSuperWeddingPlan: function (e) {
+    var code = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.code) || 'free';
+    this.setData({ 'superPlanForm.plan': code });
+  },
+
+  onSuperPlanExpiresChange: function (e) {
+    this.setData({ 'superPlanForm.expiresAt': e.detail.value });
+  },
+
+  clearSuperPlanExpires: function () {
+    this.setData({ 'superPlanForm.expiresAt': '' });
+  },
+
+  onSuperPlanNoteInput: function (e) {
+    this.setData({ 'superPlanForm.note': e.detail.value });
+  },
+
+  submitSuperWeddingPlan: function () {
+    var d = this.data.superEntData;
+    if (!d || this.data.savingSuperPlan) return;
+    var that = this;
+    var f = this.data.superPlanForm;
+    this.setData({ savingSuperPlan: true });
+    api.saveSuperAdminWeddingPlan(d.id, {
+      plan: f.plan,
+      expiresAt: f.plan === 'free' ? '' : (f.expiresAt || ''),
+      note: f.note || ''
+    }).then(function () {
+      that.setData({ savingSuperPlan: false });
+      wx.showToast({ title: '套餐已更新', icon: 'success' });
+      that.loadSuperEntitlement();
+      that.loadPlan();
+    }).catch(function (err) {
+      that.setData({ savingSuperPlan: false });
+      wx.showModal({ title: '保存失败', content: (err && err.message) || '请稍后重试', showCancel: false });
+    });
+  },
+
+  onSuperOvInput: function (e) {
+    var field = e.currentTarget.dataset.field;
+    var update = {};
+    update['superOvForm.' + field] = e.detail.value;
+    this.setData(update);
+  },
+
+  toggleSuperOvTheme: function (e) {
+    var key = e.currentTarget.dataset.key;
+    var list = (this.data.superThemeOptions || []).map(function (t) {
+      return { key: t.key, name: t.name, on: t.key === key ? !t.on : t.on };
+    });
+    if (!list.some(function (t) { return t.on; })) {
+      wx.showToast({ title: '至少保留一个主题', icon: 'none' });
+      return;
+    }
+    this.setData({ superThemeOptions: list });
+  },
+
+  pickSuperOvEffect: function (e) {
+    this.setData({ 'superOvForm.effect': e.currentTarget.dataset.key });
+  },
+
+  onSuperOvHideWatermark: function (e) {
+    this.setData({ 'superOvForm.watermark': !e.detail.value });
+  },
+
+  onSuperOvOpening: function (e) {
+    this.setData({ 'superOvForm.opening': !!e.detail.value });
+  },
+
+  submitSuperWeddingOverrides: function () {
+    var d = this.data.superEntData;
+    if (!d || this.data.savingSuperOv) return;
+    var that = this;
+    var f = this.data.superOvForm;
+    var themes = (this.data.superThemeOptions || []).filter(function (t) { return t.on; }).map(function (t) { return t.key; });
+    this.setData({ savingSuperOv: true });
+    api.saveSuperAdminWeddingOverrides(d.id, {
+      overrides: {
+        photos: parseInt(f.photos, 10) || 4,
+        lotteryPrizes: Math.max(0, parseInt(f.lotteryPrizes, 10) || 0),
+        lotteryParticipants: Math.max(0, parseInt(f.lotteryParticipants, 10) || 0),
+        lotteryThemes: themes.length ? themes : ['red'],
+        watermark: !!f.watermark,
+        badge: (f.badge || '').trim(),
+        effect: f.effect || 'none',
+        opening: !!f.opening
+      },
+      note: '小程序总后台单独调整权益'
+    }).then(function () {
+      that.setData({ savingSuperOv: false });
+      wx.showToast({ title: '权益已保存', icon: 'success' });
+      that.loadSuperEntitlement();
+      that.loadPlan();
+    }).catch(function (err) {
+      that.setData({ savingSuperOv: false });
+      wx.showModal({ title: '保存失败', content: (err && err.message) || '请检查输入数值', showCancel: false });
+    });
+  },
+
+  clearSuperWeddingOverrides: function () {
+    var d = this.data.superEntData;
+    if (!d || this.data.savingSuperOv) return;
+    var that = this;
+    this.setData({ savingSuperOv: true });
+    api.saveSuperAdminWeddingOverrides(d.id, { overrides: {}, note: '恢复套餐默认权益' }).then(function () {
+      that.setData({ savingSuperOv: false });
+      wx.showToast({ title: '已恢复套餐默认', icon: 'success' });
+      that.loadSuperEntitlement();
+      that.loadPlan();
+    }).catch(function (err) {
+      that.setData({ savingSuperOv: false });
+      wx.showToast({ title: (err && err.message) || '操作失败', icon: 'none' });
+    });
+  },
+
+  loadSuperPlans: function () {
+    if (!this.data.isSuperAdmin) return;
+    var that = this;
+    var effMap = { none: '基础特效', petals: '花瓣纷飞', gold: '金箔流光' };
+    this.setData({ superPlansLoading: true });
+    api.getSuperAdminPlans().then(function (d) {
+      var list = ((d && d.plans) || []).map(function (p) {
+        var yuan = p.priceFen > 0 ? ('¥' + (p.priceFen % 100 === 0 ? (p.priceFen / 100) : (p.priceFen / 100).toFixed(2))) : '免费';
+        return Object.assign({}, p, {
+          priceText: yuan,
+          effectLabel: effMap[(p.ent && p.ent.effect) || 'none'] || '基础特效'
+        });
+      });
+      that.setData({ superPlansLoading: false, superPlansList: list });
+    }).catch(function (err) {
+      that.setData({ superPlansLoading: false });
+      wx.showToast({ title: (err && err.message) || '加载套餐失败', icon: 'none' });
+    });
+  },
+
+  openPlanEditModal: function (e) {
+    var code = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.code) || '';
+    var plan = (this.data.superPlansList || []).find(function (p) { return p.code === code; });
+    if (!plan) return;
+    var ent = plan.ent || {};
+    this.setData({
+      showPlanEditModal: true,
+      planEditForm: {
+        code: plan.code,
+        name: plan.name || '',
+        priceYuan: plan.priceFen ? String(plan.priceFen / 100) : '0',
+        originalYuan: plan.originalFen ? String(plan.originalFen / 100) : '',
+        days: String(plan.days || 0),
+        active: !!plan.active,
+        photos: String(ent.photos != null ? ent.photos : 4),
+        lotteryPrizes: String(ent.lotteryPrizes != null ? ent.lotteryPrizes : 1),
+        lotteryParticipants: String(ent.lotteryParticipants != null ? ent.lotteryParticipants : 30),
+        badge: ent.badge || '',
+        effect: ent.effect || 'none',
+        watermark: ent.watermark !== false,
+        opening: !!ent.opening
+      },
+      planEditThemeOptions: this._buildThemeOptions(ent.lotteryThemes || ['red'])
+    });
+  },
+
+  closePlanEditModal: function () {
+    if (this.data.savingPlanEdit) return;
+    this.setData({ showPlanEditModal: false });
+  },
+
+  onPlanEditInput: function (e) {
+    var field = e.currentTarget.dataset.field;
+    var update = {};
+    update['planEditForm.' + field] = e.detail.value;
+    this.setData(update);
+  },
+
+  togglePlanEditTheme: function (e) {
+    var key = e.currentTarget.dataset.key;
+    var list = (this.data.planEditThemeOptions || []).map(function (t) {
+      return { key: t.key, name: t.name, on: t.key === key ? !t.on : t.on };
+    });
+    if (!list.some(function (t) { return t.on; })) {
+      wx.showToast({ title: '至少保留一个主题', icon: 'none' });
+      return;
+    }
+    this.setData({ planEditThemeOptions: list });
+  },
+
+  pickPlanEditEffect: function (e) {
+    this.setData({ 'planEditForm.effect': e.currentTarget.dataset.key });
+  },
+
+  onPlanEditActive: function (e) {
+    this.setData({ 'planEditForm.active': !!e.detail.value });
+  },
+
+  onPlanEditHideWatermark: function (e) {
+    this.setData({ 'planEditForm.watermark': !e.detail.value });
+  },
+
+  onPlanEditOpening: function (e) {
+    this.setData({ 'planEditForm.opening': !!e.detail.value });
+  },
+
+  submitPlanEdit: function () {
+    if (this.data.savingPlanEdit) return;
+    var that = this;
+    var f = this.data.planEditForm;
+    if (!f || !f.code) return;
+    var themes = (this.data.planEditThemeOptions || []).filter(function (t) { return t.on; }).map(function (t) { return t.key; });
+    var priceFen = f.code === 'free' ? 0 : Math.max(1, Math.round((parseFloat(f.priceYuan) || 0) * 100));
+    var origNum = parseFloat(f.originalYuan);
+    var payload = {
+      name: (f.name || '').trim(),
+      priceFen: priceFen,
+      originalFen: origNum > 0 ? Math.round(origNum * 100) : null,
+      days: f.code === 'free' ? 0 : Math.max(0, parseInt(f.days, 10) || 0),
+      active: f.code === 'free' ? true : !!f.active,
+      ent: {
+        photos: Math.max(1, parseInt(f.photos, 10) || 4),
+        lotteryPrizes: Math.max(0, parseInt(f.lotteryPrizes, 10) || 0),
+        lotteryParticipants: Math.max(0, parseInt(f.lotteryParticipants, 10) || 0),
+        lotteryThemes: themes.length ? themes : ['red'],
+        watermark: !!f.watermark,
+        badge: (f.badge || '').trim(),
+        effect: f.effect || 'none',
+        opening: !!f.opening
+      }
+    };
+    this.setData({ savingPlanEdit: true });
+    api.saveSuperAdminPlan(f.code, payload).then(function () {
+      that.setData({ savingPlanEdit: false, showPlanEditModal: false });
+      wx.showToast({ title: '套餐配置已保存', icon: 'success' });
+      that.loadSuperPlans();
+      that.loadPlan();
+    }).catch(function (err) {
+      that.setData({ savingPlanEdit: false });
+      wx.showModal({ title: '保存失败', content: (err && err.message) || '请检查输入数值', showCancel: false });
+    });
   },
 
   openNewWeddingModal: function () {
@@ -627,6 +1027,11 @@ Page({
       isAuthorized: false,
       isSuperAdmin: false,
       isWeddingAdmin: false,
+      superMode: 'wedding',
+      superEntData: null,
+      superUsersList: [],
+      superPlansList: [],
+      showPlanEditModal: false,
       inputPasscode: '',
       rsvpList: [],
       photosList: [],

@@ -70,9 +70,201 @@
           <text class="wp-arrow">切换 ›</text>
         </view>
       </picker>
-      <view class="wp-sub-tip">切换场次后，下方回执名单、相册、婚礼信息与二维码将同步联动。</view>
+      <view class="wp-sub-tip">切换场次后，下方单场管理与单场权益将同步联动。</view>
+      <view class="super-mode-bar">
+        <view class="sm-item {{superMode === 'wedding' ? 'is-on' : ''}}" bindtap="switchSuperMode" data-mode="wedding">单场管理</view>
+        <view class="sm-item {{superMode === 'users' ? 'is-on' : ''}}" bindtap="switchSuperMode" data-mode="users">注册用户</view>
+        <view class="sm-item {{superMode === 'entitlement' ? 'is-on' : ''}}" bindtap="switchSuperMode" data-mode="entitlement">单场权益</view>
+        <view class="sm-item {{superMode === 'plans' ? 'is-on' : ''}}" bindtap="switchSuperMode" data-mode="plans">套餐限制</view>
+      </view>
     </view>
 
+    <!-- 总后台面板 1：注册 / 授权用户列表 -->
+    <view class="super-panel" wx:if="{{isSuperAdmin && superMode === 'users'}}">
+      <view class="card">
+        <view class="sp-head">
+          <text class="sp-title">注册与授权用户</text>
+          <button class="btn-mini-refresh" bindtap="loadSuperUsers" loading="{{superUsersLoading}}">刷新</button>
+        </view>
+        <view class="sp-filter-row">
+          <view class="sp-pill {{superUserFilter === 'all' ? 'is-on' : ''}}" bindtap="onSuperUserFilter" data-filter="all">全部 ({{superUserStats.total}})</view>
+          <view class="sp-pill {{superUserFilter === 'registered' ? 'is-on' : ''}}" bindtap="onSuperUserFilter" data-filter="registered">已授权手机 ({{superUserStats.registered}})</view>
+          <view class="sp-pill {{superUserFilter === 'admin' ? 'is-on' : ''}}" bindtap="onSuperUserFilter" data-filter="admin">婚礼管理员 ({{superUserStats.admin}})</view>
+        </view>
+        <view class="sp-search-row">
+          <input class="sp-search-input" placeholder="搜索手机号 / 姓名 / 婚礼标识" value="{{superUserQuery}}" bindinput="onSuperUserQueryInput" confirm-type="search" bindconfirm="loadSuperUsers" />
+          <button class="sp-search-btn" bindtap="loadSuperUsers">搜索</button>
+        </view>
+      </view>
+
+      <view wx:for="{{superUsersList}}" wx:key="id" class="card sp-user-card">
+        <view class="sp-u-top">
+          <view class="sp-u-id">
+            <text class="sp-u-phone" bindtap="copySuperPhone" data-phone="{{item.phone}}">{{item.phone || (item.name || item.id)}}</text>
+            <text class="sp-u-tag {{item.isAdmin ? 'is-admin' : (item.hasPhone ? 'is-reg' : '')}}">{{item.isAdmin ? '婚礼管理员' : (item.hasPhone ? '已授权' : '访客')}}</text>
+          </view>
+          <text class="sp-u-time">{{item.lastSeen || '—'}}</text>
+        </view>
+        <view class="sp-u-meta">
+          <text wx:if="{{item.name && item.phone}}">称呼：{{item.name}} · </text>
+          <text>访问 {{item.logins}} 次 · 标识 {{item.id}}</text>
+        </view>
+        <view class="sp-u-weds" wx:if="{{item.weddings.length}}">
+          <view wx:for="{{item.weddings}}" wx:for-item="w" wx:key="id" class="sp-u-wed" bindtap="jumpUserWeddingEntitlement" data-wid="{{w.id}}">
+            <text class="sp-uw-name">{{w.couple}}</text>
+            <text class="sp-uw-plan {{w.plan === 'free' ? '' : 'is-paid'}}">{{w.planName}}</text>
+            <text class="sp-uw-go">调权益 ›</text>
+          </view>
+        </view>
+        <text class="sp-u-empty" wx:else>暂未开通婚礼档案</text>
+      </view>
+
+      <view wx:if="{{!superUsersLoading && superUsersList.length === 0}}" class="empty-tip">
+        <text>暂无匹配用户</text>
+      </view>
+    </view>
+
+    <!-- 总后台面板 2：当前婚礼套餐与单场权益覆盖 -->
+    <view class="super-panel" wx:if="{{isSuperAdmin && superMode === 'entitlement'}}">
+      <view class="card" wx:if="{{superEntData}}">
+        <view class="sp-head">
+          <view>
+            <text class="sp-title">{{superEntData.couple}}</text>
+            <text class="sp-sub">当前套餐：{{superEntData.planName}} · 状态：{{superEntData.status === 'disabled' ? '已停用' : '正常'}}</text>
+          </view>
+          <button class="sp-status-btn {{superEntData.status === 'disabled' ? 'is-enable' : 'is-disable'}}" bindtap="toggleSuperWeddingStatus" loading="{{savingSuperStatus}}">
+            {{superEntData.status === 'disabled' ? '恢复启用' : '停用本场'}}
+          </button>
+        </view>
+      </view>
+
+      <!-- 切换本场套餐 -->
+      <view class="card" wx:if="{{superEntData}}">
+        <view class="sp-head">
+          <text class="sp-title">切换本场套餐与有效期</text>
+        </view>
+        <view class="sp-plan-picks">
+          <view wx:for="{{superEntData.plans}}" wx:key="code" class="sp-plan-pick {{superPlanForm.plan === item.code ? 'is-on' : ''}}" bindtap="pickSuperWeddingPlan" data-code="{{item.code}}">
+            <text class="sp-pp-name">{{item.name}}</text>
+            <text class="sp-pp-price">{{item.priceFen > 0 ? ('¥' + (item.priceFen / 100)) : '免费'}}</text>
+          </view>
+        </view>
+        <view class="sp-field" wx:if="{{superPlanForm.plan !== 'free'}}">
+          <text class="sp-label">到期日期（不选则永久有效）</text>
+          <view class="sp-date-row">
+            <picker mode="date" value="{{superPlanForm.expiresAt || '2027-12-31'}}" start="2025-01-01" end="2036-12-31" bindchange="onSuperPlanExpiresChange" style="flex:1;">
+              <view class="sp-input">{{superPlanForm.expiresAt || '永久有效（点此选择到期日）'}}</view>
+            </picker>
+            <view class="sp-clear-btn" wx:if="{{superPlanForm.expiresAt}}" bindtap="clearSuperPlanExpires">设为永久</view>
+          </view>
+        </view>
+        <view class="sp-field">
+          <text class="sp-label">变更备注（选填）</text>
+          <input class="sp-input" placeholder="如：线下收款手动开通" value="{{superPlanForm.note}}" bindinput="onSuperPlanNoteInput" />
+        </view>
+        <button class="btn-primary unlock-btn" bindtap="submitSuperWeddingPlan" loading="{{savingSuperPlan}}">保存套餐变更</button>
+      </view>
+
+      <!-- 单独调整本场权益覆盖 -->
+      <view class="card" wx:if="{{superEntData}}">
+        <view class="sp-head">
+          <text class="sp-title">单独调整本场权益</text>
+          <text class="sp-sub-tag">{{superHasOverrides ? '已自定义覆盖' : '跟随套餐默认'}}</text>
+        </view>
+        <text class="sp-hint">单独调整只对当前婚礼生效，优先于套餐默认配置（相册上限最多 {{superEntData.photoLimit}} 张）。</text>
+
+        <view class="sp-pair">
+          <view class="sp-field">
+            <text class="sp-label">相册上限（张）</text>
+            <input class="sp-input" type="number" value="{{superOvForm.photos}}" bindinput="onSuperOvInput" data-field="photos" />
+          </view>
+          <view class="sp-field">
+            <text class="sp-label">抽奖奖项（0=不限）</text>
+            <input class="sp-input" type="number" value="{{superOvForm.lotteryPrizes}}" bindinput="onSuperOvInput" data-field="lotteryPrizes" />
+          </view>
+        </view>
+        <view class="sp-pair">
+          <view class="sp-field">
+            <text class="sp-label">抽奖人数（0=不限）</text>
+            <input class="sp-input" type="number" value="{{superOvForm.lotteryParticipants}}" bindinput="onSuperOvInput" data-field="lotteryParticipants" />
+          </view>
+          <view class="sp-field">
+            <text class="sp-label">专属角标（如 尊享）</text>
+            <input class="sp-input" maxlength="6" placeholder="留空不显示" value="{{superOvForm.badge}}" bindinput="onSuperOvInput" data-field="badge" />
+          </view>
+        </view>
+
+        <view class="sp-field">
+          <text class="sp-label">可用主题（点击多选）</text>
+          <view class="sp-chips">
+            <view wx:for="{{superThemeOptions}}" wx:key="key" class="sp-chip {{item.on ? 'is-on' : ''}}" bindtap="toggleSuperOvTheme" data-key="{{item.key}}">{{item.name}}</view>
+          </view>
+        </view>
+
+        <view class="sp-field">
+          <text class="sp-label">氛围特效</text>
+          <view class="sp-chips">
+            <view wx:for="{{superEffectOptions}}" wx:key="key" class="sp-chip {{superOvForm.effect === item.key ? 'is-on' : ''}}" bindtap="pickSuperOvEffect" data-key="{{item.key}}">{{item.name}}</view>
+          </view>
+        </view>
+
+        <view class="sp-switch-row">
+          <text class="sp-label" style="margin:0;">隐藏底部「有囍請柬」平台标识</text>
+          <switch checked="{{!superOvForm.watermark}}" color="#8B1E1E" bindchange="onSuperOvHideWatermark" />
+        </view>
+        <view class="sp-switch-row">
+          <text class="sp-label" style="margin:0;">开启专属红金开场动画</text>
+          <switch checked="{{superOvForm.opening}}" color="#8B1E1E" bindchange="onSuperOvOpening" />
+        </view>
+
+        <view class="sp-btn-pair">
+          <button class="btn-gold sp-btn-half" bindtap="clearSuperWeddingOverrides" loading="{{savingSuperOv}}">恢复套餐默认</button>
+          <button class="btn-primary sp-btn-half" bindtap="submitSuperWeddingOverrides" loading="{{savingSuperOv}}">保存权益覆盖</button>
+        </view>
+      </view>
+
+      <view wx:if="{{superEntLoading && !superEntData}}" class="empty-tip">
+        <text>正在加载本场套餐与权益…</text>
+      </view>
+    </view>
+
+    <!-- 总后台面板 3：全平台套餐与限制配置 -->
+    <view class="super-panel" wx:if="{{isSuperAdmin && superMode === 'plans'}}">
+      <view class="card">
+        <view class="sp-head">
+          <view>
+            <text class="sp-title">全平台套餐与权益限制</text>
+            <text class="sp-sub">修改后立即对所有小程序用户生效</text>
+          </view>
+          <button class="btn-mini-refresh" bindtap="loadSuperPlans" loading="{{superPlansLoading}}">刷新</button>
+        </view>
+      </view>
+
+      <view wx:for="{{superPlansList}}" wx:key="code" class="card sp-plan-card">
+        <view class="sp-pc-head">
+          <view class="sp-pc-left">
+            <text class="sp-pc-name">{{item.name}}</text>
+            <text class="sp-pc-code">{{item.code}}</text>
+            <text class="sp-pc-st {{item.active ? 'is-on' : ''}}">{{item.active ? '已上架' : '未上架'}}</text>
+          </view>
+          <text class="sp-pc-price">{{item.priceText}}</text>
+        </view>
+        <text class="sp-pc-desc">{{item.desc}}</text>
+        <view class="sp-pc-limits">
+          <text class="sp-lim">相册最多 {{item.ent.photos}} 张</text>
+          <text class="sp-lim">抽奖奖项 {{item.ent.lotteryPrizes ? (item.ent.lotteryPrizes + ' 个') : '不限'}}</text>
+          <text class="sp-lim">抽奖人数 {{item.ent.lotteryParticipants ? (item.ent.lotteryParticipants + ' 人') : '不限'}}</text>
+          <text class="sp-lim">主题 {{item.ent.lotteryThemes.length}} 套</text>
+          <text class="sp-lim">{{item.ent.watermark ? '显示标识' : '去除标识'}}</text>
+          <text class="sp-lim">{{item.effectLabel}}</text>
+          <text class="sp-lim" wx:if="{{item.ent.opening}}">专属开场</text>
+          <text class="sp-lim">{{item.days ? (item.days + ' 天') : '永久有效'}}</text>
+        </view>
+        <button class="btn-gold sp-pc-edit" bindtap="openPlanEditModal" data-code="{{item.code}}">编辑价格与权益限制</button>
+      </view>
+    </view>
+
+    <block wx:if="{{!isSuperAdmin || superMode === 'wedding'}}">
     <!-- 当前套餐：名称 / 到期 / 用量 / 已解锁与未解锁的权益（来自平台总后台套餐配置） -->
     <view class="card plan-card plan-tier-{{planTier}}" wx:if="{{planLoaded}}">
       <view class="plan-top" bindtap="goUpgrade">
@@ -635,6 +827,7 @@
         <button class="lt-reset-btn" bindtap="resetLotteryAll" disabled="{{lotteryBusy}}">重置本场抽奖</button>
       </view>
     </view>
+    </block>
   </block>
 
   <!-- 抽奖奖项编辑弹窗 -->
@@ -815,6 +1008,81 @@
       <view class="modal-btn-row">
         <button class="modal-btn-cancel" bindtap="closeSuperPasscodeModal" disabled="{{verifyingPasscode}}">取消</button>
         <button class="modal-btn-confirm" bindtap="submitSuperPasscode" loading="{{verifyingPasscode}}" disabled="{{verifyingPasscode}}">验证并进入</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 全平台套餐限制编辑弹窗 -->
+  <view class="modal-mask" wx:if="{{showPlanEditModal && isSuperAdmin}}">
+    <view class="modal-card sp-plan-modal">
+      <view class="modal-title">编辑套餐 · {{planEditForm.name || planEditForm.code}}</view>
+      <scroll-view scroll-y class="sp-modal-scroll">
+        <view class="modal-form-item">
+          <text class="mf-label">套餐名称</text>
+          <input class="mf-input" value="{{planEditForm.name}}" bindinput="onPlanEditInput" data-field="name" maxlength="20" />
+        </view>
+        <view class="modal-form-row" wx:if="{{planEditForm.code !== 'free'}}">
+          <view class="modal-form-item" style="flex:1;margin-right:12rpx;">
+            <text class="mf-label">现价（元）</text>
+            <input class="mf-input" type="digit" value="{{planEditForm.priceYuan}}" bindinput="onPlanEditInput" data-field="priceYuan" />
+          </view>
+          <view class="modal-form-item" style="flex:1;margin-left:12rpx;">
+            <text class="mf-label">划线原价（元）</text>
+            <input class="mf-input" type="digit" value="{{planEditForm.originalYuan}}" bindinput="onPlanEditInput" data-field="originalYuan" placeholder="选填" />
+          </view>
+        </view>
+        <view class="modal-form-row">
+          <view class="modal-form-item" style="flex:1;margin-right:12rpx;">
+            <text class="mf-label">相册上限（张）</text>
+            <input class="mf-input" type="number" value="{{planEditForm.photos}}" bindinput="onPlanEditInput" data-field="photos" />
+          </view>
+          <view class="modal-form-item" style="flex:1;margin-left:12rpx;" wx:if="{{planEditForm.code !== 'free'}}">
+            <text class="mf-label">有效天数（0=永久）</text>
+            <input class="mf-input" type="number" value="{{planEditForm.days}}" bindinput="onPlanEditInput" data-field="days" />
+          </view>
+        </view>
+        <view class="modal-form-row">
+          <view class="modal-form-item" style="flex:1;margin-right:12rpx;">
+            <text class="mf-label">抽奖奖项（0=不限）</text>
+            <input class="mf-input" type="number" value="{{planEditForm.lotteryPrizes}}" bindinput="onPlanEditInput" data-field="lotteryPrizes" />
+          </view>
+          <view class="modal-form-item" style="flex:1;margin-left:12rpx;">
+            <text class="mf-label">抽奖人数（0=不限）</text>
+            <input class="mf-input" type="number" value="{{planEditForm.lotteryParticipants}}" bindinput="onPlanEditInput" data-field="lotteryParticipants" />
+          </view>
+        </view>
+        <view class="modal-form-item">
+          <text class="mf-label">专属角标（如 尊享，留空不显示）</text>
+          <input class="mf-input" value="{{planEditForm.badge}}" bindinput="onPlanEditInput" data-field="badge" maxlength="6" />
+        </view>
+        <view class="modal-form-item">
+          <text class="mf-label">可用主题（点击多选）</text>
+          <view class="sp-chips">
+            <view wx:for="{{planEditThemeOptions}}" wx:key="key" class="sp-chip {{item.on ? 'is-on' : ''}}" bindtap="togglePlanEditTheme" data-key="{{item.key}}">{{item.name}}</view>
+          </view>
+        </view>
+        <view class="modal-form-item">
+          <text class="mf-label">氛围特效</text>
+          <view class="sp-chips">
+            <view wx:for="{{superEffectOptions}}" wx:key="key" class="sp-chip {{planEditForm.effect === item.key ? 'is-on' : ''}}" bindtap="pickPlanEditEffect" data-key="{{item.key}}">{{item.name}}</view>
+          </view>
+        </view>
+        <view class="sp-switch-row" wx:if="{{planEditForm.code !== 'free'}}">
+          <text class="sp-label" style="margin:0;">在升级页上架销售</text>
+          <switch checked="{{planEditForm.active}}" color="#8B1E1E" bindchange="onPlanEditActive" />
+        </view>
+        <view class="sp-switch-row">
+          <text class="sp-label" style="margin:0;">隐藏「有囍請柬」平台标识</text>
+          <switch checked="{{!planEditForm.watermark}}" color="#8B1E1E" bindchange="onPlanEditHideWatermark" />
+        </view>
+        <view class="sp-switch-row">
+          <text class="sp-label" style="margin:0;">开启专属开场动画</text>
+          <switch checked="{{planEditForm.opening}}" color="#8B1E1E" bindchange="onPlanEditOpening" />
+        </view>
+      </scroll-view>
+      <view class="modal-btn-row">
+        <button class="modal-btn-cancel" bindtap="closePlanEditModal" disabled="{{savingPlanEdit}}">取消</button>
+        <button class="modal-btn-confirm" bindtap="submitPlanEdit" loading="{{savingPlanEdit}}" disabled="{{savingPlanEdit}}">保存配置</button>
       </view>
     </view>
   </view>

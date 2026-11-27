@@ -18,7 +18,22 @@ import {
 import type { AppEnv } from './auth'
 import { getWxAccessToken } from './wx'
 import { checkTexts, collectTexts, attachTarget } from './moderation'
-import { getWeddingPlan, displayPlan, allowedTheme } from './billing'
+import {
+  getWeddingPlan,
+  displayPlan,
+  allowedTheme,
+  getPlans,
+  getPlanDef,
+  sanitizePlan,
+  sanitizeOverrides,
+  updatePlan,
+  logPlan,
+  isExpired,
+  ALL_THEMES,
+  THEME_NAMES,
+  EFFECTS,
+  EFFECT_NAMES,
+} from './billing'
 import { getQiniuDomain, foldConfigMedia, expandConfigMedia } from './qiniu'
 import { canCustomizeBgm, getPlatformDefaultBgm, resolvePlayback, storedFromConfig } from './bgm'
 import { genUniqueWid, isValidWid } from './wid'
@@ -818,6 +833,247 @@ wedding.put('/superadmin/passcode', optionalAuth, async (c) => {
     .bind(newPasscode)
     .run()
   return ok(c, { updated: true, passcode: newPasscode })
+})
+
+// GET /api/superadmin/users?q=&filter=all|registered|admin → 查看全部注册/授权用户及其婚礼与套餐
+wedding.get('/superadmin/users', optionalAuth, async (c) => {
+  if (!(await checkSuperAdminAuth(c))) return fail(c, '口令无效或未授权', 403)
+  const db = c.env.DB
+  const q = str(c.req.query('q'), 64).toLowerCase()
+  const filter = str(c.req.query('filter'), 16) || 'all'
+  const limit = Math.min(200, Math.max(10, Math.floor(Number(c.req.query('limit')) || 100)))
+
+  const [accRes, usrRes, wedRes, plansAll] = await Promise.all([
+    db.prepare('SELECT openid, phone, created_at, updated_at FROM accounts ORDER BY updated_at DESC LIMIT 1000').all<any>().catch(() => ({ results: [] })),
+    db.prepare('SELECT openid, wedding_id, name, phone, is_admin, first_seen, last_seen, login_count FROM users ORDER BY last_seen DESC LIMIT 2000').all<any>(),
+    db.prepare('SELECT id, groom_name, bride_name, plan, plan_expires_at, status FROM weddings LIMIT 1000').all<any>(),
+    getPlans(db),
+  ])
+
+  const planNameOf = (code: string) => plansAll.find((p) => p.code === code)?.name || code
+  const wedMap = new Map<string, { id: string; couple: string; plan: string; planName: string; expired: boolean; status: string }>()
+  for (const w of wedRes.results || []) {
+    const expired = Boolean(w.plan && w.plan !== 'free' && isExpired(w.plan_expires_at))
+    const code = expired ? 'free' : (w.plan || 'free')
+    const couple = [w.groom_name, w.bride_name].filter(Boolean).join(' & ') || w.id
+    wedMap.set(w.id, {
+      id: w.id,
+      couple,
+      plan: code,
+      planName: planNameOf(code) + (expired ? '（已过期）' : ''),
+      expired,
+      status: w.status === 'disabled' ? 'disabled' : 'active',
+    })
+  }
+
+  type UserAgg = {
+    openid: string
+    phone: string
+    name: string
+    isAdmin: boolean
+    logins: number
+    firstSeen: string
+    lastSeen: string
+    weddings: { id: string; couple: string; plan: string; planName: string; isAdmin: boolean; status: string }[]
+    _seenWids: Set<string>
+  }
+  const byOpenid = new Map<string, UserAgg>()
+  const ensure = (openid: string): UserAgg => {
+    let cur = byOpenid.get(openid)
+    if (!cur) {
+      cur = { openid, phone: '', name: '', isAdmin: false, logins: 0, firstSeen: '', lastSeen: '', weddings: [], _seenWids: new Set() }
+      byOpenid.set(openid, cur)
+    }
+    return cur
+  }
+
+  for (const a of accRes.results || []) {
+    if (!a.openid) continue
+    const u = ensure(a.openid)
+    if (a.phone) u.phone = String(a.phone).trim()
+    if (a.created_at && (!u.firstSeen || a.created_at < u.firstSeen)) u.firstSeen = a.created_at
+    if (a.updated_at && (!u.lastSeen || a.updated_at > u.lastSeen)) u.lastSeen = a.updated_at
+  }
+
+  for (const r of usrRes.results || []) {
+    if (!r.openid) continue
+    const u = ensure(r.openid)
+    if (!u.phone && r.phone) u.phone = String(r.phone).trim()
+    const nm = cleanName(r.name)
+    if (!u.name && nm) u.name = nm
+    const rowAdmin = Number(r.is_admin) === 1
+    if (rowAdmin) u.isAdmin = true
+    u.logins += Number(r.login_count) || 0
+    if (r.first_seen && (!u.firstSeen || r.first_seen < u.firstSeen)) u.firstSeen = r.first_seen
+    if (r.last_seen && (!u.lastSeen || r.last_seen > u.lastSeen)) u.lastSeen = r.last_seen
+    if (r.wedding_id && !u._seenWids.has(r.wedding_id)) {
+      u._seenWids.add(r.wedding_id)
+      const w = wedMap.get(r.wedding_id)
+      u.weddings.push({
+        id: r.wedding_id,
+        couple: w ? w.couple : r.wedding_id,
+        plan: w ? w.plan : 'free',
+        planName: w ? w.planName : '免费版',
+        isAdmin: rowAdmin,
+        status: w ? w.status : 'active',
+      })
+    }
+  }
+
+  const all = [...byOpenid.values()].sort((a, b) => (b.lastSeen || '').localeCompare(a.lastSeen || ''))
+  const registeredCount = all.filter((u) => Boolean(u.phone)).length
+  const adminCount = all.filter((u) => u.isAdmin).length
+
+  const filtered = all.filter((u) => {
+    if (filter === 'registered' && !u.phone) return false
+    if (filter === 'admin' && !u.isAdmin) return false
+    if (!q) return true
+    if (u.phone.toLowerCase().includes(q) || u.name.toLowerCase().includes(q) || u.openid.toLowerCase().includes(q)) return true
+    return u.weddings.some((w) => w.id.toLowerCase().includes(q) || w.couple.toLowerCase().includes(q))
+  })
+
+  return ok(c, {
+    total: all.length,
+    registeredCount,
+    adminCount,
+    matched: filtered.length,
+    items: filtered.slice(0, limit).map((u) => ({
+      id: u.openid.length > 12 ? u.openid.slice(0, 6) + '…' + u.openid.slice(-4) : u.openid,
+      phone: u.phone,
+      phoneMasked: u.phone ? u.phone.replace(/^(\d{3})\d{4}(\d+)$/, '$1****$2') : '',
+      hasPhone: Boolean(u.phone),
+      name: u.name || '',
+      isAdmin: u.isAdmin,
+      logins: u.logins,
+      firstSeen: u.firstSeen ? formatCnDateTime(u.firstSeen) : '',
+      lastSeen: u.lastSeen ? formatCnDateTime(u.lastSeen) : '',
+      weddings: u.weddings.slice(0, 5),
+    })),
+  })
+})
+
+// GET /api/superadmin/wedding/:id/plan → 查看某场婚礼的套餐、状态与单场权益覆盖
+wedding.get('/superadmin/wedding/:id/plan', optionalAuth, async (c) => {
+  if (!(await checkSuperAdminAuth(c))) return fail(c, '口令无效或未授权', 403)
+  const db = c.env.DB
+  const id = c.req.param('id')
+  const [wp, plans, row] = await Promise.all([
+    getWeddingPlan(db, id),
+    getPlans(db),
+    db.prepare('SELECT groom_name, bride_name FROM weddings WHERE id = ?').bind(id).first<{ groom_name: string | null; bride_name: string | null }>(),
+  ])
+  if (!wp.exists) return fail(c, '婚礼不存在', 404)
+  let expiresDate = ''
+  if (wp.expiresAt) {
+    const t = Date.parse(wp.expiresAt)
+    if (Number.isFinite(t)) expiresDate = new Date(t + 8 * 3600_000).toISOString().slice(0, 10)
+  }
+  return ok(c, {
+    id,
+    couple: [row?.groom_name, row?.bride_name].filter(Boolean).join(' & ') || id,
+    status: wp.status,
+    disabledReason: wp.disabledReason,
+    plan: wp.storedPlan,
+    effectivePlan: wp.plan,
+    planName: wp.planName,
+    expired: wp.expired,
+    expiresAt: wp.expiresAt,
+    expiresDate,
+    note: wp.note,
+    photoLimit: wp.photoLimit,
+    overrides: wp.overrides,
+    base: wp.base,
+    ent: wp.ent,
+    plans,
+    allThemes: ALL_THEMES,
+    themeNames: THEME_NAMES,
+    effects: EFFECTS,
+    effectNames: EFFECT_NAMES,
+  })
+})
+
+// POST /api/superadmin/wedding/:id/plan {plan, expiresAt?: 'YYYY-MM-DD' | '', note?} → 手动切换套餐
+wedding.post('/superadmin/wedding/:id/plan', optionalAuth, async (c) => {
+  if (!(await checkSuperAdminAuth(c))) return fail(c, '口令无效或未授权', 403)
+  const db = c.env.DB
+  const id = c.req.param('id')
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const code = typeof body.plan === 'string' ? body.plan : 'free'
+  const def = await getPlanDef(db, code)
+  if (!def) return fail(c, '套餐不存在', 400)
+  const before = await getWeddingPlan(db, id)
+  if (!before.exists) return fail(c, '婚礼不存在', 404)
+  let expiresAt: string | null = null
+  const ex = typeof body.expiresAt === 'string' ? body.expiresAt.trim() : ''
+  if (ex && code !== 'free') {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ex)) return fail(c, '到期日期格式应为 YYYY-MM-DD', 400)
+    const t = Date.parse(ex + 'T23:59:59+08:00')
+    if (!Number.isFinite(t)) return fail(c, '到期日期无效', 400)
+    expiresAt = new Date(t).toISOString()
+  }
+  const note = str(body.note, 200)
+  const now = nowIso()
+  await db
+    .prepare('UPDATE weddings SET plan = ?, plan_activated_at = ?, plan_order_no = ?, plan_expires_at = ?, plan_note = ? WHERE id = ?')
+    .bind(code, code === 'free' ? null : now, code === 'free' ? null : 'MANUAL', expiresAt, note || null, id)
+    .run()
+  await logPlan(db, id, 'manual', before.plan, code, { expiresAt, note, operator: 'platform' })
+  return ok(c, { id, plan: code, expiresAt })
+})
+
+// PUT /api/superadmin/wedding/:id/overrides {overrides, note?} → 单独调整/清除本场婚礼权益覆盖
+wedding.put('/superadmin/wedding/:id/overrides', optionalAuth, async (c) => {
+  if (!(await checkSuperAdminAuth(c))) return fail(c, '口令无效或未授权', 403)
+  const db = c.env.DB
+  const id = c.req.param('id')
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const before = await getWeddingPlan(db, id)
+  if (!before.exists) return fail(c, '婚礼不存在', 404)
+  const ov = sanitizeOverrides(body.overrides)
+  if (ov.photos !== undefined && ov.photos > before.photoLimit) return fail(c, '相册上限最多 ' + before.photoLimit + ' 张', 400)
+  const empty = Object.keys(ov).length === 0
+  const note = str(body.note, 200)
+  await db.prepare('UPDATE weddings SET plan_overrides = ? WHERE id = ?').bind(empty ? null : JSON.stringify(ov), id).run()
+  await logPlan(db, id, empty ? 'clear' : 'override', before.plan, before.plan, { note, detail: ov, operator: 'platform' })
+  const after = await getWeddingPlan(db, id)
+  return ok(c, { id, overrides: after.overrides, ent: after.ent })
+})
+
+// POST /api/superadmin/wedding/:id/status {status: 'active'|'disabled', reason?} → 启用/停用婚礼
+wedding.post('/superadmin/wedding/:id/status', optionalAuth, async (c) => {
+  if (!(await checkSuperAdminAuth(c))) return fail(c, '口令无效或未授权', 403)
+  const id = c.req.param('id')
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const status = body.status === 'disabled' ? 'disabled' : 'active'
+  const reason = str(body.reason, 200)
+  await c.env.DB.prepare('UPDATE weddings SET status = ?, disabled_reason = ? WHERE id = ?')
+    .bind(status, status === 'disabled' ? reason || null : null, id)
+    .run()
+  return ok(c, { id, status })
+})
+
+// GET /api/superadmin/plans → 获取全部套餐与权益限制定义
+wedding.get('/superadmin/plans', optionalAuth, async (c) => {
+  if (!(await checkSuperAdminAuth(c))) return fail(c, '口令无效或未授权', 403)
+  return ok(c, {
+    plans: await getPlans(c.env.DB),
+    allThemes: ALL_THEMES,
+    themeNames: THEME_NAMES,
+    effects: EFFECTS,
+    effectNames: EFFECT_NAMES,
+  })
+})
+
+// PUT /api/superadmin/plans/:code → 编辑某档套餐的价格、有效期与权益限制
+wedding.put('/superadmin/plans/:code', optionalAuth, async (c) => {
+  if (!(await checkSuperAdminAuth(c))) return fail(c, '口令无效或未授权', 403)
+  const code = c.req.param('code')
+  const cur = await getPlanDef(c.env.DB, code)
+  if (!cur) return fail(c, '套餐不存在', 404)
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const next = sanitizePlan(body, cur)
+  await updatePlan(c.env.DB, next)
+  return ok(c, next)
 })
 
 // GET /api/weddings（兼容原有平台超管接口）→ 婚礼列表
