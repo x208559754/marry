@@ -2,7 +2,7 @@ import { icpFooterHtml, icpFooterPlatformStyle } from './icp-footer'
 
 // src/platform-page.ts — 平台总后台网页（单页，原生 JS；接口见 src/platform.ts）
 // 注意：本文件是模板字符串，内嵌脚本里不要使用反引号和美元花括号
-export const platformPage = String.raw`<!doctype html>
+export const platformPage = `<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -158,7 +158,7 @@ var state = { view: 'overview', q: {} };
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-function yuan(fen){ return '¥' + (Number(fen || 0) / 100).toFixed(2).replace(/\.00$/, ''); }
+function yuan(fen){ return '¥' + (Number(fen || 0) / 100).toFixed(2).replace(/\\.00$/, ''); }
 function toast(msg){ var t = $('toast'); t.textContent = msg; t.className = 'show'; clearTimeout(toast._t); toast._t = setTimeout(function(){ t.className = ''; }, 2200); }
 function qs(o){ var a = []; for (var k in o) if (o[k] !== '' && o[k] != null) a.push(encodeURIComponent(k) + '=' + encodeURIComponent(o[k])); return a.length ? '?' + a.join('&') : ''; }
 
@@ -420,10 +420,15 @@ function planDialog(w, done){
 function overrideDialog(w, done){
   var pi = w.planInfo, ov = pi.overrides || {}, base = pi.base;
   var has = function(k){ return Object.prototype.hasOwnProperty.call(ov, k); };
-  var numRow = function(k, hint){ return '<label>' + ENT_LABEL[k] + '</label><div><input id="o_' + k + '" type="number" min="0" style="width:120px" placeholder="跟随套餐" value="' + (has(k) ? ov[k] : '') + '"> <span class="muted" style="font-size:12px">套餐默认 ' + String(entVal(k, base)).replace(/<[^>]+>/g, '') + (hint || '') + '，留空 = 跟随套餐</span></div>'; };
+  var numRow = function(k, hint){
+    var photos = k === 'photos';
+    var range = photos ? 'min="1" max="' + pi.photoLimit + '"' : 'min="0"';
+    var value = has(k) ? (photos ? Math.min(ov[k], pi.photoLimit) : ov[k]) : '';
+    return '<label>' + ENT_LABEL[k] + '</label><div><input id="o_' + k + '" type="number" ' + range + ' style="width:120px" placeholder="跟随套餐" value="' + value + '"> <span class="muted" style="font-size:12px">套餐默认 ' + String(entVal(k, base)).replace(/<[^>]+>/g, '') + (hint || '') + '，留空 = 跟随套餐</span></div>';
+  };
   var triRow = function(k, on, off){ var v = has(k) ? (ov[k] ? '1' : '0') : ''; return '<label>' + ENT_LABEL[k] + '</label><div>' + sel('o_' + k, [['', '跟随套餐（' + (base[k] ? on : off) + '）'], ['1', on], ['0', off]], v) + '</div>'; };
   var html = '<h3><span>单独调整权益 · ' + esc(w.couple || w.id) + '</span><a data-close>✕</a></h3><div class="muted" style="font-size:13px;margin-bottom:12px">只对这一场婚礼生效，优先于套餐设置；改套餐后仍然保留。当前套餐：' + esc(pi.name) + '</div><div class="form">' +
-    numRow('photos') + numRow('lotteryPrizes', '，0 = 不限') + numRow('lotteryParticipants', '，0 = 不限') +
+    numRow('photos', '，最多 ' + pi.photoLimit + ' 张') + numRow('lotteryPrizes', '，0 = 不限') + numRow('lotteryParticipants', '，0 = 不限') +
     '<label>' + ENT_LABEL.lotteryThemes + '</label><div><label style="color:var(--ink)"><input type="checkbox" id="o_th_on"' + (has('lotteryThemes') ? ' checked' : '') + '> 单独设置</label> <span id="o_th">' + THEMES.map(function(t){ var on = (has('lotteryThemes') ? ov.lotteryThemes : base.lotteryThemes).indexOf(t.key) >= 0; return '<label style="color:var(--ink);margin-left:10px"><input type="checkbox" value="' + t.key + '"' + (on ? ' checked' : '') + '> ' + esc(t.name) + '</label>'; }).join('') + '</span></div>' +
     triRow('watermark', '显示平台标识', '去除平台标识') +
     '<label>' + ENT_LABEL.badge + '</label><div><label style="color:var(--ink)"><input type="checkbox" id="o_badge_on"' + (has('badge') ? ' checked' : '') + '> 单独设置</label> <input id="o_badge" maxlength="6" style="width:120px" placeholder="如：尊享，留空=不显示" value="' + esc(has('badge') ? ov.badge : base.badge) + '"></div>' +
@@ -438,6 +443,7 @@ function overrideDialog(w, done){
   m.querySelector('#oGo').onclick = function(){
     var o = {};
     ['photos', 'lotteryPrizes', 'lotteryParticipants'].forEach(function(k){ var v = $('o_' + k).value.trim(); if (v !== '') o[k] = Number(v); });
+    if (!$('o_photos').validity.valid) return toast('请输入 1–' + pi.photoLimit + ' 张');
     if ($('o_th_on').checked) { var ts = []; var cb = m.querySelectorAll('#o_th input:checked'); for (var i = 0; i < cb.length; i++) ts.push(cb[i].value); if (!ts.length) return toast('至少选一个主题'); o.lotteryThemes = ts; }
     ['watermark', 'opening'].forEach(function(k){ var v = $('o_' + k).value; if (v !== '') o[k] = v === '1'; });
     if ($('o_badge_on').checked) o.badge = $('o_badge').value.trim();
@@ -598,9 +604,9 @@ function planEditor(p){
       '<label>有效天数</label><input id="eDays" type="number" min="0" value="' + p.days + '" placeholder="0 = 永久">' +
       '<label>在小程序上架</label><label style="color:var(--ink)"><input type="checkbox" id="eActive"' + (p.active ? ' checked' : '') + '> 上架（新人可在升级页购买）</label>') +
     '<label>一句话说明</label><input id="eDesc" maxlength="80" value="' + esc(p.desc) + '">' +
-    '<label>权益文案（每行一条）</label><textarea id="eFeat" rows="6">' + esc(p.features.join('\n')) + '</textarea>' +
+    '<label>权益文案（每行一条）</label><textarea id="eFeat" rows="6">' + esc(p.features.join('\\n')) + '</textarea>' +
     '</div><div class="form">' +
-    '<label>相册上限（张）</label><input id="ePhotos" type="number" min="1" value="' + e.photos + '">' +
+    '<label>相册上限（张）</label><div><input id="ePhotos" type="number" min="1" value="' + e.photos + '"><div class="muted" style="font-size:12px">普通版和免费版可设为 1–4 张</div></div>' +
     '<label>抽奖奖项上限</label><input id="ePrizes" type="number" min="0" value="' + e.lotteryPrizes + '" placeholder="0 = 不限">' +
     '<label>抽奖人数上限</label><input id="ePeople" type="number" min="0" value="' + e.lotteryParticipants + '" placeholder="0 = 不限">' +
     '<label>可用主题</label><div id="eThemes">' + THEMES.map(function(t){ return '<label style="color:var(--ink);margin-right:10px;white-space:nowrap"><input type="checkbox" value="' + t.key + '"' + (e.lotteryThemes.indexOf(t.key) >= 0 ? ' checked' : '') + '> ' + esc(t.name) + '</label>'; }).join('') + '</div>' +
@@ -615,7 +621,8 @@ function planEditor(p){
     var ts = []; var cb = m.querySelectorAll('#eThemes input:checked'); for (var i = 0; i < cb.length; i++) ts.push(cb[i].value);
     if (!ts.length) return toast('至少选一个主题');
     if (!$('eName').value.trim()) return toast('请填写名称');
-    var body = { name: $('eName').value, desc: $('eDesc').value, features: $('eFeat').value.split('\n').map(function(s){ return s.trim(); }).filter(Boolean),
+    if (!$('ePhotos').value || !$('ePhotos').validity.valid) return toast('请输入至少 1 张的整数');
+    var body = { name: $('eName').value, desc: $('eDesc').value, features: $('eFeat').value.split('\\n').map(function(s){ return s.trim(); }).filter(Boolean),
       ent: { photos: Number($('ePhotos').value), lotteryPrizes: Number($('ePrizes').value || 0), lotteryParticipants: Number($('ePeople').value || 0), lotteryThemes: ts, watermark: $('eWm').checked, badge: $('eBadge').value.trim(), effect: $('eEffect').value, opening: $('eOpen').checked } };
     if (!isFree) {
       body.level = Number($('eLevel').value); body.priceFen = Math.round(Number($('ePrice').value) * 100); body.originalFen = Math.round(Number($('eOrig').value || 0) * 100); body.days = Number($('eDays').value || 0); body.active = $('eActive').checked;
@@ -623,7 +630,11 @@ function planEditor(p){
     }
     if (isNew) body.code = $('eCode').value.trim().toLowerCase();
     var req = isNew ? api('POST', '/plans', body) : api('PUT', '/plans/' + encodeURIComponent(p.code), body);
-    req.then(function(){ toast(isNew ? '已创建' : '已保存'); m.remove(); VIEWS.plans(); }).catch(fail);
+    req.then(function(saved){
+      toast(saved.ent.photos !== body.ent.photos ? '已保存，相册上限为 ' + saved.ent.photos + ' 张' : (isNew ? '已创建' : '已保存'));
+      m.remove();
+      VIEWS.plans();
+    }).catch(fail);
   };
 }
 

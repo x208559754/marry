@@ -41,6 +41,7 @@
         </view>
         <view class="up-tags">
           <text class="up-tag">相册 {{item.ent.photos}} 张</text>
+          <text class="up-tag {{item.canUploadVideo ? 'up-tag-gold' : ''}}">{{item.canUploadVideo ? '支持上传视频' : '仅支持上传图片'}}</text>
           <text class="up-tag">抽奖 {{item.ent.lotteryPrizes > 0 ? item.ent.lotteryPrizes + ' 个奖项' : '奖项不限'}}</text>
           <text class="up-tag">{{item.ent.lotteryParticipants > 0 ? item.ent.lotteryParticipants + ' 人' : '人数不限'}}</text>
           <text class="up-tag">{{item.ent.lotteryThemes.length}} 套主题</text>

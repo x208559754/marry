@@ -41,15 +41,16 @@ export type PlanDef = {
 }
 
 export const MAX_PHOTOS = 2000
+const BASIC_PHOTO_LIMIT = 4
 export const PREMIUM_PHOTO_LIMIT = 200 // 兼容旧接口
 
-const DEFAULT_ENT: Entitlements = { photos: 9, lotteryPrizes: 1, lotteryParticipants: 30, lotteryThemes: ['red'], watermark: true, badge: '', effect: 'none', opening: false }
+const DEFAULT_ENT: Entitlements = { photos: BASIC_PHOTO_LIMIT, lotteryPrizes: 1, lotteryParticipants: 30, lotteryThemes: ['red'], watermark: true, badge: '', effect: 'none', opening: false }
 
 export const DEFAULT_PLANS: PlanDef[] = [
   {
     code: 'free', name: '免费版', level: 0, priceFen: 0, days: 0, active: true, sort: 0,
     desc: '基础电子请柬，适合先体验',
-    features: ['电子请柬 + 宾客回执 + 祝福墙', '婚纱相册最多 9 张', '现场抽奖：1 个奖项、30 人', '大屏主题：中式红金', '请柬底部显示「有囍請柬」标识'],
+    features: ['电子请柬 + 宾客回执 + 祝福墙', '婚纱相册最多 4 张', '现场抽奖：1 个奖项、30 人', '大屏主题：中式红金', '请柬底部显示「有囍請柬」标识'],
     ent: { ...DEFAULT_ENT },
   },
   {
@@ -82,6 +83,14 @@ function themes(v: unknown, def: string[]) {
   if (!Array.isArray(v)) return def
   const out = ALL_THEMES.filter((t) => (v as unknown[]).includes(t)) as string[]
   return out.length ? out : ['red']
+}
+
+function isBasicPlan(p: Pick<PlanDef, 'code' | 'name'>): boolean {
+  return p.code === 'free' || p.code === 'basic' || p.name.startsWith('普通')
+}
+
+function planPhotoLimit(p: Pick<PlanDef, 'code' | 'name'>): number {
+  return isBasicPlan(p) ? BASIC_PHOTO_LIMIT : MAX_PHOTOS
 }
 
 export function sanitizeEnt(raw: any, def: Entitlements): Entitlements {
@@ -146,6 +155,10 @@ export function sanitizePlan(raw: any, base?: PlanDef): PlanDef {
     if (out.priceFen < 1) out.priceFen = 1 // 付费套餐至少 0.01 元（微信支付金额必须 > 0）
     if (out.level < 1) out.level = 1
   }
+  out.ent.photos = Math.min(out.ent.photos, planPhotoLimit(out))
+  out.features = out.features.map((feature) =>
+    /^婚纱相册最多\s*\d+\s*张$/.test(feature) ? '婚纱相册最多 ' + out.ent.photos + ' 张' : feature,
+  )
   return out
 }
 
@@ -245,9 +258,15 @@ export async function deletePlan(db: D1Database, code: string) {
   resetPlanCache()
 }
 
+function planAllowsVideoUpload(p: PlanDef, plans: PlanDef[]): boolean {
+  // 平台可调整套餐名称和档位，普通套餐也可能沿用内置套餐编码。
+  const premiumLevel = plans.find((plan) => plan.code === 'premium')?.level ?? DEFAULT_PLANS[1].level
+  return p.level >= premiumLevel && !isBasicPlan(p)
+}
+
 // 小程序展示用（不含内部字段）
-export function publicPlan(p: PlanDef) {
-  return { code: p.code, name: p.name, level: p.level, priceFen: p.priceFen, originalFen: p.originalFen, days: p.days, desc: p.desc, features: p.features, ent: p.ent }
+function publicPlan(p: PlanDef, plans: PlanDef[]) {
+  return { code: p.code, name: p.name, level: p.level, priceFen: p.priceFen, originalFen: p.originalFen, days: p.days, desc: p.desc, features: p.features, ent: p.ent, canUploadVideo: planAllowsVideoUpload(p, plans) }
 }
 
 // ---------------- 兼容旧版接口（小程序 1.0.0 与旧后台用的 pricing 结构） ----------------
@@ -297,6 +316,8 @@ export type WeddingPlan = {
   overrides: Partial<Entitlements>
   base: Entitlements // 套餐本身的权益
   ent: Entitlements // 叠加单场覆盖后的实际权益
+  photoLimit: number // 可配置的相册张数上限
+  canUploadVideo: boolean
   canUpgrade: boolean // 是否还有更高档位在售
 }
 type WRow = { plan: string | null; plan_activated_at: string | null; plan_expires_at: string | null; plan_overrides: string | null; plan_note: string | null; plan_order_no: string | null; status: string | null; disabled_reason: string | null }
@@ -321,7 +342,9 @@ export async function getWeddingPlan(db: D1Database, wid: string): Promise<Weddi
   const def = (!expired && plans.find((p) => p.code === stored)) || free
   let overrides: Partial<Entitlements> = {}
   try { overrides = sanitizeOverrides(JSON.parse(row?.plan_overrides || '{}')) } catch {}
+  const photoLimit = planPhotoLimit(def)
   const ent = sanitizeEnt({ ...def.ent, ...overrides }, def.ent)
+  ent.photos = Math.min(ent.photos, photoLimit)
   const maxActive = Math.max(0, ...plans.filter((p) => p.active && p.code !== 'free').map((p) => p.level))
   return {
     exists: Boolean(row),
@@ -340,6 +363,8 @@ export async function getWeddingPlan(db: D1Database, wid: string): Promise<Weddi
     overrides,
     base: def.ent,
     ent,
+    photoLimit,
+    canUploadVideo: planAllowsVideoUpload(def, plans),
     canUpgrade: maxActive > def.level,
   }
 }
@@ -490,7 +515,7 @@ billing.get('/plan', async (c) => {
   if (!wp.exists) return fail(c, '婚礼不存在', 404)
   const usage = await getUsage(c.env.DB, wid)
   return ok(c, {
-    plans: plans.filter((p) => p.active || p.code === wp.plan).map(publicPlan),
+    plans: plans.filter((p) => p.active || p.code === wp.plan).map((p) => publicPlan(p, plans)),
     themes: ALL_THEMES.map((k) => ({ key: k, name: THEME_NAMES[k] })),
     wedding: {
       wid,
@@ -503,6 +528,7 @@ billing.get('/plan', async (c) => {
       activatedAt: wp.activatedAt,
       status: wp.status,
       ent: wp.ent,
+      canUploadVideo: wp.canUploadVideo,
       canUpgrade: wp.canUpgrade,
       usage,
     },

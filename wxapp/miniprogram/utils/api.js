@@ -286,19 +286,25 @@ function getPromo() {
 
 // ---------------- 相册（按婚礼） ----------------
 
-function getPhotosList() {
-  return request('GET', widPath('/api/images')).then(function (list) {
-    return (list || []).map(function (it) {
-      return media.tagMedia({
-        id: it.id,
-        url: it.url,
-        thumbUrl: it.thumb_url,
-        thumb_url: it.thumb_url,
-        title: it.title || '',
-        kind: it.kind
-      });
+function tagAlbumPhotos(list) {
+  return (list || []).map(function (it) {
+    return media.tagMedia({
+      id: it.id,
+      url: it.url,
+      thumbUrl: it.thumb_url,
+      thumb_url: it.thumb_url,
+      title: it.title || '',
+      kind: it.kind
     });
   });
+}
+
+function getPhotosList() {
+  return request('GET', widPath('/api/images')).then(tagAlbumPhotos);
+}
+
+function moveAlbumPhoto(id, targetId, after) {
+  return request('PUT', widPath('/api/images/order'), { id: id, targetId: targetId, after: after }).then(tagAlbumPhotos);
 }
 
 function uploadPhoto(filePath, title) {
@@ -705,6 +711,7 @@ module.exports = {
   getConfig: getConfig,
   saveConfig: saveConfig,
   getPhotosList: getPhotosList,
+  moveAlbumPhoto: moveAlbumPhoto,
   uploadPhoto: uploadPhoto,
   uploadMedia: uploadMedia,
   deletePhoto: deletePhoto,

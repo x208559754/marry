@@ -83,6 +83,8 @@ Page({
     isWeddingAdmin: false,
     inputPasscode: '',
     verifyingPasscode: false,
+    showSuperPasscodeModal: false,
+    passcodeError: '',
     weddingsList: [],
     weddingOptions: [],
     selectedWeddingIndex: 0,
@@ -129,6 +131,11 @@ Page({
     rsvpList: [],
     loadingRsvps: false,
     photosList: [],
+    albumPhotoLimit: 0,
+    movingPhoto: false,
+    photoDragId: 0,
+    photoDropId: 0,
+    photoDragPreview: null,
     uploading: false,
     uploadingVideo: false,
     uploadProgress: 0,
@@ -181,6 +188,7 @@ Page({
     planBadge: '',
     planExpiryText: '',
     planCanUpgrade: false,
+    canUploadVideo: false,
     planMultiple: false,
     planPriceText: '',
     planUsage: [],
@@ -225,11 +233,20 @@ Page({
   },
 
   onHide: function () {
+    this.cancelPhotoDrag();
     this._clearLotteryTimer();
   },
 
   onUnload: function () {
+    this.cancelPhotoDrag();
     this._clearLotteryTimer();
+  },
+
+  onPageScroll: function (e) {
+    const drag = this._photoDrag;
+    if (!drag || !drag.cards) return;
+    drag.scrollTop = e.scrollTop;
+    this._updatePhotoDrag(drag);
   },
 
   onPullDownRefresh: function () {
@@ -238,20 +255,33 @@ Page({
     });
   },
 
+  openSuperPasscodeModal: function () {
+    if (!this.data.isAuthorized || this.data.isSuperAdmin || this.data.verifyingPasscode) return;
+    this._inputPasscode = '';
+    this.setData({ showSuperPasscodeModal: true, inputPasscode: '', passcodeError: '' });
+  },
+
+  closeSuperPasscodeModal: function () {
+    if (this.data.verifyingPasscode) return;
+    this._inputPasscode = '';
+    this.setData({ showSuperPasscodeModal: false, inputPasscode: '', passcodeError: '' });
+  },
+
   onPasscodeInput: function (e) {
     // 同步到实例变量，避免受控输入在其它 setData 时丢掉最后一次按键
     this._inputPasscode = e.detail.value;
-    this.setData({ inputPasscode: e.detail.value });
+    this.setData({ inputPasscode: e.detail.value, passcodeError: '' });
   },
 
   submitSuperPasscode: function () {
+    if (this.data.verifyingPasscode || this.data.isSuperAdmin) return;
     const that = this;
     const code = (this._inputPasscode || this.data.inputPasscode || '').trim();
     if (!code) {
       wx.showToast({ title: '请输入口令', icon: 'none' });
       return;
     }
-    this.setData({ verifyingPasscode: true });
+    this.setData({ verifyingPasscode: true, passcodeError: '' });
     const seq = this._nextAuthSeq();
     api.superAdminLogin(code).then(function () {
       if (seq !== that._authSeq) return;
@@ -261,6 +291,7 @@ Page({
         verifyingPasscode: false,
         isAuthorized: true,
         isSuperAdmin: true,
+        showSuperPasscodeModal: false,
         currentOpenid: api.getOpenid() || '',
         inputPasscode: ''
       });
@@ -271,10 +302,16 @@ Page({
       that.loadQr();
     }).catch(function (err) {
       if (seq !== that._authSeq) return;
+      that._booting = false;
+      const message = (err && err.message) || '口令不正确或后端未就绪';
+      if (that.data.showSuperPasscodeModal) {
+        that.setData({ verifyingPasscode: false, passcodeError: message });
+        return;
+      }
       that.setData({ verifyingPasscode: false });
       wx.showModal({
         title: '认证未通过',
-        content: (err && err.message) || '口令不正确或后端未就绪',
+        content: message,
         showCancel: false
       });
     });
@@ -408,6 +445,10 @@ Page({
 
   // 复查登录态：总后台只认总管口令，本场婚礼管理员不能跳过口令页
   refreshAdminState: function (cb) {
+    if (this.data.verifyingPasscode || this.data.showSuperPasscodeModal) {
+      if (typeof cb === 'function') cb();
+      return;
+    }
     const that = this;
     this.setData({ backend: api.BASE_URL, wid: api.getWid() || 'demo' });
     const savedPass = api.getSuperAdminPasscode();
@@ -607,6 +648,12 @@ Page({
   },
 
   logoutAdmin: function () {
+    this.cancelPhotoDrag();
+    if (!this.data.isSuperAdmin) {
+      this._clearLotteryTimer();
+      this.goToPreviewCurrentWedding();
+      return;
+    }
     api.logout();
     this.setData({
       isAuthorized: false,
@@ -631,6 +678,7 @@ Page({
 
   switchTab: function (e) {
     const tab = e.currentTarget.dataset.tab;
+    if (tab !== 'photos') this.cancelPhotoDrag();
     this.setData({ curTab: tab });
     if (tab === 'lottery') this.loadLottery();
   },
@@ -650,6 +698,10 @@ Page({
   loadPlan: function () {
     const that = this;
     const wid = api.getWid() || '';
+    if (this._planWid !== wid) {
+      this._planWid = wid;
+      this.setData({ planLoaded: false, canUploadVideo: false, albumPhotoLimit: 0 });
+    }
     api.getPlan().then(function (d) {
       if ((api.getWid() || '') !== wid || !d) return;
       const w = d.wedding || {};
@@ -678,6 +730,8 @@ Page({
         planBadge: ent.badge || '',
         planExpiryText: expiry,
         planCanUpgrade: !!w.canUpgrade && higher.length > 0,
+        canUploadVideo: w.canUploadVideo === true,
+        albumPhotoLimit: Number(ent.photos) || 0,
         planMultiple: higher.length > 1,
         planPriceText: price ? ('¥' + (price % 1 ? price.toFixed(2) : price)) : '',
         planUsage: [
@@ -752,17 +806,176 @@ Page({
 
   loadPhotos: function () {
     const that = this;
+    const wid = api.getWid();
+    if (this._photosWid !== wid) {
+      this.cancelPhotoDrag();
+      this._photosWid = wid;
+      this.setData({ photosList: [], movingPhoto: false });
+    }
+    if (this.data.movingPhoto || this._photoDrag) return;
+    const request = this._photosRequest = {};
     api.getPhotosList().then(function (list) {
+      if (that._photosRequest !== request || api.getWid() !== wid || that._photoDrag) return;
       that.setData({ photosList: list || [] });
     }).catch(function () {});
   },
 
+  rememberPhotoTouch: function (e) {
+    if (this._photoDrag) return;
+    this._photoTouch = e.touches[0];
+  },
+
+  beginPhotoDrag: function (e) {
+    const wid = api.getWid();
+    if (this._photosWid !== wid || this._photoDrag || this.data.movingPhoto || this.data.uploading || this.data.uploadingVideo) return;
+    const photos = this.data.photosList;
+    const id = Number(e.currentTarget.dataset.id);
+    const index = photos.findIndex(function (photo) { return photo.id === id; });
+    const touch = (e.touches && e.touches[0]) || this._photoTouch;
+    if (photos.length < 2 || index < 0 || !touch) return;
+
+    const that = this;
+    this._photosRequest = {};
+    const drag = this._photoDrag = { wid: wid, id: id, start: touch, touch: touch };
+    this.setData({ photoDragId: id, photoDropId: 0 });
+    const query = wx.createSelectorQuery();
+    query.selectAll('.pm-item').boundingClientRect();
+    query.selectViewport().scrollOffset();
+    query.exec(function (result) {
+      if (that._photoDrag !== drag) return;
+      const [rects, viewport] = result || [];
+      if (!viewport || !rects || rects.length !== photos.length || api.getWid() !== wid) {
+        that.cancelPhotoDrag();
+        return;
+      }
+      const source = rects[index];
+      const scrollTop = Number(viewport.scrollTop) || 0;
+      drag.scrollTop = scrollTop;
+      // 卡片位置换算成文档坐标，滚动时只需更新页面偏移量。
+      drag.cards = rects.map(function (rect, idx) {
+        return { id: photos[idx].id, left: rect.left, right: rect.right, top: rect.top + scrollTop, bottom: rect.bottom + scrollTop };
+      });
+      drag.offsetX = drag.start.clientX - source.left;
+      drag.offsetY = drag.start.clientY - source.top;
+      that.setData({
+        photoDragPreview: {
+          src: photos[index].thumb_url || photos[index].thumbUrl || photos[index].url,
+          width: source.width,
+          x: drag.touch.clientX - drag.offsetX,
+          y: drag.touch.clientY - drag.offsetY
+        }
+      });
+      that._updatePhotoDrag(drag);
+
+      const windowHeight = wx.getWindowInfo().windowHeight;
+      const edge = Math.min(72, windowHeight / 5);
+      const min = Math.max(0, Math.min(scrollTop, drag.cards[0].top - edge));
+      const max = Math.max(scrollTop, drag.cards[drag.cards.length - 1].bottom - windowHeight + edge);
+      drag.scrollTimer = setInterval(function () {
+        if (!drag.hasMoved) return;
+        const y = drag.touch.clientY;
+        const distance = y < edge ? y - edge : Math.max(0, y - (windowHeight - edge));
+        const next = Math.min(max, Math.max(min, drag.scrollTop + Math.round(distance / 4)));
+        if (next !== drag.scrollTop) wx.pageScrollTo({ scrollTop: next, duration: 0 });
+      }, 40);
+    });
+  },
+
+  trackPhotoDrag: function (e) {
+    const drag = this._photoDrag;
+    if (!drag || e.touches.length !== 1 || e.touches[0].identifier !== drag.start.identifier) return;
+    drag.touch = e.touches[0];
+    if (Math.abs(drag.touch.clientX - drag.start.clientX) + Math.abs(drag.touch.clientY - drag.start.clientY) >= 4) {
+      drag.hasMoved = true;
+    }
+    if (drag.cards) this._updatePhotoDrag(drag);
+  },
+
+  _updatePhotoDrag: function (drag) {
+    const { clientX, clientY } = drag.touch;
+    const y = clientY + drag.scrollTop;
+    const target = drag.cards.find(function (card) {
+      return clientX >= card.left && clientX <= card.right && y >= card.top && y <= card.bottom;
+    });
+    drag.targetId = target && target.id !== drag.id ? target.id : 0;
+
+    const patch = {};
+    const preview = this.data.photoDragPreview;
+    const left = clientX - drag.offsetX;
+    const top = clientY - drag.offsetY;
+    if (left !== preview.x) patch['photoDragPreview.x'] = left;
+    if (top !== preview.y) patch['photoDragPreview.y'] = top;
+    if (drag.targetId !== this.data.photoDropId) patch.photoDropId = drag.targetId;
+    if (Object.keys(patch).length) this.setData(patch);
+  },
+
+  finishPhotoDrag: function (e) {
+    this._photoTouch = null;
+    const drag = this._photoDrag;
+    if (!drag) return;
+    const touch = (e.changedTouches || []).find(function (point) { return point.identifier === drag.start.identifier; });
+    if (!touch) {
+      if (!(e.touches || []).some(function (point) { return point.identifier === drag.start.identifier; })) {
+        this.cancelPhotoDrag();
+      }
+      return;
+    }
+    if (drag.cards) {
+      drag.touch = touch;
+      this._updatePhotoDrag(drag);
+    }
+    this.cancelPhotoDrag();
+    if (drag.targetId && api.getWid() === drag.wid) this._savePhotoOrder(drag.id, drag.targetId);
+  },
+
+  cancelPhotoDrag: function () {
+    this._photoTouch = null;
+    const drag = this._photoDrag;
+    if (!drag) return;
+    clearInterval(drag.scrollTimer);
+    this._photoDrag = null;
+    this._photoDragEndedAt = Date.now();
+    this.setData({ photoDragId: 0, photoDropId: 0, photoDragPreview: null });
+  },
+
+  _savePhotoOrder: function (id, targetId) {
+    const that = this;
+    const wid = api.getWid();
+    if (this._photosWid !== wid || this.data.movingPhoto || this.data.uploading || this.data.uploadingVideo) return;
+    const list = this.data.photosList;
+    const index = list.findIndex(function (photo) { return photo.id === id; });
+    const target = list.findIndex(function (photo) { return photo.id === targetId; });
+    if (index < 0 || target < 0 || index === target) return;
+
+    const reordered = list.slice();
+    reordered.splice(index, 1);
+    reordered.splice(target, 0, list[index]);
+
+    const request = this._photosRequest = {};
+    this.setData({ photosList: reordered, movingPhoto: true });
+    api.moveAlbumPhoto(id, targetId, index < target).then(function (updated) {
+      if (that._photosRequest !== request || api.getWid() !== wid) return;
+      that.setData({ photosList: updated, movingPhoto: false });
+    }).catch(function (err) {
+      if (that._photosRequest !== request || api.getWid() !== wid) return;
+      that.setData({ photosList: list, movingPhoto: false });
+      that.loadPhotos();
+      wx.showToast({ title: (err && err.message) || '调整顺序失败', icon: 'none' });
+    });
+  },
+
   chooseAndUploadPhoto: function () {
     const that = this;
-    if (this.data.uploading || this.data.uploadingVideo) return;
+    if (this.data.uploading || this.data.uploadingVideo || this.data.movingPhoto || this._photoDrag) return;
+    const limit = this.data.albumPhotoLimit;
+    const remaining = limit ? limit - this.data.photosList.length : 9;
+    if (remaining <= 0) {
+      wx.showToast({ title: '相册最多 ' + limit + ' 张', icon: 'none' });
+      return;
+    }
     wx.chooseMedia({
-      count: 9,
-      mediaType: ['image', 'video'],
+      count: Math.min(9, remaining),
+      mediaType: this.data.canUploadVideo ? ['image', 'video'] : ['image'],
       sourceType: ['album', 'camera'],
       sizeType: ['original', 'compressed'],
       maxDuration: 60,
@@ -772,12 +985,16 @@ Page({
           wx.showToast({ title: '未选取到文件', icon: 'none' });
           return;
         }
+        var hasVideo = files.some(media.isVideoFile);
+        if (hasVideo && !that.data.canUploadVideo) {
+          wx.showToast({ title: '当前套餐仅支持上传图片', icon: 'none' });
+          return;
+        }
         var tooBig = files.filter(function (f) { return media.isVideoFile(f) && Number(f.size) > 200 * 1024 * 1024; });
         if (tooBig.length) {
           wx.showModal({ title: '视频过大', content: '单个视频不能超过 200MB', showCancel: false });
           return;
         }
-        var hasVideo = files.some(function (f) { return media.isVideoFile(f); });
         that.setData({ uploading: true, uploadingVideo: hasVideo, uploadProgress: 0 });
         var i = 0;
         var okCount = 0;
@@ -840,6 +1057,7 @@ Page({
   },
 
   deletePhoto: function (e) {
+    if (this.data.movingPhoto || this._photoDrag) return;
     const that = this;
     const id = e.currentTarget.dataset.id;
     wx.showModal({
@@ -858,6 +1076,7 @@ Page({
   },
 
   previewPhoto: function (e) {
+    if (this._photoDrag || Date.now() - (this._photoDragEndedAt || 0) < 300) return;
     const url = e.currentTarget.dataset.url;
     const list = this.data.photosList || [];
     const kind = media.mediaKindOf({ url: url, kind: e.currentTarget.dataset.kind });
@@ -880,7 +1099,7 @@ Page({
 
   chooseAndUploadVideo: function () {
     const that = this;
-    if (this.data.uploading || this.data.uploadingVideo) return;
+    if (!this.data.canUploadVideo || this.data.uploading || this.data.uploadingVideo || this.data.movingPhoto || this._photoDrag) return;
     wx.chooseMedia({
       count: 3,
       mediaType: ['video'],
@@ -1046,13 +1265,13 @@ Page({
     this.setData({ 'storyForm.image': '', 'storyForm.kind': 'image', 'storyForm.isVideo': false });
   },
 
-  // 上传新配图：只存图拿地址，不进婚纱相册
+  // 上传纪事配图或视频，返回地址供纪事使用
   uploadStoryImage: function () {
     const that = this;
     if (this.data.uploadingStoryImage) return;
     wx.chooseMedia({
       count: 1,
-      mediaType: ['image', 'video'],
+      mediaType: this.data.canUploadVideo ? ['image', 'video'] : ['image'],
       sourceType: ['album', 'camera'],
       sizeType: ['compressed'],
       maxDuration: 60,
@@ -1062,7 +1281,12 @@ Page({
           wx.showToast({ title: '未选取到文件', icon: 'none' });
           return;
         }
-        if (media.isVideoFile(f) && Number(f.size) > 200 * 1024 * 1024) {
+        const isVideo = media.isVideoFile(f);
+        if (isVideo && !that.data.canUploadVideo) {
+          wx.showToast({ title: '当前套餐仅支持上传图片', icon: 'none' });
+          return;
+        }
+        if (isVideo && Number(f.size) > 200 * 1024 * 1024) {
           wx.showModal({ title: '视频过大', content: '单个视频不能超过 200MB', showCancel: false });
           return;
         }
@@ -1082,6 +1306,7 @@ Page({
           wx.showToast({ title: tagged.isVideo ? '视频已上传' : '配图已上传', icon: 'success' });
         }).catch(function (err) {
           that.setData({ uploadingStoryImage: false });
+          if (api.handleUpgradeError(err)) return;
           wx.showModal({ title: '上传失败', content: (err && err.message) || '请检查网络后重试', showCancel: false });
         });
       },

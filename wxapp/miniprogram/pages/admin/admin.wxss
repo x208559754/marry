@@ -130,6 +130,26 @@ button.unlock-btn {
   color: #8C7B75;
 }
 
+.switch-admin-link {
+  padding: 0 16rpx;
+  min-height: 56rpx;
+  font-size: 24rpx;
+  color: #8B1E1E;
+  background: #FFF7E6;
+  border-radius: 28rpx;
+}
+
+.passcode-field {
+  margin-top: 28rpx;
+}
+
+.passcode-error {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #B23A3A;
+}
+
 /* 统计看板 */
 .stats-card {
   padding: 28rpx;
@@ -388,11 +408,39 @@ button.unlock-btn {
   padding: 0 30rpx;
 }
 
+.pm-reorder-tip {
+  display: block;
+  margin: 0 30rpx 16rpx;
+  font-size: 24rpx;
+  color: var(--text-muted);
+}
+
 .pm-item {
   background: #ffffff;
   border-radius: 16rpx;
   overflow: hidden;
   border: 1rpx solid #E6CA65;
+}
+
+.pm-drag-source {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+.pm-drop-target {
+  outline: 4rpx solid #B88C3D;
+  outline-offset: 2rpx;
+}
+
+.pm-drag-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  height: 280rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 8rpx 28rpx rgba(56, 38, 16, 0.3);
+  pointer-events: none;
 }
 
 .pm-img {
@@ -409,6 +457,17 @@ button.unlock-btn {
 .pm-title {
   font-size: 22rpx;
   color: var(--text-main);
+}
+
+.pm-delete {
+  width: max-content;
+  margin: 8rpx auto 0;
+  padding: 0 12rpx;
+  font-size: 22rpx;
+  line-height: 54rpx;
+  color: #B23A3A;
+  background: #FCF1EE;
+  border-radius: 12rpx;
 }
 
 /* 设置区 */

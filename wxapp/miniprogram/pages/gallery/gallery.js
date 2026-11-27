@@ -33,11 +33,6 @@ Page({
     storiesList: []
   },
 
-  onLoad: function () {
-    if (app.syncPageTheme) app.syncPageTheme(this);
-    this.loadGallery();
-  },
-
   onShow: function () {
     const t = (app.getTheme && app.getTheme()) || 'red';
     this.setData({ theme: t });
@@ -49,6 +44,7 @@ Page({
         theme: t
       });
     }
+    this.loadGallery();
   },
 
   onPullDownRefresh: function () {

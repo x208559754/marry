@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { Context } from 'hono'
 import { cors } from 'hono/cors'
 import { page } from './frontend'
 import { site } from './site'
@@ -215,17 +216,73 @@ app.get('/l/:wid', (c) => {
   return c.html(lotteryPage)
 })
 
-// 照片列表（新 → 旧；按婚礼隔离，必须带 ?wid=）
-app.get('/api/images', async (c) => {
-  const wid = getWid(c)
-  const { results } = await c.env.DB.prepare(
-    "SELECT id, title, url, thumb_url, created_at, kind FROM images WHERE wedding_id = ? AND status <> 'hidden' ORDER BY id DESC",
-  )
-    .bind(wid)
-    .all<ImageRow>()
+async function loadAlbum(db: D1Database, wid: string) {
+  const orderKey = 'album_order:' + wid
+  const [{ results }, saved] = await Promise.all([
+    db.prepare("SELECT id, title, url, thumb_url, created_at, kind FROM images WHERE wedding_id = ? AND status <> 'hidden' ORDER BY id DESC")
+      .bind(wid).all<ImageRow>(),
+    db.prepare('SELECT value FROM config WHERE key = ?').bind(orderKey).first<{ value: string }>(),
+  ])
+  if (!saved) return { rows: results || [], orderKey, saved }
+
+  let ids: unknown
+  try { ids = JSON.parse(saved.value) } catch {}
+  if (!Array.isArray(ids)) return { rows: results || [], orderKey, saved }
+
+  const remaining = new Map((results || []).map((row) => [row.id, row]))
+  const ordered: ImageRow[] = []
+  for (const id of ids) {
+    const row = remaining.get(id)
+    if (row) {
+      ordered.push(row)
+      remaining.delete(id)
+    }
+  }
+  // 新上传的照片排在最前，已删除或隐藏的照片不参与排序。
+  return { rows: [...remaining.values(), ...ordered], orderKey, saved }
+}
+
+async function publicAlbum(c: Context<AppEnv>, rows: ImageRow[]) {
   const origin = new URL(c.req.url).origin
   const qiniuDomain = await getQiniuDomain(c.env.DB, c.env)
-  return c.json((results || []).map((row) => withPublicUrls(origin, row, qiniuDomain)))
+  return c.json(rows.map((row) => withPublicUrls(origin, row, qiniuDomain)))
+}
+
+app.get('/api/images', async (c) => {
+  const { rows } = await loadAlbum(c.env.DB, getWid(c))
+  return publicAlbum(c, rows)
+})
+
+app.put('/api/images/order', requireAdmin, async (c) => {
+  const wid = getWid(c)
+  const body = await c.req.json<{ id?: number; targetId?: number; after?: boolean }>().catch(() => null)
+  if (!body || !Number.isSafeInteger(body.id) || !Number.isSafeInteger(body.targetId) ||
+      body.id === body.targetId || typeof body.after !== 'boolean') {
+    return c.json({ error: '无效的照片位置' }, 400)
+  }
+
+  const db = c.env.DB
+  const wp = await getWeddingPlan(db, wid)
+  if (!wp.exists) return c.json({ error: '婚礼不存在' }, 404)
+  if (wp.status === 'disabled') return c.json({ error: '该婚礼已被平台停用' }, 403)
+  const { rows, orderKey, saved } = await loadAlbum(db, wid)
+  const index = rows.findIndex((row) => row.id === body.id)
+  const target = rows.findIndex((row) => row.id === body.targetId)
+  if (index < 0 || target < 0) return c.json({ error: '相册内容已更新，请重试' }, 409)
+  if (index === target + (body.after ? 1 : -1)) return publicAlbum(c, rows)
+
+  const [moved] = rows.splice(index, 1)
+  const insertAt = target - Number(index < target) + Number(body.after)
+  rows.splice(insertAt, 0, moved)
+  const value = JSON.stringify(rows.map((row) => row.id))
+  const now = new Date().toISOString()
+  const result = await (saved
+    ? db.prepare('UPDATE config SET value = ?, updated_at = ? WHERE key = ? AND value = ?')
+      .bind(value, now, orderKey, saved.value)
+    : db.prepare('INSERT OR IGNORE INTO config (key, value, updated_at) VALUES (?, ?, ?)')
+      .bind(orderKey, value, now)).run()
+  if (!result.meta.changes) return c.json({ error: '相册顺序已更新，请重试' }, 409)
+  return publicAlbum(c, rows)
 })
 
 // 上传到 ImgBB：返回 {id,url,thumb_url,delete_url}；失败抛错
@@ -248,6 +305,33 @@ async function uploadToImgbb(apiKey: string, bytes: Uint8Array, mime: string, fi
   }
 }
 
+const albumCountSql = "SELECT COUNT(*) AS n FROM images WHERE wedding_id = ? AND status <> 'hidden'"
+
+async function albumIsFull(db: D1Database, wid: string, cap: number): Promise<boolean> {
+  const count = await db.prepare(albumCountSql).bind(wid).first<{ n: number }>()
+  return (Number(count?.n) || 0) >= cap
+}
+
+async function insertAlbumMedia(
+  db: D1Database,
+  wid: string,
+  cap: number,
+  title: string | null,
+  stored: { id: string; url: string; thumb_url: string; delete_url: string | null },
+  kind: 'image' | 'video',
+): Promise<number | null> {
+  // 在插入时再次校验相册容量，避免并发上传共用最后一个名额。
+  const stmt = db.prepare(
+    'INSERT INTO images (wedding_id, imgbb_id, title, url, thumb_url, delete_url, kind) ' +
+    'SELECT ?, ?, ?, ?, ?, ?, ? FROM (' + albumCountSql + ') AS album WHERE album.n < ?',
+  ).bind(wid, stored.id, title, stored.url, stored.thumb_url, stored.delete_url, kind, wid, cap)
+  const result = await stmt.run().catch((err: unknown) => {
+    if ((err as { code?: string })?.code !== 'ER_LOCK_DEADLOCK') throw err
+    return stmt.run()
+  })
+  return result.meta.changes ? result.meta.last_row_id : null
+}
+
 // 上传照片（该婚礼管理员）：文件传到 ImgBB 图床，元数据写入数据库（gallery=0 时只传图不进相册）
 // 自建服务器部署走 ImgBB（IMGBB_API_KEY）；未配置时回退到 Cloudflare KV（旧 Worker 部署）
 app.post('/api/images', requireAdmin, async (c) => {
@@ -258,7 +342,7 @@ app.post('/api/images', requireAdmin, async (c) => {
 
   const body = await c.req.parseBody()
   const raw = body['file']
-  const title = body['title']
+  const title = typeof body.title === 'string' ? body.title.trim() || null : null
   if (!raw || typeof raw === 'string' || !(raw instanceof Blob) || raw.size === 0) {
     return c.json({ error: '请选择要上传的图片文件' }, 400)
   }
@@ -268,30 +352,26 @@ app.post('/api/images', requireAdmin, async (c) => {
 
   const buf = await raw.arrayBuffer()
   const bytes = new Uint8Array(buf)
-  const sniffed = sniffImage(bytes)
-  const name = raw instanceof File ? raw.name || '' : ''
-  const extOk = /\.(jpe?g|png|webp|gif|heic|heif|bmp)$/i.test(name)
-  const typeOk = Boolean(raw.type) && raw.type.startsWith('image/')
-  if (!sniffed && !extOk && !typeOk) {
+  const image = sniffImage(bytes)
+  if (!image) {
     return c.json({ error: '只能上传图片文件' }, 400)
   }
-  const mime = sniffed?.mime || (typeOk ? raw.type : 'image/jpeg')
+  const { mime, ext } = image
   const origin = new URL(c.req.url).origin
 
   // 套餐限制：相册张数（gallery=0 的配图不计入）
   const isGallery = !(typeof body['gallery'] === 'string' && (body['gallery'] === '0' || body['gallery'] === 'false'))
   const wp = await getWeddingPlan(c.env.DB, wid)
   if (wp.status === 'disabled') return c.json({ error: '该婚礼已被平台停用' }, 403)
-  if (isGallery) {
-    const cnt = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM images WHERE wedding_id = ? AND status <> 'hidden'").bind(wid).first<{ n: number }>()
-    const cap = wp.ent.photos
-    if ((Number(cnt?.n) || 0) >= cap) return limitReached(c, wp, '相册最多 ' + cap + ' 张')
+  const cap = wp.ent.photos
+  if (isGallery && await albumIsFull(c.env.DB, wid, cap)) {
+    return limitReached(c, wp, '相册最多 ' + cap + ' 张')
   }
 
   let stored: { id: string; url: string; thumb_url: string; delete_url: string | null }
   if (c.env.IMGBB_API_KEY) {
     try {
-      stored = await uploadToImgbb(c.env.IMGBB_API_KEY, bytes, mime, 'photo.' + (sniffed?.ext || 'jpg'))
+      stored = await uploadToImgbb(c.env.IMGBB_API_KEY, bytes, mime, 'photo.' + ext)
     } catch (e) {
       return c.json({ error: (e as Error).message }, 502)
     }
@@ -312,7 +392,7 @@ app.post('/api/images', requireAdmin, async (c) => {
     return c.json(
       {
         id: null,
-        title: typeof title === 'string' ? title.trim() || null : null,
+        title,
         url: stored.url,
         thumb_url: stored.thumb_url,
         created_at: new Date().toISOString(),
@@ -322,25 +402,22 @@ app.post('/api/images', requireAdmin, async (c) => {
     )
   }
 
-  const inserted = await c.env.DB.prepare(
-    'INSERT INTO images (wedding_id, imgbb_id, title, url, thumb_url, delete_url) VALUES (?, ?, ?, ?, ?, ?)',
-  )
-    .bind(
-      wid,
-      stored.id,
-      typeof title === 'string' ? title.trim() || null : null,
-      stored.url,
-      stored.thumb_url,
-      stored.delete_url,
-    )
-    .run()
+  const id = await insertAlbumMedia(c.env.DB, wid, cap, title, stored, 'image')
+  if (id === null) {
+    if (stored.delete_url) {
+      await fetch(stored.delete_url, { signal: AbortSignal.timeout(8000) }).catch(() => {})
+    } else if (!c.env.IMGBB_API_KEY) {
+      await c.env.PHOTOS!.delete(stored.id).catch(() => {})
+    }
+    return limitReached(c, wp, '相册最多 ' + cap + ' 张')
+  }
 
   const row = await c.env.DB.prepare(
     'SELECT id, title, url, thumb_url, created_at, kind FROM images WHERE id = ?',
   )
-    .bind(inserted.meta.last_row_id)
+    .bind(id)
     .first<ImageRow>()
-  submitImageCheck(c.env, stored.url, { ...modTarget, targetId: inserted.meta.last_row_id }).catch(() => {})
+  submitImageCheck(c.env, stored.url, { ...modTarget, targetId: id }).catch(() => {})
 
   return c.json(row ? withPublicUrls(origin, row) : row, 201)
 })
@@ -349,16 +426,16 @@ app.post('/api/images', requireAdmin, async (c) => {
 // 库里只存 qiniu:<对象键>，完整网址在读出时用 config.qiniu_domain 拼接。
 app.post('/api/videos/token', requireAdmin, async (c) => {
   const wid = getWid(c)
+  const wp = await getWeddingPlan(c.env.DB, wid)
+  if (wp.status === 'disabled') return c.json({ error: '该婚礼已被平台停用' }, 403)
+  if (!wp.canUploadVideo) return limitReached(c, wp, '仅支持上传图片')
   const creds = getQiniuCreds(c.env)
   if ('error' in creds) return c.json({ error: creds.error }, 503)
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
   const isGallery = !(body.gallery === 0 || body.gallery === '0' || body.gallery === false)
-  const wp = await getWeddingPlan(c.env.DB, wid)
-  if (wp.status === 'disabled') return c.json({ error: '该婚礼已被平台停用' }, 403)
-  if (isGallery) {
-    const cnt = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM images WHERE wedding_id = ? AND status <> 'hidden'").bind(wid).first<{ n: number }>()
-    const cap = wp.ent.photos
-    if ((Number(cnt?.n) || 0) >= cap) return limitReached(c, wp, '相册最多 ' + cap + ' 张')
+  const cap = wp.ent.photos
+  if (isGallery && await albumIsFull(c.env.DB, wid, cap)) {
+    return limitReached(c, wp, '相册最多 ' + cap + ' 张')
   }
   const key = newVideoKey(wid)
   const domain = await getQiniuDomain(c.env.DB, c.env)
@@ -383,11 +460,7 @@ app.post('/api/videos', requireAdmin, async (c) => {
   const isGallery = !(body.gallery === 0 || body.gallery === '0' || body.gallery === false)
   const wp = await getWeddingPlan(c.env.DB, wid)
   if (wp.status === 'disabled') return c.json({ error: '该婚礼已被平台停用' }, 403)
-  if (isGallery) {
-    const cnt = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM images WHERE wedding_id = ? AND status <> 'hidden'").bind(wid).first<{ n: number }>()
-    const cap = wp.ent.photos
-    if ((Number(cnt?.n) || 0) >= cap) return limitReached(c, wp, '相册最多 ' + cap + ' 张')
-  }
+  if (!wp.canUploadVideo) return limitReached(c, wp, '仅支持上传图片')
   const marker = toQiniuMarker(key)
   const domain = await getQiniuDomain(c.env.DB, c.env)
   const origin = new URL(c.req.url).origin
@@ -407,15 +480,13 @@ app.post('/api/videos', requireAdmin, async (c) => {
       201,
     )
   }
-  const inserted = await c.env.DB.prepare(
-    "INSERT INTO images (wedding_id, imgbb_id, title, url, thumb_url, delete_url, kind) VALUES (?, ?, ?, ?, ?, ?, 'video')",
-  )
-    .bind(wid, marker, title, marker, marker, null)
-    .run()
+  const cap = wp.ent.photos
+  const id = await insertAlbumMedia(c.env.DB, wid, cap, title, { id: marker, url: marker, thumb_url: marker, delete_url: null }, 'video')
+  if (id === null) return limitReached(c, wp, '相册最多 ' + cap + ' 张')
   const row = await c.env.DB.prepare(
     'SELECT id, title, url, thumb_url, created_at, kind FROM images WHERE id = ?',
   )
-    .bind(inserted.meta.last_row_id)
+    .bind(id)
     .first<ImageRow>()
   return c.json(row ? withPublicUrls(origin, row, domain) : row, 201)
 })

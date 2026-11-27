@@ -332,6 +332,7 @@ platform.get('/weddings/:id', async (c) => {
       overrides: wp.overrides,
       base: wp.base,
       ent: wp.ent,
+      photoLimit: wp.photoLimit,
       canUpgrade: wp.canUpgrade,
       usage,
       logs: logs.map((l) => ({ id: l.id, action: l.action, from: planNameOf(l.from_plan), to: planNameOf(l.to_plan), expiresAt: cnDay(l.expires_at), note: l.note || '', detail: l.detail || '', operator: l.operator, createdAt: cnTime(l.created_at) })),
@@ -392,6 +393,7 @@ platform.put('/weddings/:id/overrides', async (c) => {
   const before = await getWeddingPlan(db, id)
   if (!before.exists) return fail(c, '婚礼不存在', 404)
   const ov = sanitizeOverrides(body.overrides)
+  if (ov.photos !== undefined && ov.photos > before.photoLimit) return fail(c, '相册上限最多 ' + before.photoLimit + ' 张')
   const empty = Object.keys(ov).length === 0
   const note = typeof body.note === 'string' ? body.note.trim().slice(0, 200) : ''
   await db.prepare('UPDATE weddings SET plan_overrides = ? WHERE id = ?').bind(empty ? null : JSON.stringify(ov), id).run()
