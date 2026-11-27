@@ -23,7 +23,7 @@
     show-petals="{{true}}"
     show-danmaku="{{isAppOpened && !isPromo && !isWeddingNotFound}}"
     toggle-offset-top="{{topSafeHeight + 54}}"
-  />
+  ></ambient-overlay>
   <view class="glints-layer" wx:if="{{planEffect === 'gold'}}">
     <view class="glint" wx:for="{{[1,2,3,4,5,6,7,8,9,10,11,12]}}" wx:key="*this"></view>
   </view>

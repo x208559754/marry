@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "宾客出席回执 (RSVP)",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "ambient-overlay": "../../components/ambient-overlay/ambient-overlay"
+  }
 }

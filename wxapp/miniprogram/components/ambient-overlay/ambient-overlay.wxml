@@ -1,5 +1,5 @@
 <!-- components/ambient-overlay/ambient-overlay.wxml - 全屏飘散花瓣 + 任意位置横向飘屏弹幕 -->
-<view class="ao-root theme-{{theme || 'red'}}" aria-hidden="true">
+<view class="ao-root theme-{{theme || 'red'}}">
   <!-- ① 全屏飘散花瓣层（26片错峰 3D 飘散，开屏即满屏柔美飘舞，不阻挡任何点击） -->
   <view class="ao-petals-layer" wx:if="{{showPetals}}">
     <view

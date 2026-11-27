@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "真挚祝福·弹幕留言",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "ambient-overlay": "../../components/ambient-overlay/ambient-overlay"
+  }
 }

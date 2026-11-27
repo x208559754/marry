@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "婚礼盛典·日程与导航",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "ambient-overlay": "../../components/ambient-overlay/ambient-overlay"
+  }
 }

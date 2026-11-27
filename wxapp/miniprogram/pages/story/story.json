@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "恋爱历程·浪漫纪事",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "ambient-overlay": "../../components/ambient-overlay/ambient-overlay"
+  }
 }

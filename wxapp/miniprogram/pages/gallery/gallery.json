@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "婚纱相册·幸福光影",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "ambient-overlay": "../../components/ambient-overlay/ambient-overlay"
+  }
 }

@@ -1,5 +1,11 @@
 // components/ambient-overlay/ambient-overlay.js
-const app = getApp();
+function getAppSafe() {
+  try {
+    return typeof getApp === 'function' ? getApp() : null;
+  } catch (e) {
+    return null;
+  }
+}
 
 const THEME_PALETTES = {
   red: {
@@ -164,7 +170,10 @@ Component({
       type: String,
       value: 'red',
       observer: function (val) {
-        this.setData({ petals: buildPetals(val || 'red') });
+        const next = val || 'red';
+        if (next === this._curTheme) return;
+        this._curTheme = next;
+        this.setData({ petals: buildPetals(next) });
       }
     },
     showPetals: {
@@ -192,15 +201,18 @@ Component({
     petals: buildPetals('red'),
     danmakuItems: [],
     danmakuOn: true,
-    toggleTopPx: 18
+    toggleTopPx: 14
   },
 
   lifetimes: {
     attached: function () {
+      const app = getAppSafe();
       this.computeToggleTop();
+      const t = this.properties.theme || (app && app.getTheme && app.getTheme()) || 'red';
+      this._curTheme = t;
       this.setData({
-        petals: buildPetals(this.properties.theme || (app.getTheme && app.getTheme()) || 'red'),
-        danmakuOn: app.globalData.danmakuVisible !== false
+        petals: buildPetals(t),
+        danmakuOn: !(app && app.globalData && app.globalData.danmakuVisible === false)
       });
 
       this._onDanmakuUpdate = (state) => {
@@ -209,10 +221,10 @@ Component({
         if (state && Array.isArray(state.list)) patch.danmakuItems = buildDanmakuItems(state.list);
         if (Object.keys(patch).length) this.setData(patch);
       };
-      if (app.addDanmakuListener) {
+      if (app && app.addDanmakuListener) {
         app.addDanmakuListener(this._onDanmakuUpdate);
       }
-      if (app.loadSharedBlessings) {
+      if (app && app.loadSharedBlessings) {
         app.loadSharedBlessings(false);
       } else {
         this.setData({ danmakuItems: buildDanmakuItems([]) });
@@ -220,7 +232,8 @@ Component({
     },
 
     detached: function () {
-      if (this._onDanmakuUpdate && app.removeDanmakuListener) {
+      const app = getAppSafe();
+      if (this._onDanmakuUpdate && app && app.removeDanmakuListener) {
         app.removeDanmakuListener(this._onDanmakuUpdate);
       }
     }
@@ -228,12 +241,15 @@ Component({
 
   pageLifetimes: {
     show: function () {
-      const t = this.properties.theme || (app.getTheme && app.getTheme()) || 'red';
-      this.setData({
-        petals: buildPetals(t),
-        danmakuOn: app.globalData.danmakuVisible !== false
-      });
-      if (app.loadSharedBlessings) {
+      const app = getAppSafe();
+      const t = this.properties.theme || (app && app.getTheme && app.getTheme()) || 'red';
+      const patch = { danmakuOn: !(app && app.globalData && app.globalData.danmakuVisible === false) };
+      if (t !== this._curTheme) {
+        this._curTheme = t;
+        patch.petals = buildPetals(t);
+      }
+      this.setData(patch);
+      if (app && app.loadSharedBlessings) {
         app.loadSharedBlessings(false);
       }
     }
@@ -242,17 +258,16 @@ Component({
   methods: {
     computeToggleTop: function () {
       const custom = Number(this.properties.toggleOffsetTop) || 0;
-      if (custom > 0) {
-        this.setData({ toggleTopPx: custom });
-        return;
+      const top = custom > 0 ? custom : 14;
+      if (top !== this.data.toggleTopPx) {
+        this.setData({ toggleTopPx: top });
       }
-      // 默认用于有系统导航栏的子页面（右上角距顶 14px，清晰不遮挡标题）
-      this.setData({ toggleTopPx: 14 });
     },
 
     onToggleDanmaku: function () {
+      const app = getAppSafe();
       const next = !this.data.danmakuOn;
-      if (app.setDanmakuVisible) {
+      if (app && app.setDanmakuVisible) {
         app.setDanmakuVisible(next);
       } else {
         this.setData({ danmakuOn: next });

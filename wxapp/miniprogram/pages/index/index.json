@@ -1,5 +1,8 @@
 {
   "navigationStyle": "custom",
   "navigationBarTextStyle": "white",
-  "enablePullDownRefresh": false
+  "enablePullDownRefresh": false,
+  "usingComponents": {
+    "ambient-overlay": "../../components/ambient-overlay/ambient-overlay"
+  }
 }
