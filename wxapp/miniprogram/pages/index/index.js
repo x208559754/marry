@@ -10,6 +10,8 @@ Page({
     coverImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1000&q=80',
     coverIsVideo: false,
     coverPoster: '',
+    coverVideoSrc: '',
+    coverVideoPlaying: false,
     isPlayingBgm: false,
     
     // 开屏信封与开帖状态
@@ -175,6 +177,12 @@ Page({
     });
     if (app.syncPageTheme) app.syncPageTheme(this);
     this.updateCustomTabBar();
+    if (this.data.isAppOpened && this.data.coverIsVideo) {
+      try {
+        const ctx = wx.createVideoContext('heroCoverVideo', this);
+        if (ctx && typeof ctx.play === 'function') ctx.play();
+      } catch (e) {}
+    }
   },
 
   onReady: function () {
@@ -253,17 +261,31 @@ Page({
       coverItem = media.tagMedia(Object.assign({}, coverItem, { url: cover }));
       const plan = (cfg && cfg._plan) || {};
       const resolvedTheme = (cfg && cfg.theme) || (app.getTheme && app.getTheme()) || 'red';
+      const poster = coverItem.thumb_url || coverItem.thumbUrl || '';
+      const cachedVideo = coverItem.isVideo && app.getPreloadedVideo ? app.getPreloadedVideo(cover) : '';
+      const coverChanged = this.data.coverImage !== cover;
       this.setData({
         config: cfg,
         theme: resolvedTheme,
         coverImage: cover,
         coverIsVideo: !!coverItem.isVideo,
-        coverPoster: coverItem.thumb_url || coverItem.thumbUrl || '',
+        coverPoster: poster,
+        coverVideoSrc: coverItem.isVideo ? (cachedVideo || cover) : '',
+        coverVideoPlaying: coverChanged ? false : this.data.coverVideoPlaying,
         showBrand: plan.watermark !== undefined ? !!plan.watermark : !!plan.brand,
         canUpgrade: (plan.canUpgrade !== undefined ? !!plan.canUpgrade : !plan.premium) && api.isAdmin(),
         planBadge: plan.badge || '',
         planEffect: plan.effect || 'none'
       });
+      if (coverItem.isVideo && !cachedVideo && app.preloadCoverVideo) {
+        app.preloadCoverVideo(cover, poster, (localPath) => {
+          if (!localPath || this.data.coverImage !== cover) return;
+          // 若视频尚未开始在线播放（例如宾客还在看开屏信封，或仍在缓冲），立即切换为本地预下载文件实现秒播
+          if (!this.data.isAppOpened || !this.data.coverVideoPlaying) {
+            this.setData({ coverVideoSrc: localPath });
+          }
+        });
+      }
       this.playOpening(!!plan.opening);
       if (app.applyTheme) app.applyTheme(resolvedTheme, this);
       this.updateCustomTabBar();
@@ -647,10 +669,23 @@ Page({
     app.toggleBackgroundMusic();
   },
 
+  onCoverVideoPlay: function () {
+    if (!this.data.coverVideoPlaying) {
+      this.setData({ coverVideoPlaying: true });
+    }
+  },
+
+  onCoverVideoError: function () {
+    // 若本地临时缓存失效，自动回退到远程地址播放
+    if (this.data.coverVideoSrc && this.data.coverImage && this.data.coverVideoSrc !== this.data.coverImage) {
+      this.setData({ coverVideoSrc: this.data.coverImage });
+    }
+  },
+
   previewCover: function () {
     if (!this.data.coverImage) return;
     if (this.data.coverIsVideo) {
-      wx.previewMedia({ sources: [{ url: this.data.coverImage, type: 'video' }], current: 0 });
+      wx.previewMedia({ sources: [{ url: this.data.coverVideoSrc || this.data.coverImage, type: 'video' }], current: 0 });
       return;
     }
     wx.previewImage({

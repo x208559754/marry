@@ -326,25 +326,36 @@
         {{config.groom.pinyin || 'CHEN CHANGSHENG'}} & {{config.bride.pinyin || 'XU YOURONG'}}
       </view>
 
-      <!-- 3:4 婚纱大片 (来自相册资源) -->
+      <!-- 3:4 婚纱大片 (来自相册资源；若为视频，开屏即后台预下载，首帧封面无缝承接秒播) -->
       <view class="hero-photo-box" bindtap="previewCover">
         <video
           wx:if="{{coverIsVideo}}"
+          id="heroCoverVideo"
           class="hero-img"
-          src="{{coverImage}}"
+          src="{{coverVideoSrc || coverImage}}"
           poster="{{coverPoster}}"
           object-fit="cover"
           autoplay="{{true}}"
           muted="{{true}}"
           loop="{{true}}"
           controls="{{false}}"
+          show-loading="{{false}}"
           show-center-play-btn="{{false}}"
           show-play-btn="{{false}}"
           show-fullscreen-btn="{{false}}"
           enable-progress-gesture="{{false}}"
+          bindplay="onCoverVideoPlay"
+          bindtimeupdate="onCoverVideoPlay"
+          binderror="onCoverVideoError"
         ></video>
         <image
-          wx:else
+          wx:if="{{coverIsVideo && coverPoster && !coverVideoPlaying}}"
+          class="hero-img hero-poster-underlay"
+          src="{{coverPoster}}"
+          mode="aspectFill"
+        ></image>
+        <image
+          wx:if="{{!coverIsVideo}}"
           class="hero-img"
           src="{{coverImage}}"
           mode="aspectFill"

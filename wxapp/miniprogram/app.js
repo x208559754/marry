@@ -1,6 +1,7 @@
 // app.js - 微信小程序全局入口逻辑（多租户：扫码带 wid 进入对应婚礼；见 utils/api.js）
 // 安全说明：AppSecret 已从客户端移除，jscode2session 由 Worker 服务端完成
 const api = require('./utils/api.js');
+const media = require('./utils/media.js');
 
 const THEME_NAV_COLORS = {
   red: '#8B1E1E',
@@ -66,7 +67,10 @@ App({
     danmakuVisible: true,
     blessingsCache: [],
     blessingsCacheWid: '',
-    blessingsLoadedAt: 0
+    blessingsLoadedAt: 0,
+
+    // 首页封面视频预下载本地路径缓存（remoteUrl -> wxfile:// tempFilePath）
+    videoLocalCache: {}
   },
 
   onLaunch: function (options) {
@@ -77,6 +81,11 @@ App({
 
     // 2. 解析进入参数（扫码/分享链接里的 wid）
     this.resolveEntry(options);
+
+    // 2.5 若本地缓存已知首页是视频，启动瞬间即开始后台预下载
+    if (this.globalData.weddingConfig) {
+      this.preloadWeddingCover(this.globalData.weddingConfig);
+    }
 
     // 3. 静默微信登录（服务端 jscode2session；本地开发走 mock），换取 token 与 openid
     this.doWxLogin();
@@ -349,6 +358,7 @@ App({
       if (cfg && cfg.theme) {
         that.applyTheme(cfg.theme);
       }
+      that.preloadWeddingCover(cfg);
       console.log('[配置] 已同步云端婚礼配置');
       if (typeof callback === 'function') callback(cfg);
     }).catch(function (err) {
@@ -360,6 +370,80 @@ App({
       }
       if (typeof callback === 'function') callback(that.globalData.weddingConfig);
     });
+  },
+
+  // 获取已预下载到本地的视频路径（命中后 <video> 可瞬时秒播）
+  getPreloadedVideo: function (url) {
+    if (!url) return '';
+    var cache = this.globalData.videoLocalCache || {};
+    return cache[url] || '';
+  },
+
+  // 后台预下载首页视频与首帧封面图（去重并发请求，下载失败静默降级为在线流播）
+  preloadCoverVideo: function (url, posterUrl, cb) {
+    var that = this;
+    var u = String(url || '').trim();
+    if (!u || !/^https?:\/\//i.test(u)) {
+      if (typeof cb === 'function') cb('');
+      return;
+    }
+    if (posterUrl && /^https?:\/\//i.test(posterUrl) && typeof wx.getImageInfo === 'function') {
+      wx.getImageInfo({ src: posterUrl, success: function () {}, fail: function () {} });
+    }
+    var cache = this.globalData.videoLocalCache || (this.globalData.videoLocalCache = {});
+    if (cache[u]) {
+      if (typeof cb === 'function') cb(cache[u]);
+      return;
+    }
+    var waiters = this._videoPreloadWaiters || (this._videoPreloadWaiters = {});
+    if (waiters[u]) {
+      if (typeof cb === 'function') waiters[u].push(cb);
+      return;
+    }
+    waiters[u] = typeof cb === 'function' ? [cb] : [];
+    var finish = function (localPath) {
+      var list = waiters[u] || [];
+      delete waiters[u];
+      list.forEach(function (fn) {
+        try { fn(localPath); } catch (e) {}
+      });
+    };
+    if (typeof wx.downloadFile !== 'function') {
+      finish('');
+      return;
+    }
+    wx.downloadFile({
+      url: u,
+      success: function (res) {
+        if (res && res.statusCode === 200 && res.tempFilePath) {
+          cache[u] = res.tempFilePath;
+          console.log('[预下载] 首页封面视频已就绪');
+          finish(res.tempFilePath);
+        } else {
+          finish('');
+        }
+      },
+      fail: function (err) {
+        console.log('[预下载] 首页视频降级为在线播放:', err && err.errMsg);
+        finish('');
+      }
+    });
+  },
+
+  // 从婚礼配置识别首页封面是否为视频，是则立即后台预下载
+  preloadWeddingCover: function (cfg) {
+    if (!cfg) return;
+    var coverItem = null;
+    if (Array.isArray(cfg.photos) && cfg.photos.length > 0) {
+      coverItem = cfg.photos[0];
+    } else if (cfg.coverImage) {
+      coverItem = { url: cfg.coverImage, image: cfg.coverImage, kind: cfg.coverKind };
+    }
+    if (!coverItem || !coverItem.url) return;
+    var tagged = media.tagMedia(coverItem);
+    if (tagged && tagged.isVideo) {
+      this.preloadCoverVideo(tagged.url, tagged.thumb_url || tagged.thumbUrl || '');
+    }
   },
 
   // 背景音乐管理
