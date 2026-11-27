@@ -1,14 +1,14 @@
 <!-- pages/admin/admin.wxml -->
 <view class="container theme-{{lotteryTheme || 'red'}}">
-  <!-- 未授权：试用开通（绑手机号 + 设密码）或总管口令 -->
+  <!-- 未授权：普通/付费用户仅需微信一键授权手机号（无需密码）；平台总管理员凭口令进入总后台 -->
   <view class="card lock-card" wx:if="{{!isAuthorized}}">
     <view class="lock-seal">囍</view>
-    <text class="lock-title">开通与登录</text>
-    <text class="lock-desc">登录后绑定手机号并设置登录密码，即可使用基础版管理自己的请柬，也可以随时升级。</text>
+    <text class="lock-title">我的请柬管理</text>
+    <text class="lock-desc">微信一键授权手机号即可管理或开通自己的请柬，无需密码。</text>
 
     <view class="diag-row" wx:if="{{currentOpenid}}">
       <text class="diag-label">当前微信已登录</text>
-      <text class="diag-val color-green" style="font-size: 22rpx;">{{accountPhoneBound ? '已绑定 ' + accountPhoneMasked : '尚未绑定手机号'}}</text>
+      <text class="diag-val color-green" style="font-size: 22rpx;">{{accountPhoneBound ? '已授权 ' + accountPhoneMasked : '尚未授权手机号'}}</text>
     </view>
     <view class="diag-row" wx:else>
       <text class="diag-label">登录状态:</text>
@@ -16,17 +16,13 @@
     </view>
 
     <view wx:if="{{currentOpenid && !accountReady}}" class="onboard-block">
-      <text class="lock-sub">请绑定手机号，并设置一个登录密码（至少 6 位）。密码是你的账户凭证，以后可用于网页端登录；进入本后台仍以微信登录为准。</text>
-      <button class="btn-primary unlock-btn" open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber" loading="{{bindingAccount}}">微信一键绑定手机号</button>
-      <input class="pin-input" type="number" maxlength="11" placeholder="或手动输入 11 位手机号" value="{{bindPhone}}" bindinput="onBindPhoneInput" />
-      <input class="pin-input" password placeholder="{{accountHasPassword ? '已设置过密码，如需修改请再输入' : '设置登录密码（至少 6 位）'}}" value="{{bindPassword}}" bindinput="onBindPasswordInput" />
-      <input class="pin-input" password placeholder="再次输入密码" value="{{bindPassword2}}" bindinput="onBindPassword2Input" wx:if="{{!accountHasPassword || bindPassword}}" />
-      <button class="btn-gold unlock-btn" bindtap="submitBindManual" loading="{{bindingAccount}}">{{accountPhoneBound ? '保存密码并继续' : '提交手机号与密码'}}</button>
+      <text class="lock-sub">请通过微信一键授权手机号（不支持手动输入，无需设置密码）。授权后即可进入或开通自己的请柬后台。</text>
+      <button class="btn-primary unlock-btn" open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber" loading="{{bindingAccount}}">微信一键授权手机号</button>
     </view>
 
     <view wx:if="{{currentOpenid && accountReady}}" class="onboard-block">
-      <text class="lock-sub" wx:if="{{accountWeddings.length}}">你已绑定 {{accountPhoneMasked}}，可以选择进入自己的请柬后台。</text>
-      <text class="lock-sub" wx:else>你已绑定 {{accountPhoneMasked}}，现在可以开通一场基础版请柬。婚礼标识会自动生成，不用自己填写。</text>
+      <text class="lock-sub" wx:if="{{accountWeddings.length}}">已授权 {{accountPhoneMasked}}，请选择进入自己的请柬后台。</text>
+      <text class="lock-sub" wx:else>已授权 {{accountPhoneMasked}}，现在可以开通一场基础版请柬。婚礼标识会自动生成，不用自己填写。</text>
       <view wx:for="{{accountWeddings}}" wx:key="id" class="owned-wid" bindtap="enterOwnedWedding" data-wid="{{item.id}}">
         <text class="owned-name">{{item.groomName || '新郎'}} ＆ {{item.brideName || '新娘'}}</text>
         <text class="owned-id">进入管理 ›</text>
@@ -42,14 +38,11 @@
       刷新登录状态
     </button>
 
-    <view class="diag-divider" style="margin: 36rpx 0; border-top: 1rpx dashed #E5D5BA;"></view>
-    <text class="lock-sub">平台总管理员请在下方输入总管口令。</text>
-    <view style="margin: 16rpx 0 0;">
-      <input class="pin-input" password placeholder="请输入总管口令" bindinput="onPasscodeInput" />
-      <button class="btn-primary unlock-btn" bindtap="submitSuperPasscode" loading="{{verifyingPasscode}}">
-        验证口令并进入总后台
-      </button>
-    </view>
+    <block wx:if="{{canEnterSuperAdmin}}">
+      <view class="diag-divider" style="margin: 36rpx 0 24rpx; border-top: 1rpx dashed #E5D5BA;"></view>
+      <text class="lock-sub super-entry-tip">平台总管理员可验证口令进入总后台。</text>
+      <button class="super-entry-btn" bindtap="openSuperPasscodeModal">进入总后台管理 ›</button>
+    </block>
   </view>
 
   <block wx:else>
@@ -58,23 +51,8 @@
       <view class="badge-role">{{isSuperAdmin ? '平台总管理员' : '婚礼管理员'}}</view>
       <view style="display: flex; align-items: center;">
         <text wx:if="{{isSuperAdmin}}" class="preview-link" bindtap="goToPreviewCurrentWedding">进入请柬预览 ›</text>
-        <button wx:else class="switch-admin-link" bindtap="openSuperPasscodeModal">切换到总管理员</button>
+        <button wx:elif="{{canEnterSuperAdmin}}" class="switch-admin-link" bindtap="openSuperPasscodeModal">进入总后台</button>
         <text class="exit-link" bindtap="logoutAdmin" style="margin-left: 20rpx;">{{isSuperAdmin ? '退出管理' : '返回请柬'}}</text>
-      </view>
-    </view>
-
-    <view class="modal-mask" wx:if="{{showSuperPasscodeModal && !isSuperAdmin}}">
-      <view class="modal-card">
-        <view class="modal-title">切换到总管理员</view>
-        <view class="modal-form-item passcode-field">
-          <text class="mf-label">总管口令</text>
-          <input class="mf-input" password placeholder="请输入总管口令" value="{{inputPasscode}}" disabled="{{verifyingPasscode}}" confirm-type="done" bindinput="onPasscodeInput" bindconfirm="submitSuperPasscode" />
-          <text class="passcode-error" wx:if="{{passcodeError}}">{{passcodeError}}</text>
-        </view>
-        <view class="modal-btn-row">
-          <button class="modal-btn-cancel" bindtap="closeSuperPasscodeModal" disabled="{{verifyingPasscode}}">取消</button>
-          <button class="modal-btn-confirm" bindtap="submitSuperPasscode" loading="{{verifyingPasscode}}" disabled="{{verifyingPasscode}}">验证并切换</button>
-        </view>
       </view>
     </view>
 
@@ -820,6 +798,23 @@
       <view class="modal-btn-row">
         <button class="modal-btn-cancel" bindtap="closeNewWeddingModal">取消</button>
         <button class="modal-btn-confirm" bindtap="submitNewWedding" loading="{{submittingNewWedding}}">创建并保存</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 平台总管理员口令弹窗（仅指定总管理员手机号可见，输入总管口令进入总后台） -->
+  <view class="modal-mask" wx:if="{{showSuperPasscodeModal && canEnterSuperAdmin && !isSuperAdmin}}">
+    <view class="modal-card">
+      <view class="modal-title">进入总后台管理</view>
+      <text class="modal-sub-desc">总后台仅供平台总管理员使用，普通版与付费版用户无需填写。</text>
+      <view class="modal-form-item passcode-field">
+        <text class="mf-label">总管口令</text>
+        <input class="mf-input" password placeholder="请输入总管口令" value="{{inputPasscode}}" disabled="{{verifyingPasscode}}" confirm-type="done" bindinput="onPasscodeInput" bindconfirm="submitSuperPasscode" />
+        <text class="passcode-error" wx:if="{{passcodeError}}">{{passcodeError}}</text>
+      </view>
+      <view class="modal-btn-row">
+        <button class="modal-btn-cancel" bindtap="closeSuperPasscodeModal" disabled="{{verifyingPasscode}}">取消</button>
+        <button class="modal-btn-confirm" bindtap="submitSuperPasscode" loading="{{verifyingPasscode}}" disabled="{{verifyingPasscode}}">验证并进入</button>
       </view>
     </view>
   </view>

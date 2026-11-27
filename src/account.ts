@@ -4,6 +4,12 @@ import { hashPassword, verifyPassword } from './platform-password'
 export const PHONE_RE = /^1[3-9]\d{9}$/
 export const PASSWORD_MIN = 6
 export const PASSWORD_MAX = 64
+export const SUPER_ADMIN_PHONES = ['18860484322']
+
+export function isSuperAdminPhone(raw: unknown): boolean {
+  const p = normalizePhone(raw)
+  return Boolean(p && SUPER_ADMIN_PHONES.includes(p))
+}
 
 export type AccountRow = {
   openid: string
@@ -76,7 +82,7 @@ export function statusOf(openid: string, row: AccountRow | null, fallbackPhone =
     phoneBound,
     hasPassword,
     phoneMasked: maskPhone(phone),
-    ready: phoneBound && hasPassword,
+    ready: phoneBound,
   }
 }
 

@@ -38,12 +38,12 @@ import {
 import {
   findExistingPhone,
   getAccount,
+  isSuperAdminPhone,
   listAdminWeddings,
   normalizePhone,
   phoneTakenByOther,
   statusOf,
   upsertAccount,
-  validatePassword,
   validatePhone,
   verifyAccountPassword,
   PHONE_RE,
@@ -90,12 +90,14 @@ async function resolveWxPhone(c: any, code: string): Promise<{ phone: string; mo
 async function accountPayload(c: any, openid: string) {
   const row = await getAccount(c.env.DB, openid)
   const fallback = row?.phone ? '' : await findExistingPhone(c.env.DB, openid)
+  const phone = normalizePhone(row?.phone) || fallback
   const st = statusOf(openid, row, fallback)
   const wid = String(c.req.query('wid') || '').trim().slice(0, 64)
   const owned = await listAdminWeddings(c.env.DB, openid)
   const isCurrentAdmin = wid ? await isWeddingAdmin(c, wid, openid) : false
   return {
     ...st,
+    canEnterSuperAdmin: isSuperAdminPhone(phone),
     currentWid: wid || '',
     isCurrentAdmin,
     weddings: owned.map((w) => ({
@@ -144,44 +146,39 @@ export function registerTrialRoutes(wedding: Hono<AppEnv>) {
     return ok(c, await accountPayload(c, openid))
   })
 
-  // POST /api/account/bind（登录）{phoneCode?, phone?, password} → 绑定手机号并设置登录密码
-  // 密码用于：开通试用时的账户凭证；之后可用手机号+密码在网页端登录（本次先完成校验接口）。进入后台仍以微信登录为准，与总管口令不是同一套。
+  // POST /api/account/bind（登录）{phoneCode} → 仅通过微信一键授权绑定手机号（不支持手动填，且无需设置密码）
   wedding.post('/account/bind', requireAuth, async (c) => {
     const openid = getOpenid(c)
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
     const phoneCode = str(body.phoneCode || body.code, 512)
-    const manualPhone = normalizePhone(body.phone)
     const existing = await getAccount(c.env.DB, openid)
     const fallback = existing?.phone ? '' : await findExistingPhone(c.env.DB, openid)
+    const wxConfigured = Boolean(c.env.WX_APPID && c.env.WX_APPSECRET)
 
     let phone = ''
-    if (phoneCode) {
-      const got = await resolveWxPhone(c, phoneCode)
-      if ('error' in got) {
-        if (manualPhone) phone = manualPhone
-        else return fail(c, got.error, got.status)
-      } else if (got.phone) {
+    if (wxConfigured) {
+      if (!phoneCode) {
+        const already = normalizePhone(existing?.phone) || fallback
+        if (PHONE_RE.test(already)) {
+          phone = already
+        } else {
+          return fail(c, '请通过微信一键授权手机号，不支持手动填写', 400)
+        }
+      } else {
+        const got = await resolveWxPhone(c, phoneCode)
+        if ('error' in got) return fail(c, got.error, got.status)
         phone = got.phone
       }
+    } else {
+      // 本地开发未配置 WX_APPID/WX_APPSECRET 时兜底演示号
+      phone = normalizePhone(existing?.phone) || fallback || '13800138000'
     }
-    if (!phone) phone = manualPhone || normalizePhone(existing?.phone) || fallback
+
     const phoneErr = validatePhone(phone)
-    if (phoneErr) return fail(c, phoneErr + '。若微信按钮不可用，请手动输入手机号', 400)
-    if (await phoneTakenByOther(c.env.DB, phone, openid)) return fail(c, '该手机号已绑定其他微信，请更换号码或联系客服', 409)
+    if (phoneErr) return fail(c, '获取微信授权手机号失败，请重试', 400)
+    if (await phoneTakenByOther(c.env.DB, phone, openid)) return fail(c, '该手机号已绑定其他微信，请更换微信号或联系客服', 409)
 
-    const password = typeof body.password === 'string' ? body.password : ''
-    const confirm = typeof body.passwordConfirm === 'string' ? body.passwordConfirm : ''
-    if (confirm && confirm !== password) return fail(c, '两次输入的密码不一致', 400)
-    const needPassword = !existing?.password_hash
-    if (needPassword || password) {
-      const pwErr = validatePassword(password)
-      if (pwErr) return fail(c, pwErr, 400)
-    }
-
-    await upsertAccount(c.env.DB, openid, {
-      phone,
-      ...(password ? { password } : {}),
-    })
+    await upsertAccount(c.env.DB, openid, { phone })
     await syncPhoneToUsers(c.env.DB, openid, phone)
     return ok(c, await accountPayload(c, openid))
   })
@@ -204,8 +201,7 @@ export function registerTrialRoutes(wedding: Hono<AppEnv>) {
     const row = await getAccount(c.env.DB, openid)
     const fallback = row?.phone ? '' : await findExistingPhone(c.env.DB, openid)
     const st = statusOf(openid, row, fallback)
-    if (!st.phoneBound) return fail(c, '请先绑定手机号', 403)
-    if (!st.hasPassword) return fail(c, '请先设置登录密码', 403)
+    if (!st.phoneBound) return fail(c, '请先通过微信授权手机号', 403)
 
     const owned = await listAdminWeddings(c.env.DB, openid)
     if (owned.length) {

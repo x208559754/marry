@@ -104,12 +104,9 @@ Page({
     accountLoading: false,
     accountReady: false,
     accountPhoneBound: false,
-    accountHasPassword: false,
     accountPhoneMasked: '',
+    canEnterSuperAdmin: false,
     accountWeddings: [],
-    bindPhone: '',
-    bindPassword: '',
-    bindPassword2: '',
     trialGroom: '',
     trialBride: '',
     bindingAccount: false,
@@ -256,7 +253,7 @@ Page({
   },
 
   openSuperPasscodeModal: function () {
-    if (!this.data.isAuthorized || this.data.isSuperAdmin || this.data.verifyingPasscode) return;
+    if (!this.data.canEnterSuperAdmin || this.data.isSuperAdmin || this.data.verifyingPasscode) return;
     this._inputPasscode = '';
     this.setData({ showSuperPasscodeModal: true, inputPasscode: '', passcodeError: '' });
   },
@@ -503,6 +500,7 @@ Page({
       that.setData({
         currentOpenid: api.getOpenid() || '',
         isWeddingAdmin: false,
+        canEnterSuperAdmin: false,
         accountLoading: false
       });
       console.warn('[admin] 获取登录态失败:', err && err.message);
@@ -517,11 +515,10 @@ Page({
       isWeddingAdmin: !!acc.isCurrentAdmin,
       accountReady: !!acc.ready,
       accountPhoneBound: !!acc.phoneBound,
-      accountHasPassword: !!acc.hasPassword,
       accountPhoneMasked: acc.phoneMasked || '',
+      canEnterSuperAdmin: !!acc.canEnterSuperAdmin,
       accountWeddings: acc.weddings || [],
-      accountLoading: false,
-      bindPhone: this.data.bindPhone || ''
+      accountLoading: false
     });
   },
 
@@ -539,9 +536,6 @@ Page({
     if (typeof cb === 'function') cb();
   },
 
-  onBindPhoneInput: function (e) { this.setData({ bindPhone: e.detail.value }); },
-  onBindPasswordInput: function (e) { this.setData({ bindPassword: e.detail.value }); },
-  onBindPassword2Input: function (e) { this.setData({ bindPassword2: e.detail.value }); },
   onTrialGroomInput: function (e) { this.setData({ trialGroom: e.detail.value }); },
   onTrialBrideInput: function (e) { this.setData({ trialBride: e.detail.value }); },
 
@@ -552,42 +546,16 @@ Page({
       var msg = detail.errMsg || '';
       var denied = msg.indexOf('deny') !== -1 || msg.indexOf('cancel') !== -1;
       wx.showToast({
-        title: denied ? '已取消，可改为手动输入手机号' : '暂无法一键获取，请手动输入手机号',
+        title: denied ? '需要授权微信手机号才能继续' : '暂无法获取手机号，请稍后重试',
         icon: 'none'
       });
       return;
     }
-    this.submitBind({ phoneCode: detail.code });
-  },
-
-  submitBindManual: function () {
-    this.submitBind({ phone: this.data.bindPhone });
-  },
-
-  submitBind: function (extra) {
-    const that = this;
-    const password = this.data.bindPassword || '';
-    const password2 = this.data.bindPassword2 || '';
-    if (!this.data.accountHasPassword) {
-      if (!password || password.length < 6) {
-        wx.showToast({ title: '请设置至少 6 位登录密码', icon: 'none' });
-        return;
-      }
-      if (password !== password2) {
-        wx.showToast({ title: '两次输入的密码不一致', icon: 'none' });
-        return;
-      }
-    }
-    const payload = Object.assign({
-      password: password,
-      passwordConfirm: password2,
-      phone: this.data.bindPhone
-    }, extra || {});
     this.setData({ bindingAccount: true });
-    api.bindAccount(payload).then(function (acc) {
-      that.setData({ bindingAccount: false, bindPassword: '', bindPassword2: '' });
+    api.bindAccount({ phoneCode: detail.code }).then(function (acc) {
+      that.setData({ bindingAccount: false });
       that._applyAccount(acc);
-      wx.showToast({ title: '绑定成功', icon: 'success' });
+      wx.showToast({ title: '授权成功', icon: 'success' });
       if (acc && acc.ready && acc.isCurrentAdmin) {
         that.enterWeddingAdmin();
         return;
@@ -595,8 +563,8 @@ Page({
     }).catch(function (err) {
       that.setData({ bindingAccount: false });
       wx.showModal({
-        title: '绑定失败',
-        content: (err && err.message) || '请检查手机号或网络',
+        title: '授权失败',
+        content: (err && err.message) || '请检查网络后重试',
         showCancel: false
       });
     });
@@ -674,6 +642,7 @@ Page({
     });
     this._clearLotteryTimer();
     wx.showToast({ title: '已退出管理', icon: 'none' });
+    this.showPasscodeLock();
   },
 
   switchTab: function (e) {
