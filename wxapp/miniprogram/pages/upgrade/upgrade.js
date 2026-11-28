@@ -16,6 +16,10 @@ Page({
   data: {
     loading: true,
     error: '',
+    isCreateMode: false,
+    groomName: '',
+    brideName: '',
+    myWedding: null,
     premium: false,
     currentCode: 'free',
     currentName: '免费版',
@@ -38,41 +42,79 @@ Page({
 
   onLoad: function (q) {
     this._want = (q && q.plan) || '';
+    this._forceCreate = !!(q && q.mode === 'create');
     this.load();
+  },
+
+  onGroomInput: function (e) {
+    this.setData({ groomName: e.detail.value });
+  },
+
+  onBrideInput: function (e) {
+    this.setData({ brideName: e.detail.value });
+  },
+
+  enterMyWedding: function () {
+    const w = this.data.myWedding;
+    if (!w || !w.id) return;
+    this._enterAdminForWid(w.id);
+  },
+
+  _enterAdminForWid: function (wid) {
+    api.setWid(wid);
+    const app = getApp();
+    if (app && app.globalData) {
+      app.globalData.wid = wid;
+      app.globalData.isAdmin = true;
+    }
+    api.login().catch(function () {}).then(function () {
+      wx.redirectTo({ url: '/pages/admin/admin' });
+    });
   },
 
   load: function () {
     const that = this;
-    this.setData({ loading: true, error: '', wid: api.getWid() || '' });
+    const curWid = api.getWid() || 'demo';
+    const isCreateMode = this._forceCreate || (curWid === 'demo' && !api.getSuperAdminPasscode());
+    this.setData({ loading: true, error: '', wid: curWid, isCreateMode: isCreateMode });
+    if (isCreateMode) {
+      wx.setNavigationBarTitle({ title: '开通我的专属请柬' });
+      api.getMyWeddings().then(function (res) {
+        const list = (res && res.weddings) || [];
+        that.setData({ myWedding: list.length ? list[0] : null });
+      }).catch(function () {});
+    }
     api.getPlan().then(function (d) {
       const w = (d && d.wedding) || {};
       const raw = (d && d.plans) || [];
-      const level = Number(w.level) || 0;
+      const level = isCreateMode ? -1 : (Number(w.level) || 0);
       const plans = raw.map(function (p) {
+        const buyable = isCreateMode ? true : (p.code !== 'free' && p.level > level);
         return Object.assign({}, p, {
           priceText: yuan(p.priceFen),
           originalText: p.originalFen && p.originalFen > p.priceFen ? yuan(p.originalFen) : '',
-          periodText: p.code === 'free' ? '基础功能 · 永久免费' : (p.days ? '按场次 · ' + p.days + ' 天有效' : '按场次 · 一次付费 · 永久有效'),
-          current: p.code === w.plan,
-          included: p.level < level,
-          buyable: p.code !== 'free' && p.level > level,
+          periodText: p.code === 'free' ? '基础体验 · 永久免费' : (p.days ? '按场次 · ' + p.days + ' 天有效' : '按场次 · 一次付费 · 永久有效'),
+          current: isCreateMode ? false : (p.code === w.plan),
+          included: isCreateMode ? false : (p.level < level),
+          buyable: buyable,
           top: isTop(raw, p)
         });
       });
-      // 默认选中：指定的套餐 > 比当前高一档的套餐
+      // 默认选中：指定的套餐 > 首个付费套餐 > 首个可选套餐
       let sel = '';
       const want = that._want;
       plans.forEach(function (p) { if (p.buyable && p.code === want) sel = p.code; });
+      if (!sel) for (let i = 0; i < plans.length; i++) if (plans[i].buyable && plans[i].code !== 'free') { sel = plans[i].code; break; }
       if (!sel) for (let i = 0; i < plans.length; i++) if (plans[i].buyable) { sel = plans[i].code; break; }
       that.setData({
         loading: false,
-        premium: !!w.premium,
-        currentCode: w.plan || 'free',
-        currentName: w.planName || '免费版',
-        currentLevel: level,
-        expired: !!w.expired,
-        expiresText: w.expiresAt && !w.expired ? String(w.expiresAt).slice(0, 10) : '',
-        activatedAt: w.activatedAt ? String(w.activatedAt).slice(0, 10) : '',
+        premium: isCreateMode ? false : !!w.premium,
+        currentCode: isCreateMode ? '' : (w.plan || 'free'),
+        currentName: isCreateMode ? '' : (w.planName || '免费版'),
+        currentLevel: isCreateMode ? 0 : level,
+        expired: isCreateMode ? false : !!w.expired,
+        expiresText: !isCreateMode && w.expiresAt && !w.expired ? String(w.expiresAt).slice(0, 10) : '',
+        activatedAt: !isCreateMode && w.activatedAt ? String(w.activatedAt).slice(0, 10) : '',
         payMode: d.payMode || 'unavailable',
         plans: plans
       });
@@ -90,7 +132,7 @@ Page({
       selectedPlan: p,
       priceText: p ? p.priceText : '',
       canBuy: !!(p && p.buyable),
-      isUpgrade: !!(p && this.data.currentLevel > 0)
+      isUpgrade: !!(p && !this.data.isCreateMode && this.data.currentLevel > 0)
     });
   },
 
@@ -105,14 +147,52 @@ Page({
   pay: function () {
     if (this.data.paying || !this.data.canBuy) return;
     const p = this.data.selectedPlan;
+    const that = this;
+
+    // 开通模式 + 免费版：直接免费创建专属婚礼并进入后台
+    if (this.data.isCreateMode && p && p.code === 'free') {
+      this.setData({ paying: true });
+      api.createFreeWedding({
+        groomName: (this.data.groomName || '').trim(),
+        brideName: (this.data.brideName || '').trim()
+      }).then(function (res) {
+        that.setData({ paying: false });
+        wx.showToast({ title: '已开通免费版，正在进入后台', icon: 'success' });
+        setTimeout(function () {
+          that._enterAdminForWid(res.wid);
+        }, 900);
+      }).catch(function (err) {
+        that.setData({ paying: false });
+        if (err && err.existingWid) {
+          wx.showModal({
+            title: '您已拥有专属请柬',
+            content: '每个微信号可免费开通 1 场请柬。您可以直接进入自己的管理后台，或选择付费套餐再开通一场。',
+            confirmText: '进入我的后台',
+            confirmColor: '#8B1E1E',
+            success: function (r) {
+              if (r.confirm) that._enterAdminForWid(err.existingWid);
+            }
+          });
+          return;
+        }
+        wx.showModal({ title: '开通失败', content: (err && err.message) || '网络异常，请重试', showCancel: false });
+      });
+      return;
+    }
+
     if (this.data.payMode === 'unavailable') {
       this.setData({ showKefu: true });
       return;
     }
-    const that = this;
     const go = function () {
       that.setData({ paying: true });
-      api.createPayOrder(p.code).then(function (o) {
+      const orderPromise = that.data.isCreateMode
+        ? api.createNewWeddingOrder(p.code, {
+            groomName: (that.data.groomName || '').trim(),
+            brideName: (that.data.brideName || '').trim()
+          })
+        : api.createPayOrder(p.code);
+      orderPromise.then(function (o) {
         if (o.mock) return that._mockPay(o, p);
         return that._wxPay(o);
       }).catch(function (err) {
@@ -120,7 +200,7 @@ Page({
         wx.showModal({ title: '无法下单', content: (err && err.message) || '网络异常，请重试', showCancel: false });
       });
     };
-    if (this.data.currentLevel > 0) {
+    if (!this.data.isCreateMode && this.data.currentLevel > 0) {
       wx.showModal({
         title: '升级到' + p.name,
         content: '当前已是「' + this.data.currentName + '」。升级按「' + p.name + '」全价 ¥' + p.priceText + ' 计费，不折算已付金额，确认升级？',
@@ -144,7 +224,7 @@ Page({
         success: function (r) {
           if (!r.confirm) { that.setData({ paying: false }); return resolve(); }
           api.mockConfirmPay(o.orderNo).then(function (d) {
-            that._done(!!(d && d.order && d.order.status === 'paid'), d && d.planName);
+            that._done(!!(d && d.order && d.order.status === 'paid'), d && d.planName, (d && d.wid) || o.wid);
             resolve();
           }).catch(function (err) {
             that.setData({ paying: false });
@@ -168,7 +248,7 @@ Page({
         paySign: p.paySign,
         success: function () {
           wx.showLoading({ title: '确认支付结果', mask: true });
-          that._poll(o.orderNo, 0, resolve);
+          that._poll(o.orderNo, 0, resolve, o.wid);
         },
         fail: function (err) {
           that.setData({ paying: false });
@@ -181,18 +261,18 @@ Page({
   },
 
   // 支付成功后轮询订单（回调可能稍有延迟；服务端会主动向微信查单）
-  _poll: function (orderNo, n, resolve) {
+  _poll: function (orderNo, n, resolve, expectedWid) {
     const that = this;
     api.getPayOrder(orderNo).then(function (d) {
       if (d && d.order && d.order.status === 'paid') {
         wx.hideLoading();
-        that._done(true);
+        that._done(true, d.planName, d.wid || expectedWid);
         return resolve();
       }
       if (n >= 7) throw new Error('timeout');
-      setTimeout(function () { that._poll(orderNo, n + 1, resolve); }, 1500);
+      setTimeout(function () { that._poll(orderNo, n + 1, resolve, expectedWid); }, 1500);
     }).catch(function () {
-      if (n < 7) { setTimeout(function () { that._poll(orderNo, n + 1, resolve); }, 1500); return; }
+      if (n < 7) { setTimeout(function () { that._poll(orderNo, n + 1, resolve, expectedWid); }, 1500); return; }
       wx.hideLoading();
       that.setData({ paying: false });
       wx.showModal({ title: '支付结果确认中', content: '如已扣款，套餐会在几分钟内自动生效；也可稍后重新进入本页查看。', showCancel: false });
@@ -200,9 +280,17 @@ Page({
     });
   },
 
-  _done: function (ok, name) {
+  _done: function (ok, name, newWid) {
+    const that = this;
     this.setData({ paying: false });
     if (!ok) { this.load(); return; }
+    if (this.data.isCreateMode && newWid) {
+      wx.showToast({ title: '已开通，正在进入后台', icon: 'success' });
+      setTimeout(function () {
+        that._enterAdminForWid(newWid);
+      }, 1200);
+      return;
+    }
     wx.showToast({ title: '已开通' + (name || (this.data.selectedPlan && this.data.selectedPlan.name) || '套餐'), icon: 'success' });
     this.load();
     setTimeout(function () {

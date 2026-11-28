@@ -93,6 +93,10 @@ Page({
     weddingOptions: [],
     selectedWeddingIndex: 0,
     currentWeddingDisplay: '',
+    myWeddings: [],
+    myWeddingOptions: [],
+    selectedMyWeddingIndex: 0,
+    currentMyWeddingDisplay: '',
     superMode: 'wedding',
     superUsersLoading: false,
     superUserFilter: 'all',
@@ -254,9 +258,9 @@ Page({
   },
 
   onShow: function () {
-    // 首次进入时 onLoad 已在验证；已通过的会话不再重新登录，避免失败把口令清掉
+    // 首次进入时 onLoad 已在验证；已通过的会话且未切换场次时直接刷新数据
     if (this._booting) return;
-    if (this.data.isAuthorized && this.data.isSuperAdmin) {
+    if (this.data.isAuthorized && (api.getWid() || 'demo') === this.data.wid) {
       this.refreshAll();
       return;
     }
@@ -860,7 +864,7 @@ Page({
     return this._authSeq;
   },
 
-  // 复查登录态：总后台只认总管口令，本场婚礼管理员不能跳过口令页
+  // 复查登录态：优先总管口令 → 其次微信登录自动进入自己管理的婚礼后台 → 否则展示开通/口令认证页
   refreshAdminState: function (cb) {
     if (this.data.verifyingPasscode || this.data.showSuperPasscodeModal) {
       if (typeof cb === 'function') cb();
@@ -896,36 +900,105 @@ Page({
           if (typeof cb === 'function') cb();
           return;
         }
-        that.showPasscodeLock(cb);
+        that.tryWeddingAdminLogin(seq, cb);
       });
       return;
     }
-    this.showPasscodeLock(cb);
+    this.tryWeddingAdminLogin(seq, cb);
   },
 
+  // 微信身份自动登录自己的婚礼后台（无需总管口令；未绑定则留在开通页）
   showPasscodeLock: function (cb) {
+    this.tryWeddingAdminLogin(this._nextAuthSeq(), cb);
+  },
+
+  // 微信身份自动登录自己的婚礼后台（无需总管口令；未绑定则留在开通页）
+  tryWeddingAdminLogin: function (seq, cb) {
     const that = this;
     this.setData({ isAuthorized: false, isSuperAdmin: false, accountLoading: true });
     api.ensureLogin().then(function () {
       return api.getAccount();
     }).then(function (acc) {
+      if (seq !== that._authSeq) return;
       acc = acc || {};
       that._applyAccount(acc);
-      if (acc.ready && acc.isCurrentAdmin) {
+      const myList = acc.weddings || [];
+      const myOpts = myList.map(function (w) {
+        return {
+          id: w.id,
+          label: (w.groomName || '新郎') + ' & ' + (w.brideName || '新娘') + ' · ' + (w.plan || 'free')
+        };
+      });
+      const curWid = api.getWid() || 'demo';
+      let targetWid = '';
+      if (acc.ready && acc.isCurrentAdmin && curWid && curWid !== 'demo') targetWid = curWid;
+      else if (acc.ready && myList.length) targetWid = myList[0].id;
+      let sel = 0;
+      if (targetWid) {
+        for (let i = 0; i < myOpts.length; i++) {
+          if (myOpts[i].id === targetWid) { sel = i; break; }
+        }
+      }
+      that.setData({
+        myWeddings: myList,
+        myWeddingOptions: myOpts,
+        selectedMyWeddingIndex: sel,
+        currentMyWeddingDisplay: (myOpts[sel] && myOpts[sel].label) || ''
+      });
+      if (targetWid) {
+        if (targetWid !== curWid) {
+          api.setWid(targetWid);
+          const g = getApp();
+          if (g && g.globalData) {
+            g.globalData.wid = targetWid;
+            g.globalData.isAdmin = true;
+          }
+        }
         that.enterWeddingAdmin(cb);
         return;
       }
       if (typeof cb === 'function') cb();
     }).catch(function (err) {
+      if (seq !== that._authSeq) return;
       that.setData({
-        currentOpenid: api.getOpenid() || '',
+        isAuthorized: false,
+        isSuperAdmin: false,
         isWeddingAdmin: false,
+        currentOpenid: api.getOpenid() || '',
         canEnterSuperAdmin: false,
-        accountLoading: false
+        accountLoading: false,
+        myWeddings: [],
+        myWeddingOptions: []
       });
       console.warn('[admin] 获取登录态失败:', err && err.message);
       if (typeof cb === 'function') cb();
     });
+  },
+
+  onSelectMyWedding: function (e) {
+    const idx = parseInt(e.detail.value, 10) || 0;
+    const item = this.data.myWeddingOptions[idx];
+    if (!item || !item.id) return;
+    api.setWid(item.id);
+    const g = getApp();
+    if (g && g.globalData) {
+      g.globalData.wid = item.id;
+      g.globalData.isAdmin = true;
+    }
+    this.setData({
+      selectedMyWeddingIndex: idx,
+      currentMyWeddingDisplay: item.label,
+      wid: item.id,
+      lotteryLoaded: false
+    });
+    wx.showToast({ title: '已切换婚礼', icon: 'none' });
+    this.refreshAll(null, true);
+    this.loadConfigForm();
+    this.loadQr();
+  },
+
+  goCreateMyWedding: function () {
+    wx.navigateTo({ url: '/pages/upgrade/upgrade?mode=create' });
   },
 
   _applyAccount: function (acc) {
@@ -946,6 +1019,7 @@ Page({
     this.setData({
       isAuthorized: true,
       isSuperAdmin: false,
+      isWeddingAdmin: true,
       currentOpenid: api.getOpenid() || '',
       wid: api.getWid() || ''
     });
@@ -960,7 +1034,6 @@ Page({
   onTrialBrideInput: function (e) { this.setData({ trialBride: e.detail.value }); },
 
   onGetPhoneNumber: function (e) {
-    const that = this;
     const detail = (e && e.detail) || {};
     if (!detail.code) {
       var msg = detail.errMsg || '';
@@ -1001,15 +1074,23 @@ Page({
       const wid = (d && (d.wid || d.id)) || '';
       if (!wid) throw new Error('未返回婚礼标识');
       api.setWid(wid);
+      const g = getApp();
+      if (g && g.globalData) {
+        g.globalData.wid = wid;
+        g.globalData.isAdmin = true;
+      }
       wx.showToast({ title: '已开通基础版', icon: 'success' });
       that.enterWeddingAdmin();
     }).catch(function (err) {
       that.setData({ startingTrial: false });
-      if (err && err.code === 'ALREADY_HAS_WEDDING' && err.data && (err.data.existingWid || err.data.id)) {
-        const wid = err.data.existingWid || err.data.id;
-        api.setWid(wid);
-        that.enterWeddingAdmin();
-        return;
+      const existing = (err && err.existingWid) || (err && err.data && (err.data.existingWid || err.data.id));
+      if (err && (err.code === 'ALREADY_HAS_WEDDING' || existing)) {
+        const wid = existing;
+        if (wid) {
+          api.setWid(wid);
+          that.enterWeddingAdmin();
+          return;
+        }
       }
       wx.showModal({
         title: '开通失败',
@@ -1023,9 +1104,13 @@ Page({
     const wid = (e.currentTarget.dataset.wid) || '';
     if (!wid) return;
     api.setWid(wid);
+    const g = getApp();
+    if (g && g.globalData) {
+      g.globalData.wid = wid;
+      g.globalData.isAdmin = true;
+    }
     this.enterWeddingAdmin();
   },
-
 
   copyOpenid: function () {
     if (!this.data.currentOpenid) return;

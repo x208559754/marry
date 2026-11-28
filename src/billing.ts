@@ -4,9 +4,10 @@
 // 微信支付实现由 Node 入口注入（c.env.PAY，见 server/wxpay.ts）；未接入时 PAY_MOCK=1 可模拟支付成功
 import { Hono } from 'hono'
 import type { Context } from 'hono'
-import { ok, fail, requireAdmin, getWid, getOpenid } from './auth'
+import { ok, fail, requireAuth, requireAdmin, optionalAuth, hasSuperAdminPasscode, isWeddingAdmin, getWid, getOpenid } from './auth'
 import type { AppEnv, Bindings } from './auth'
 import { DEFAULT_VIDEO_MAX_MB, MAX_VIDEO_MB } from './qiniu'
+import { genUniqueWid, defaultWeddingConfig } from './wid'
 
 export const billing = new Hono<AppEnv>()
 
@@ -52,13 +53,13 @@ export const DEFAULT_SUPREME_PHOTO_MAX_KB = 5120
 const BASIC_PHOTO_LIMIT = 4
 export const PREMIUM_PHOTO_LIMIT = 200 // 兼容旧接口
 
-const DEFAULT_ENT: Entitlements = { photos: BASIC_PHOTO_LIMIT, photoMaxKb: DEFAULT_FREE_PHOTO_MAX_KB, videoMaxMb: DEFAULT_VIDEO_MAX_MB, lotteryPrizes: 1, lotteryParticipants: 30, lotteryThemes: ['red'], watermark: true, badge: '', effect: 'none', opening: false }
+const DEFAULT_ENT: Entitlements = { photos: BASIC_PHOTO_LIMIT, photoMaxKb: DEFAULT_FREE_PHOTO_MAX_KB, videoMaxMb: DEFAULT_VIDEO_MAX_MB, lotteryPrizes: 1, lotteryParticipants: 20, lotteryThemes: ['red'], watermark: true, badge: '', effect: 'none', opening: false }
 
 export const DEFAULT_PLANS: PlanDef[] = [
   {
     code: 'free', name: '免费版', level: 0, priceFen: 0, days: 0, active: true, sort: 0,
     desc: '基础电子请柬，适合先体验',
-    features: ['电子请柬 + 宾客回执 + 祝福墙', '婚纱相册最多 4 张', '现场抽奖：1 个奖项、30 人', '大屏主题：中式红金', '请柬底部显示「有囍請柬」标识'],
+    features: ['电子请柬 + 宾客回执 + 祝福墙', '婚纱相册最多 4 张', '现场抽奖：1 个奖项、20 人', '大屏主题：仅中式红金', '请柬底部显示「有囍請柬」标识'],
     ent: { ...DEFAULT_ENT },
   },
   {
@@ -496,7 +497,30 @@ export function orderOut(o: OrderRow) {
   }
 }
 
-// 标记已支付并把婚礼升级到订单对应的套餐（幂等：只有 pending/closed 才会变成 paid）
+// 生成唯一的婚礼短标识（w + 7 位小写字母数字）
+// 新建 wid 使用 src/wid.ts 的随机 UUID（去横线），不再使用短随机码
+
+function defaultNewWeddingConfig(groom: string, bride: string): string {
+  return JSON.stringify(defaultWeddingConfig(groom, bride))
+}
+
+function parseCreateNote(note: string | null | undefined): { isCreate: boolean; groomName: string; brideName: string } {
+  if (!note) return { isCreate: false, groomName: '新郎', brideName: '新娘' }
+  try {
+    const obj = JSON.parse(note)
+    if (obj && obj.mode === 'create') {
+      return {
+        isCreate: true,
+        groomName: typeof obj.groomName === 'string' && obj.groomName.trim() ? obj.groomName.trim().slice(0, 32) : '新郎',
+        brideName: typeof obj.brideName === 'string' && obj.brideName.trim() ? obj.brideName.trim().slice(0, 32) : '新娘',
+      }
+    }
+  } catch {}
+  return { isCreate: false, groomName: '新郎', brideName: '新娘' }
+}
+
+// 标记已支付并把婚礼升级到订单对应的套餐（或为「新购婚礼」自动建场并授予买家管理员权限）
+// 幂等：只有 pending/closed 才会变成 paid
 export async function markPaid(db: D1Database, orderNo: string, transactionId: string, payload?: string): Promise<boolean> {
   const now = new Date().toISOString()
   const res = await db
@@ -504,16 +528,50 @@ export async function markPaid(db: D1Database, orderNo: string, transactionId: s
     .bind(transactionId || null, now, payload ? payload.slice(0, 8000) : null, now, orderNo)
     .run()
   if (!res.meta.changes) return false
-  const o = await db.prepare('SELECT wedding_id, product, amount_fen FROM orders WHERE out_trade_no = ?').bind(orderNo).first<{ wedding_id: string; product: string; amount_fen: number }>()
+  const o = await db
+    .prepare('SELECT wedding_id, openid, product, amount_fen, note FROM orders WHERE out_trade_no = ?')
+    .bind(orderNo)
+    .first<{ wedding_id: string; openid: string | null; product: string; amount_fen: number; note: string | null }>()
   if (o && o.product && o.product !== 'free') {
     const def = await getPlanDef(db, o.product)
-    const before = await getWeddingPlan(db, o.wedding_id)
     const expires = def && def.days > 0 ? new Date(Date.now() + def.days * 86400_000).toISOString() : null
-    await db
-      .prepare('UPDATE weddings SET plan = ?, plan_activated_at = ?, plan_order_no = ?, plan_expires_at = ? WHERE id = ?')
-      .bind(o.product, now, orderNo, expires, o.wedding_id)
-      .run()
-    await logPlan(db, o.wedding_id, 'purchase', before.plan, o.product, { expiresAt: expires, note: '订单 ' + orderNo + ' 支付 ' + (Number(o.amount_fen) / 100).toFixed(2) + ' 元', operator: 'user' })
+    const existing = await db.prepare('SELECT id FROM weddings WHERE id = ?').bind(o.wedding_id).first<{ id: string }>()
+    if (!existing) {
+      // 自助购买新婚礼：支付成功后自动创建专属婚礼 + 绑定买家为该婚礼管理员
+      const meta = parseCreateNote(o.note)
+      await db
+        .prepare(
+          'INSERT INTO weddings (id, groom_name, bride_name, config, plan, plan_activated_at, plan_order_no, plan_expires_at, created_at, updated_at) ' +
+            'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        )
+        .bind(o.wedding_id, meta.groomName, meta.brideName, defaultNewWeddingConfig(meta.groomName, meta.brideName), o.product, now, orderNo, expires, now, now)
+        .run()
+      if (o.openid) {
+        await db
+          .prepare(
+            'INSERT INTO users (openid, wedding_id, is_admin, first_seen, last_seen, login_count) VALUES (?, ?, 1, ?, ?, 1) ' +
+              'ON CONFLICT(openid, wedding_id) DO UPDATE SET is_admin = 1, last_seen = excluded.last_seen',
+          )
+          .bind(o.openid, o.wedding_id, now, now)
+          .run()
+      }
+      await logPlan(db, o.wedding_id, 'purchase_new', '', o.product, {
+        expiresAt: expires,
+        note: '自助购买新婚礼 · 订单 ' + orderNo + ' 支付 ' + (Number(o.amount_fen) / 100).toFixed(2) + ' 元',
+        operator: 'user',
+      })
+    } else {
+      const before = await getWeddingPlan(db, o.wedding_id)
+      await db
+        .prepare('UPDATE weddings SET plan = ?, plan_activated_at = ?, plan_order_no = ?, plan_expires_at = ? WHERE id = ?')
+        .bind(o.product, now, orderNo, expires, o.wedding_id)
+        .run()
+      await logPlan(db, o.wedding_id, 'purchase', before.plan, o.product, {
+        expiresAt: expires,
+        note: '订单 ' + orderNo + ' 支付 ' + (Number(o.amount_fen) / 100).toFixed(2) + ' 元',
+        operator: 'user',
+      })
+    }
   }
   return true
 }
@@ -547,6 +605,124 @@ billing.get('/plan', async (c) => {
     payMode: payMode(c.env),
     pricing,
   })
+})
+
+// ---------------- 自助开通 / 我的婚礼（普通微信用户登录即可） ----------------
+
+// GET /api/my-weddings → 当前微信号（openid）拥有管理员权限的所有非演示婚礼
+billing.get('/my-weddings', requireAuth, async (c) => {
+  const openid = getOpenid(c)
+  const plans = await getPlans(c.env.DB)
+  const planMap = new Map(plans.map((p) => [p.code, p.name]))
+  const { results } = await c.env.DB.prepare(
+    "SELECT w.id, w.groom_name, w.bride_name, w.plan, w.plan_expires_at, w.status, w.created_at " +
+      "FROM weddings w INNER JOIN users u ON u.wedding_id = w.id " +
+      "WHERE u.openid = ? AND u.is_admin = 1 AND w.id <> 'demo' " +
+      "ORDER BY w.created_at DESC LIMIT 50",
+  )
+    .bind(openid)
+    .all<{ id: string; groom_name: string | null; bride_name: string | null; plan: string | null; plan_expires_at: string | null; status: string | null; created_at: string }>()
+  const weddings = (results || []).map((w) => {
+    const code = w.plan && !isExpired(w.plan_expires_at) ? w.plan : 'free'
+    return {
+      id: w.id,
+      groomName: w.groom_name || '新郎',
+      brideName: w.bride_name || '新娘',
+      plan: code,
+      planName: planMap.get(code) || '免费版',
+      status: w.status === 'disabled' ? 'disabled' : 'active',
+      createdAt: w.created_at,
+    }
+  })
+  return ok(c, { weddings })
+})
+
+// POST /api/weddings/create-free {groomName?, brideName?} → 免费开通一场专属婚礼并自动授予当前微信管理员权限
+// 每个微信号限制免费开通 1 场（已有非演示婚礼时返回 409 + existingWid，引导直接进入后台或购买付费套餐）
+billing.post('/weddings/create-free', requireAuth, async (c) => {
+  const openid = getOpenid(c)
+  const existing = await c.env.DB.prepare(
+    "SELECT u.wedding_id FROM users u INNER JOIN weddings w ON w.id = u.wedding_id WHERE u.openid = ? AND u.is_admin = 1 AND u.wedding_id <> 'demo' ORDER BY w.created_at DESC LIMIT 1",
+  )
+    .bind(openid)
+    .first<{ wedding_id: string }>()
+  if (existing?.wedding_id) {
+    return c.json(
+      { ok: false as const, error: '您已开通专属请柬，可直接进入管理后台', code: 'ALREADY_HAS_WEDDING', existingWid: existing.wedding_id },
+      409,
+    )
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const groomName = typeof body.groomName === 'string' && body.groomName.trim() ? body.groomName.trim().slice(0, 32) : '新郎'
+  const brideName = typeof body.brideName === 'string' && body.brideName.trim() ? body.brideName.trim().slice(0, 32) : '新娘'
+  const wid = await genUniqueWid(c.env.DB)
+  const now = new Date().toISOString()
+
+  await c.env.DB.prepare(
+    "INSERT INTO weddings (id, groom_name, bride_name, config, plan, plan_activated_at, created_at, updated_at) VALUES (?, ?, ?, ?, 'free', ?, ?, ?)",
+  )
+    .bind(wid, groomName, brideName, defaultNewWeddingConfig(groomName, brideName), now, now, now)
+    .run()
+
+  await c.env.DB.prepare(
+    'INSERT INTO users (openid, wedding_id, is_admin, first_seen, last_seen, login_count) VALUES (?, ?, 1, ?, ?, 1) ' +
+      'ON CONFLICT(openid, wedding_id) DO UPDATE SET is_admin = 1, last_seen = excluded.last_seen',
+  )
+    .bind(openid, wid, now, now)
+    .run()
+
+  await logPlan(c.env.DB, wid, 'create_free', '', 'free', { note: '用户自助免费开通', operator: 'user' })
+  const freeDef = await getPlanDef(c.env.DB, 'free')
+  return ok(c, { wid, groomName, brideName, plan: 'free', planName: freeDef?.name || '免费版', isAdmin: true })
+})
+
+// POST /api/pay/order-new {product, groomName?, brideName?} → 普通用户自助购买付费套餐（支付成功后自动创建专属婚礼 + 绑定管理员）
+billing.post('/pay/order-new', requireAuth, async (c) => {
+  const openid = getOpenid(c)
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+  const code = typeof body.product === 'string' && body.product ? body.product : 'premium'
+  const groomName = typeof body.groomName === 'string' && body.groomName.trim() ? body.groomName.trim().slice(0, 32) : '新郎'
+  const brideName = typeof body.brideName === 'string' && body.brideName.trim() ? body.brideName.trim().slice(0, 32) : '新娘'
+
+  const p = await getPlanDef(c.env.DB, code)
+  if (!p || !p.active || p.code === 'free') return fail(c, '该套餐不存在或已下架', 404)
+  const mode = payMode(c.env)
+  if (mode === 'unavailable') return fail(c, '在线支付暂未开通，请微信联系客服 lzx91697 开通套餐', 503)
+  if (mode === 'wxpay' && !openid) return fail(c, '请先在小程序内完成微信登录后再支付', 401)
+
+  const newWid = await genUniqueWid(c.env.DB)
+  const orderNo = genOrderNo()
+  const description = '有囍請柬-' + p.name + '（新婚礼）'
+  const note = JSON.stringify({ mode: 'create', groomName, brideName })
+  const now = new Date().toISOString()
+
+  // 关闭当前用户之前未支付的新建婚礼订单，避免堆积
+  await c.env.DB.prepare("UPDATE orders SET status = 'closed', updated_at = ? WHERE openid = ? AND status = 'pending' AND note LIKE '{\"mode\":\"create\"%'")
+    .bind(now, openid)
+    .run()
+
+  await c.env.DB
+    .prepare(
+      'INSERT INTO orders (out_trade_no, wedding_id, openid, product, description, amount_fen, status, pay_mode, note, created_at, updated_at) ' +
+        "VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)",
+    )
+    .bind(orderNo, newWid, openid, p.code, description, p.priceFen, mode, note, now, now)
+    .run()
+
+  if (mode === 'mock') {
+    return ok(c, { orderNo, wid: newWid, product: p.code, amountFen: p.priceFen, description, mock: true, mode: 'create' })
+  }
+  try {
+    const r = await c.env.PAY!.createJsapiOrder({ outTradeNo: orderNo, description: description.slice(0, 120), totalFen: p.priceFen, openid, attach: newWid })
+    await c.env.DB.prepare('UPDATE orders SET prepay_id = ? WHERE out_trade_no = ?').bind(r.prepayId, orderNo).run()
+    return ok(c, { orderNo, wid: newWid, product: p.code, amountFen: p.priceFen, description, mock: false, mode: 'create', payParams: r.payParams })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('wxpay create order-new error', msg)
+    await c.env.DB.prepare("UPDATE orders SET status = 'failed', note = ?, updated_at = ? WHERE out_trade_no = ?").bind(msg.slice(0, 250), now, orderNo).run()
+    return fail(c, '创建微信支付订单失败：' + msg, 502)
+  }
 })
 
 // ---------------- 管理员：下单 / 查单 / 模拟支付 ----------------
@@ -600,12 +776,23 @@ async function loadOrder(db: D1Database, orderNo: string) {
   return db.prepare('SELECT * FROM orders WHERE out_trade_no = ?').bind(orderNo).first<OrderRow>()
 }
 
-// GET /api/pay/order/:no?wid= → 订单状态（未支付时主动向微信查单一次）
-billing.get('/pay/order/:no', requireAdmin, async (c) => {
-  const wid = getWid(c)
+// 订单访问鉴权：总管口令 或 下单本人(openid) 或 该婚礼管理员
+async function checkOrderAccess(c: Context<AppEnv>, o: OrderRow): Promise<'ok' | 'unauth' | 'forbidden'> {
+  if (await hasSuperAdminPasscode(c)) return 'ok'
+  const openid = getOpenid(c)
+  if (!openid) return 'unauth'
+  if (o.openid && o.openid === openid) return 'ok'
+  return (await isWeddingAdmin(c, o.wedding_id, openid)) ? 'ok' : 'forbidden'
+}
+
+// GET /api/pay/order/:no → 订单状态（未支付时主动向微信查单一次；支持下单本人或婚礼管理员查询）
+billing.get('/pay/order/:no', optionalAuth, async (c) => {
   const no = c.req.param('no') || ''
   let o = await loadOrder(c.env.DB, no)
-  if (!o || o.wedding_id !== wid) return fail(c, '订单不存在', 404)
+  if (!o) return fail(c, '订单不存在', 404)
+  const access = await checkOrderAccess(c, o)
+  if (access === 'unauth') return fail(c, '未登录或登录已过期', 401)
+  if (access === 'forbidden') return fail(c, '无权查看该订单', 403)
   if (o.status === 'pending' && o.pay_mode === 'wxpay' && c.env.PAY?.configured) {
     try {
       const q = await c.env.PAY.queryOrder(no)
@@ -617,22 +804,24 @@ billing.get('/pay/order/:no', requireAdmin, async (c) => {
       console.warn('wxpay query error', e)
     }
   }
-  const wp = await getWeddingPlan(c.env.DB, wid)
-  return ok(c, { order: orderOut(o!), premium: wp.premium, plan: wp.plan, planName: wp.planName })
+  const wp = await getWeddingPlan(c.env.DB, o!.wedding_id)
+  return ok(c, { order: orderOut(o!), wid: o!.wedding_id, premium: wp.premium, plan: wp.plan, planName: wp.planName })
 })
 
-// POST /api/pay/mock-confirm?wid= {orderNo} → 模拟支付成功（仅 PAY_MOCK=1 且订单为 mock 模式）
-billing.post('/pay/mock-confirm', requireAdmin, async (c) => {
+// POST /api/pay/mock-confirm {orderNo} → 模拟支付成功（仅 PAY_MOCK=1 且订单为 mock 模式；支持下单本人或婚礼管理员）
+billing.post('/pay/mock-confirm', optionalAuth, async (c) => {
   if (c.env.PAY_MOCK !== '1') return fail(c, '未开启模拟支付', 403)
-  const wid = getWid(c)
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
   const no = typeof body.orderNo === 'string' ? body.orderNo : ''
   const o = await loadOrder(c.env.DB, no)
-  if (!o || o.wedding_id !== wid) return fail(c, '订单不存在', 404)
+  if (!o) return fail(c, '订单不存在', 404)
+  const access = await checkOrderAccess(c, o)
+  if (access === 'unauth') return fail(c, '未登录或登录已过期', 401)
+  if (access === 'forbidden') return fail(c, '无权操作该订单', 403)
   if (o.pay_mode !== 'mock') return fail(c, '该订单不是模拟支付订单', 400)
   await markPaid(c.env.DB, no, 'MOCK' + Date.now(), '{"mock":true}')
-  const wp = await getWeddingPlan(c.env.DB, wid)
-  return ok(c, { order: orderOut((await loadOrder(c.env.DB, no))!), premium: wp.premium, plan: wp.plan, planName: wp.planName })
+  const wp = await getWeddingPlan(c.env.DB, o.wedding_id)
+  return ok(c, { order: orderOut((await loadOrder(c.env.DB, no))!), wid: o.wedding_id, premium: wp.premium, plan: wp.plan, planName: wp.planName })
 })
 
 // ---------------- 微信支付回调（公开；验签 + 解密） ----------------

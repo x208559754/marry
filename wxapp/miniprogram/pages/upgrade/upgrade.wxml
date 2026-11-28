@@ -2,10 +2,13 @@
 <view class="up-page">
   <view class="up-hero">
     <view class="up-seal">囍</view>
-    <text class="up-title">{{currentLevel > 0 ? '套餐与权益' : '升级套餐'}}</text>
-    <text class="up-sub">按场次购买 · 仅对当前婚礼生效</text>
-    <view class="up-status {{premium ? 'up-status-on' : ''}}" wx:if="{{!loading && !error}}">
+    <text class="up-title">{{isCreateMode ? '开通我的专属请柬' : (currentLevel > 0 ? '套餐与权益' : '升级套餐')}}</text>
+    <text class="up-sub">{{isCreateMode ? '开通后立即获得独立后台权限 · 微信直接管理' : '按场次购买 · 仅对当前婚礼生效'}}</text>
+    <view class="up-status {{premium ? 'up-status-on' : ''}}" wx:if="{{!isCreateMode && !loading && !error}}">
       当前：{{currentName}}{{expiresText ? ' · ' + expiresText + ' 到期' : (premium ? ' · 永久有效' : '')}}{{expired ? ' · 付费套餐已过期' : ''}}
+    </view>
+    <view class="up-my-pill" wx:if="{{isCreateMode && myWedding}}" bindtap="enterMyWedding">
+      已有专属请柬（{{myWedding.groomName}} &amp; {{myWedding.brideName}}）· 直接进后台 ›
     </view>
   </view>
 
@@ -17,6 +20,14 @@
 
   <block wx:else>
     <view class="up-list">
+      <view class="up-couple-card" wx:if="{{isCreateMode}}">
+        <view class="up-couple-title">新人姓名（选填，开通后随时可在后台修改）</view>
+        <view class="up-couple-inputs">
+          <input class="up-couple-input" placeholder="新郎姓名" value="{{groomName}}" bindinput="onGroomInput" maxlength="20" />
+          <text class="up-couple-amp">&amp;</text>
+          <input class="up-couple-input" placeholder="新娘姓名" value="{{brideName}}" bindinput="onBrideInput" maxlength="20" />
+        </view>
+      </view>
       <view wx:for="{{plans}}" wx:key="code"
         class="up-card {{item.code === 'free' ? 'up-card-free' : 'up-card-paid'}} {{item.top ? 'up-card-top' : ''}} {{selected === item.code ? 'up-card-on' : ''}} {{item.buyable ? '' : 'up-card-dim'}}"
         bindtap="choose" data-code="{{item.code}}">
@@ -55,8 +66,9 @@
     </view>
 
     <view class="up-notes">
-      <text>· 开通后立即生效，仅对当前婚礼（{{wid}}）有效</text>
-      <text>· 已开通付费套餐再升级时，按新套餐全价计费，不折算已付金额</text>
+      <text wx:if="{{isCreateMode}}">· 开通后自动生成专属婚礼请柬，当前微信号自动成为管理员</text>
+      <text wx:else>· 开通后立即生效，仅对当前婚礼（{{wid}}）有效</text>
+      <text>· 免费版可随时在后台升级更高套餐；升级按新套餐全价计费</text>
       <text>· 支付由微信支付提供，平台不保存任何支付信息</text>
       <text class="up-link" bindtap="contact">· 发票 / 退款 / 其它问题，联系客服 ›</text>
     </view>
@@ -80,9 +92,9 @@
     <block wx:else>
       <view class="up-bar-price">
         <text class="up-bar-yen">¥</text><text class="up-bar-num">{{priceText}}</text>
-        <text class="up-bar-tip">{{payMode === 'mock' ? '测试模式·模拟支付' : payMode === 'unavailable' ? '在线支付暂未开通' : selectedPlan.name}}</text>
+        <text class="up-bar-tip">{{selectedPlan.code === 'free' ? '免费版 · 立即开通' : (payMode === 'mock' ? '测试模式·模拟支付' : payMode === 'unavailable' ? '在线支付暂未开通' : selectedPlan.name)}}</text>
       </view>
-      <button class="up-btn" bindtap="pay" loading="{{paying}}" disabled="{{paying}}">{{payMode === 'unavailable' ? '联系客服开通' : (isUpgrade ? '升级到' + selectedPlan.name : '开通' + selectedPlan.name)}}</button>
+      <button class="up-btn" bindtap="pay" loading="{{paying}}" disabled="{{paying}}">{{selectedPlan.code === 'free' ? '免费开通请柬' : (payMode === 'unavailable' ? '联系客服开通' : (isCreateMode ? '支付并开通' : (isUpgrade ? '升级到' + selectedPlan.name : '开通' + selectedPlan.name)))}}</button>
     </block>
   </view>
 

@@ -454,6 +454,34 @@
       </view>
     </view>
 
+    <!-- 演示场专属入口：自助开通请柬 / 直达我的后台 -->
+    <view class="demo-cta-card" wx:if="{{isDemo}}">
+      <block wx:if="{{myWedding}}">
+        <view class="demo-cta-head">
+          <text class="demo-cta-tag">已开通</text>
+          <text class="demo-cta-title">{{myWedding.groomName}} &amp; {{myWedding.brideName}}（{{myWedding.planName}}）</text>
+        </view>
+        <text class="demo-cta-desc">当前微信号已拥有该婚礼管理权限，无需口令可直接进入后台编辑请柬。</text>
+        <view class="demo-cta-actions">
+          <button class="demo-cta-btn" bindtap="goMyAdmin">进入我的管理后台 ›</button>
+          <text class="demo-cta-sublink" bindtap="goCreateWedding">再买一场 ›</text>
+        </view>
+      </block>
+      <block wx:else>
+        <view class="demo-cta-head">
+          <text class="demo-cta-tag">演示请柬</text>
+          <text class="demo-cta-title">制作你们的专属婚礼请柬</text>
+        </view>
+        <text class="demo-cta-desc">支持免费版体验或直接购买套餐，开通后本微信号自动获得独立后台权限。</text>
+        <button class="demo-cta-btn" bindtap="goCreateWedding">免费试用 / 购买套餐 ›</button>
+      </block>
+    </view>
+
+    <!-- 演示场悬浮快捷入口 -->
+    <view class="demo-float-pill" wx:if="{{isDemo}}" bindtap="{{myWedding ? 'goMyAdmin' : 'goCreateWedding'}}">
+      <text>{{myWedding ? '进入我的后台 ›' : '制作同款请柬 ›'}}</text>
+    </view>
+
     <!-- 套餐含平台标识时显示；新人（管理员）可见升级入口 -->
     <view class="brand-footer" wx:if="{{showBrand}}">
       <text class="bf-line">— 有囍請柬 · 提供技术支持 —</text>

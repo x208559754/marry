@@ -59,6 +59,8 @@ Page({
     weddingDisabledText: '',
     showBrand: false,
     canUpgrade: false,
+    isDemo: false,
+    myWedding: null,
     // 套餐展示效果（来自 /api/config 的 _plan）
     planBadge: '',
     planEffect: 'none',
@@ -177,12 +179,43 @@ Page({
     });
     if (app.syncPageTheme) app.syncPageTheme(this);
     this.updateCustomTabBar();
+    this.refreshDemoState();
     if (this.data.isAppOpened && this.data.coverIsVideo) {
       try {
         const ctx = wx.createVideoContext('heroCoverVideo', this);
         if (ctx && typeof ctx.play === 'function') ctx.play();
       } catch (e) {}
     }
+  },
+
+  refreshDemoState: function () {
+    const that = this;
+    const isDemo = (api.getWid() || 'demo') === 'demo';
+    this.setData({ isDemo: isDemo });
+    if (!isDemo) {
+      if (this.data.myWedding) this.setData({ myWedding: null });
+      return;
+    }
+    api.getMyWeddings().then(function (res) {
+      const list = (res && res.weddings) || [];
+      that.setData({ myWedding: list.length ? list[0] : null });
+    }).catch(function () {});
+  },
+
+  goCreateWedding: function () {
+    wx.navigateTo({ url: '/pages/upgrade/upgrade?mode=create' });
+  },
+
+  goMyAdmin: function () {
+    const w = this.data.myWedding;
+    if (w && w.id) {
+      api.setWid(w.id);
+      if (app && app.globalData) {
+        app.globalData.wid = w.id;
+        app.globalData.isAdmin = true;
+      }
+    }
+    wx.navigateTo({ url: '/pages/admin/admin' });
   },
 
   onReady: function () {

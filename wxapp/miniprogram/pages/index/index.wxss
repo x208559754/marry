@@ -1588,6 +1588,66 @@
 .bf-line { font-size: 22rpx; color: #b8a99a; letter-spacing: 2rpx; }
 .bf-upgrade { margin-top: 12rpx; font-size: 22rpx; color: #b08442; padding: 6rpx 20rpx; border: 1rpx solid #e3cfa6; border-radius: 30rpx; }
 
+/* 演示场自助开通 / 我的后台入口 */
+.demo-cta-card {
+  margin: 28rpx 32rpx 8rpx;
+  padding: 28rpx 30rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(160deg, #FFFDF8 0%, #FBF1DF 100%);
+  border: 2rpx solid #E5C892;
+  box-shadow: 0 10rpx 32rpx rgba(139, 30, 30, 0.08);
+}
+.demo-cta-head { display: flex; align-items: center; margin-bottom: 12rpx; }
+.demo-cta-tag {
+  flex: none;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  color: #F6DFA8;
+  background: #8B1E1E;
+  margin-right: 14rpx;
+  letter-spacing: 2rpx;
+}
+.demo-cta-title { font-size: 30rpx; font-weight: 700; color: #5A1616; }
+.demo-cta-desc { display: block; font-size: 24rpx; color: #7C6A60; line-height: 1.6; margin-bottom: 22rpx; }
+.demo-cta-actions { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; }
+.demo-cta-btn, button.demo-cta-btn:not([size='mini']) {
+  flex: 1;
+  width: 100%;
+  margin: 0;
+  padding: 0 28rpx;
+  height: 80rpx;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 40rpx;
+  background: linear-gradient(135deg, #A32929, #8B1E1E);
+  color: #F6DFA8;
+  font-size: 28rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+}
+.demo-cta-btn::after { border: none; }
+.demo-cta-sublink { flex: none; font-size: 24rpx; color: #8B1E1E; padding: 12rpx 8rpx; font-weight: 600; }
+
+.demo-float-pill {
+  position: fixed;
+  right: 28rpx;
+  bottom: calc(156rpx + env(safe-area-inset-bottom));
+  z-index: 90;
+  padding: 16rpx 28rpx;
+  border-radius: 40rpx;
+  background: linear-gradient(135deg, #A32929, #7A1414);
+  border: 2rpx solid #E6C47F;
+  color: #F6DFA8;
+  font-size: 24rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+  box-shadow: 0 8rpx 26rpx rgba(122, 20, 20, 0.35);
+}
+
 /* ================= 套餐展示效果 ================= */
 /* 花瓣纷飞：额外 8 片花瓣（与 app.wxss 的前 4 片错开） */
 .petals-petals .petal:nth-child(5), .petals-gold .petal:nth-child(5) { left: 4%; animation-duration: 13s; animation-delay: 3s; background: var(--petal-b); }

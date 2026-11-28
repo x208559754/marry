@@ -38,6 +38,8 @@
       刷新登录状态
     </button>
 
+    <text class="col-tip">若您已在其他入口开通了请柬，点击「刷新登录状态」即可自动进入自己的后台。</text>
+    <button class="btn-gold unlock-btn" bindtap="goCreateMyWedding" wx:if="{{accountReady && !accountWeddings.length}}" style="margin-top: 12rpx; background: #EFE9DD; color: #555;">购买套餐开通</button>
     <block wx:if="{{canEnterSuperAdmin}}">
       <view class="diag-divider" style="margin: 36rpx 0 24rpx; border-top: 1rpx dashed #E5D5BA;"></view>
       <text class="lock-sub super-entry-tip">平台总管理员可验证口令进入总后台。</text>
@@ -54,6 +56,21 @@
         <button wx:elif="{{canEnterSuperAdmin}}" class="switch-admin-link" bindtap="openSuperPasscodeModal">进入总后台</button>
         <text class="exit-link" bindtap="logoutAdmin" style="margin-left: 20rpx;">{{isSuperAdmin ? '退出管理' : '返回请柬'}}</text>
       </view>
+    </view>
+
+    <!-- 我的多场婚礼切换：普通用户购买了多场婚礼时显示（总管口令弹窗沿用下方已有的 canEnterSuperAdmin 版本） -->
+    <view class="card super-weddings-card" wx:if="{{!isSuperAdmin && myWeddingOptions.length > 1}}">
+      <view class="sc-title" style="display: flex; justify-content: space-between; align-items: center;">
+        <text>我的婚礼场次</text>
+        <view class="btn-pill-create" bindtap="goCreateMyWedding">+ 再买一场</view>
+      </view>
+      <picker range="{{myWeddingOptions}}" range-key="label" value="{{selectedMyWeddingIndex}}" bindchange="onSelectMyWedding">
+        <view class="wedding-picker-display">
+          <text class="wp-label">当前管理：</text>
+          <text class="wp-val">{{currentMyWeddingDisplay || wid}}</text>
+          <text class="wp-arrow">切换 ›</text>
+        </view>
+      </picker>
     </view>
 
     <!-- 全平台婚礼调度：仅总管口令验证通过后显示 -->

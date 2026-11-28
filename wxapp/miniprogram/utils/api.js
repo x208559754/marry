@@ -99,6 +99,8 @@ function request(method, path, data) {
       if (res.statusCode === 404) err.notFound = true;
       if (body && body.code) err.code = body.code;
       if (body && body.data) err.data = body.data;
+      if (body && body.existingWid) err.existingWid = body.existingWid;
+      if (body && body.data && body.data.existingWid) err.existingWid = body.data.existingWid;
       if (body && body.code === 'WEDDING_DISABLED') err.disabled = true; // 婚礼被平台停用
       if (res.statusCode === 402 || (body && body.needUpgrade)) err.needUpgrade = true; // 超出免费版限制
       if (res.statusCode === 422) err.blocked = true; // 内容安全拦截
@@ -622,7 +624,28 @@ function saveSuperAdminPlan(code, data) {
   return request('PUT', '/api/superadmin/plans/' + encodeURIComponent(code), data || {});
 }
 
-// ---------------- 套餐 / 支付 ----------------
+// ---------------- 套餐 / 支付 / 自助开通 ----------------
+
+// 当前微信号名下拥有管理员权限的专属婚礼列表
+function getMyWeddings() {
+  return ensureLogin().then(function () {
+    return request('GET', '/api/my-weddings');
+  });
+}
+
+// 免费开通一场专属婚礼（当前微信号自动成为该婚礼管理员）
+function createFreeWedding(data) {
+  return ensureLogin().then(function () {
+    return request('POST', '/api/weddings/create-free', data || {});
+  });
+}
+
+// 购买付费套餐并开通新婚礼（支付成功后自动创建专属婚礼 + 绑定管理员）
+function createNewWeddingOrder(product, data) {
+  return ensureLogin().then(function () {
+    return request('POST', '/api/pay/order-new', Object.assign({ product: product || 'premium' }, data || {}));
+  });
+}
 
 // { plans:[{code,name,level,priceFen,originalFen,days,desc,features,ent}], themes, wedding:{plan,planName,level,premium,expired,expiresAt,ent,usage,canUpgrade}, payMode:'wxpay'|'mock'|'unavailable', pricing(旧结构) }
 function getPlan() {
@@ -785,7 +808,10 @@ module.exports = {
   revealLottery: revealLottery,
   setLotteryScreen: setLotteryScreen,
   resetLottery: resetLottery,
-  // 套餐 / 支付
+  // 套餐 / 支付 / 自助开通
+  getMyWeddings: getMyWeddings,
+  createFreeWedding: createFreeWedding,
+  createNewWeddingOrder: createNewWeddingOrder,
   getPlan: getPlan,
   createPayOrder: createPayOrder,
   getPayOrder: getPayOrder,
