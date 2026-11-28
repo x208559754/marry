@@ -60,7 +60,7 @@ const THEME_PALETTES = {
   }
 };
 
-// 26 片覆盖全屏宽度的花瓣种子（使用负 animation-delay，打开页面首帧即满屏飘散）
+// 26 片覆盖全屏宽度的花瓣种子（负 animation-delay，开屏首帧即满屏柔美飘散）
 const PETAL_SEEDS = [
   { left: 3,  size: 22, dur: 11.4, delay: -1.2,  path: 'a', op: 0.72 },
   { left: 7,  size: 16, dur: 14.8, delay: -7.5,  path: 'b', op: 0.56 },
@@ -93,15 +93,17 @@ const PETAL_SEEDS = [
 const FALLBACK_BLESSINGS = [
   { id: 'fb-1', author: '挚友阿杰', content: '祝两位新人百年好合，永结同心！' },
   { id: 'fb-2', author: '表姐一家', content: '新婚大喜，岁岁年年甜甜蜜蜜！' },
-  { id: 'fb-3', author: '大学闺蜜', content: '最美的新娘，愿你们幸福美满到白头！' },
+  { id: 'fb-3', author: '大学闺蜜', content: '最美的新娘，愿你们幸福到白头！' },
   { id: 'fb-4', author: '发小陈晨', content: '佳偶天成，执手相伴一生一世！' },
   { id: 'fb-5', author: '同事同仁', content: '喜结良缘，花好月圆，早生贵子！' },
-  { id: 'fb-6', author: '小姨', content: '良缘永结，琴瑟和鸣，幸福长久！' },
-  { id: 'fb-7', author: '老同学', content: '一定要狠狠幸福呀，婚礼现场见！' }
+  { id: 'fb-6', author: '小姨', content: '良缘永结，琴瑟和鸣，幸福长久！' }
 ];
 
-// 7 条覆盖整屏高度（14vh ~ 76vh）的任意分布弹幕高度槽
-const LANE_TOPS_VH = [14, 24, 35, 46, 57, 67, 76];
+// 5 条大间距错落高度轨道（覆盖 17vh ~ 71vh，轨距 13–14vh，绝不垂直贴脸或重叠）
+const LANE_TOPS_VH = [17, 30, 44, 58, 71];
+const SPAWN_INTERVAL_MS = 3200;
+const LANE_COOLDOWN_MS = 8200;
+const MAX_ACTIVE_PILLS = 4;
 
 function buildPetals(themeKey) {
   const pal = THEME_PALETTES[themeKey] || THEME_PALETTES.red;
@@ -127,41 +129,21 @@ function buildPetals(themeKey) {
   });
 }
 
-function buildDanmakuItems(list) {
+function normalizeBlessingPool(list) {
   const raw = (Array.isArray(list) && list.length ? list : FALLBACK_BLESSINGS)
-    .filter(function (it) { return it && String(it.content || it.text || '').trim(); })
-    .slice(0, 14);
-  if (!raw.length) return [];
-
-  // 若祝福不足 7 条，轻量循环补齐到 7 条，保证整屏不同高度都有弹幕优雅飘过
-  const source = raw.slice();
-  let guard = 0;
-  while (source.length < 7 && guard < 14) {
-    source.push(raw[guard % raw.length]);
-    guard++;
-  }
-
-  return source.map(function (it, idx) {
-    const lane = idx % LANE_TOPS_VH.length;
-    const round = Math.floor(idx / LANE_TOPS_VH.length);
-    // 同轨相邻弹幕错开半程，且高度带轻微有机微调（任意感强且绝不重叠）
-    const jitter = ((idx * 17) % 5) - 2; // -2 ~ +2 vh
-    const top = Math.max(12, Math.min(78, LANE_TOPS_VH[lane] + jitter));
-    const duration = Number((13.5 + (lane % 4) * 1.9 + (round % 2) * 0.8).toFixed(1));
-    const lanePhase = (lane * 2.4 + round * (duration * 0.52)) % duration;
-    const delay = Number((-lanePhase).toFixed(1));
-    const textRaw = String(it.content || it.text || '').trim();
-    const text = textRaw.length > 24 ? textRaw.slice(0, 24) + '…' : textRaw;
-    return {
-      id: 'dm_' + (it.id || idx) + '_' + idx,
-      author: String(it.author || it.name || '').trim().slice(0, 10),
-      text: text,
-      top: top,
-      duration: duration,
-      delay: delay,
-      highlight: !!it._justSent
-    };
-  });
+    .map(function (it, idx) {
+      const textRaw = String((it && (it.content || it.text)) || '').trim();
+      if (!textRaw) return null;
+      return {
+        id: String((it && it.id) || ('b_' + idx)),
+        author: String((it && (it.author || it.name)) || '').trim().slice(0, 8),
+        text: textRaw.length > 20 ? textRaw.slice(0, 20) + '…' : textRaw,
+        justSent: !!(it && it._justSent)
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 24);
+  return raw.length ? raw : normalizeBlessingPool(FALLBACK_BLESSINGS);
 }
 
 Component({
@@ -182,7 +164,14 @@ Component({
     },
     showDanmaku: {
       type: Boolean,
-      value: true
+      value: true,
+      observer: function (val) {
+        if (val) {
+          this.startDanmakuLoop();
+        } else {
+          this.stopDanmakuLoop(true);
+        }
+      }
     },
     showToggle: {
       type: Boolean,
@@ -207,31 +196,60 @@ Component({
   lifetimes: {
     attached: function () {
       const app = getAppSafe();
+      this._pool = normalizeBlessingPool([]);
+      this._cursor = 0;
+      this._seq = 0;
+      this._lastLane = -1;
+      this._laneBusyUntil = LANE_TOPS_VH.map(function () { return 0; });
+      this._lastJustSentId = '';
+
       this.computeToggleTop();
       const t = this.properties.theme || (app && app.getTheme && app.getTheme()) || 'red';
       this._curTheme = t;
+      const visible = !(app && app.globalData && app.globalData.danmakuVisible === false);
       this.setData({
         petals: buildPetals(t),
-        danmakuOn: !(app && app.globalData && app.globalData.danmakuVisible === false)
+        danmakuOn: visible
       });
 
       this._onDanmakuUpdate = (state) => {
-        const patch = {};
-        if (state && typeof state.visible === 'boolean') patch.danmakuOn = state.visible;
-        if (state && Array.isArray(state.list)) patch.danmakuItems = buildDanmakuItems(state.list);
-        if (Object.keys(patch).length) this.setData(patch);
+        if (state && typeof state.visible === 'boolean') {
+          if (state.visible !== this.data.danmakuOn) {
+            this.setData({ danmakuOn: state.visible });
+          }
+          if (!state.visible) {
+            this.stopDanmakuLoop(true);
+          }
+        }
+        if (state && Array.isArray(state.list)) {
+          this._pool = normalizeBlessingPool(state.list);
+          // 若宾客刚刚发了一条新祝福，立即高亮飘出
+          const first = this._pool[0];
+          if (first && first.justSent && first.id !== this._lastJustSentId) {
+            this._lastJustSentId = first.id;
+            if (this.properties.showDanmaku && this.data.danmakuOn) {
+              this.spawnOnePill(first, 0);
+            }
+          }
+        }
+        if (this.properties.showDanmaku && this.data.danmakuOn) {
+          this.startDanmakuLoop();
+        }
       };
+
       if (app && app.addDanmakuListener) {
         app.addDanmakuListener(this._onDanmakuUpdate);
       }
       if (app && app.loadSharedBlessings) {
         app.loadSharedBlessings(false);
-      } else {
-        this.setData({ danmakuItems: buildDanmakuItems([]) });
+      }
+      if (this.properties.showDanmaku && visible) {
+        this.startDanmakuLoop();
       }
     },
 
     detached: function () {
+      this.stopDanmakuLoop(true);
       const app = getAppSafe();
       if (this._onDanmakuUpdate && app && app.removeDanmakuListener) {
         app.removeDanmakuListener(this._onDanmakuUpdate);
@@ -243,7 +261,8 @@ Component({
     show: function () {
       const app = getAppSafe();
       const t = this.properties.theme || (app && app.getTheme && app.getTheme()) || 'red';
-      const patch = { danmakuOn: !(app && app.globalData && app.globalData.danmakuVisible === false) };
+      const visible = !(app && app.globalData && app.globalData.danmakuVisible === false);
+      const patch = { danmakuOn: visible };
       if (t !== this._curTheme) {
         this._curTheme = t;
         patch.petals = buildPetals(t);
@@ -252,6 +271,12 @@ Component({
       if (app && app.loadSharedBlessings) {
         app.loadSharedBlessings(false);
       }
+      if (this.properties.showDanmaku && visible) {
+        this.startDanmakuLoop();
+      }
+    },
+    hide: function () {
+      this.stopDanmakuLoop(false);
     }
   },
 
@@ -264,6 +289,96 @@ Component({
       }
     },
 
+    pickFreeLane: function (now) {
+      const busy = this._laneBusyUntil || [];
+      const free = [];
+      for (var i = 0; i < LANE_TOPS_VH.length; i++) {
+        if ((busy[i] || 0) <= now) free.push(i);
+      }
+      if (!free.length) return -1;
+      // 尽量不连续使用同一轨道，让弹幕在不同高度间优雅错落
+      const preferred = free.filter((l) => l !== this._lastLane);
+      const candidates = preferred.length ? preferred : free;
+      return candidates[Math.floor(Math.random() * candidates.length)];
+    },
+
+    spawnOnePill: function (customItem, delaySec) {
+      if (!this.properties.showDanmaku || !this.data.danmakuOn) return;
+      const pool = this._pool && this._pool.length ? this._pool : normalizeBlessingPool([]);
+      const now = Date.now();
+
+      // 先清理已飘出屏幕的旧弹幕，保持界面始终清爽有序
+      let active = (this.data.danmakuItems || []).filter(function (it) {
+        return it && it.expiresAt > now;
+      });
+      if (!customItem && active.length >= MAX_ACTIVE_PILLS) return;
+
+      let lane = this.pickFreeLane(now);
+      if (lane === -1) {
+        if (!customItem) return;
+        // 刚发的新祝福优先挑一条最快释放的轨道
+        lane = 1;
+      }
+
+      const item = customItem || pool[(this._cursor++) % pool.length];
+      if (!item) return;
+
+      const textLen = (item.author ? item.author.length : 0) + item.text.length;
+      // 文字越长稍微多给一点时间，视觉飘动速度均匀舒缓
+      const duration = Number(Math.min(16, Math.max(12.5, 11.8 + textLen * 0.14)).toFixed(1));
+      const dSec = typeof delaySec === 'number' ? delaySec : 0;
+
+      this._lastLane = lane;
+      this._laneBusyUntil[lane] = now + LANE_COOLDOWN_MS + Math.round(dSec * 1000);
+      this._seq = (this._seq || 0) + 1;
+
+      const pill = {
+        id: 'dm_' + this._seq + '_' + lane,
+        author: item.author,
+        text: item.text,
+        top: LANE_TOPS_VH[lane],
+        duration: duration,
+        delay: dSec,
+        highlight: !!item.justSent,
+        expiresAt: now + Math.round((duration + dSec + 0.6) * 1000)
+      };
+
+      active = active.concat([pill]).slice(-6);
+      this.setData({ danmakuItems: active });
+    },
+
+    startDanmakuLoop: function () {
+      if (!this.properties.showDanmaku || !this.data.danmakuOn) return;
+      if (this._spawnTimer) return;
+
+      const now = Date.now();
+      const alive = (this.data.danmakuItems || []).filter(function (it) { return it && it.expiresAt > now; });
+      // 首屏先有序铺出 2 条错峰弹幕（不扎堆，不空白）
+      if (alive.length === 0) {
+        this.spawnOnePill(null, -2.6);
+        this.spawnOnePill(null, 0);
+      }
+
+      this._spawnTimer = setInterval(() => {
+        if (!this.properties.showDanmaku || !this.data.danmakuOn) {
+          this.stopDanmakuLoop(true);
+          return;
+        }
+        this.spawnOnePill(null, 0);
+      }, SPAWN_INTERVAL_MS);
+    },
+
+    stopDanmakuLoop: function (clearList) {
+      if (this._spawnTimer) {
+        clearInterval(this._spawnTimer);
+        this._spawnTimer = null;
+      }
+      if (clearList && this.data.danmakuItems && this.data.danmakuItems.length) {
+        this.setData({ danmakuItems: [] });
+        this._laneBusyUntil = LANE_TOPS_VH.map(function () { return 0; });
+      }
+    },
+
     onToggleDanmaku: function () {
       const app = getAppSafe();
       const next = !this.data.danmakuOn;
@@ -271,6 +386,8 @@ Component({
         app.setDanmakuVisible(next);
       } else {
         this.setData({ danmakuOn: next });
+        if (next) this.startDanmakuLoop();
+        else this.stopDanmakuLoop(true);
       }
       wx.showToast({
         title: next ? '已开启祝福弹幕' : '已隐藏祝福弹幕',
